@@ -1,0 +1,6 @@
+
+#include "v2xSe.h"
+
+#define V2XSE_STATE_INIT	0
+#define V2XSE_STATE_CONNECTED	1
+#define V2XSE_STATE_ACTIVATED	2
