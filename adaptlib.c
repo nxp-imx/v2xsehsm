@@ -1,5 +1,6 @@
 
 #include "adaptlib.h"
+#include "nvm.h"
 #include <string.h>
 
 uint8_t	v2xseState = V2XSE_STATE_INIT;
@@ -7,18 +8,12 @@ channelSecLevel_t v2xseSecurityLevel;
 appletSelection_t v2xseAppletId;
 const uint8_t serialNumber[V2XSE_SERIAL_NUMBER] = SERIALNUM_BYTES;
 
-/*TODO: read nvm vars from filesystem */
-uint8_t	v2xsePhase = V2XSE_KEY_INJECTION_PHASE;
+/* NVM vars, initialized from filesystem */
+uint8_t	v2xsePhase;
 
 int32_t v2xSe_connect(void)
 {
-	if (v2xseState != V2XSE_STATE_INIT) {
-		if (v2xseState == V2XSE_STATE_CONNECTED)
-			return V2XSE_FAILURE_CONNECTED;
-		if (v2xseState == V2XSE_STATE_ACTIVATED)
-			return V2XSE_FAILURE_ACTIVATED;
-		return V2XSE_FAILURE;
-	}
+	ENFORCE_STATE_INIT();
 	v2xseState = V2XSE_STATE_CONNECTED;
 	return V2XSE_SUCCESS;
 }
@@ -33,15 +28,11 @@ int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId, channelSecLe
 {
 	if (!pHsmStatusCode)
 		return V2XSE_FAILURE;
-	if (v2xseState != V2XSE_STATE_INIT) {
+	ENFORCE_STATE_INIT();
+	if (nvm_load()) {
 		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
-		if (v2xseState == V2XSE_STATE_CONNECTED)
-			return V2XSE_FAILURE_CONNECTED;
-		if (v2xseState == V2XSE_STATE_ACTIVATED)
-			return V2XSE_FAILURE_ACTIVATED;
 		return V2XSE_FAILURE;
 	}
-	/* TODO: open nvm */
 	/* TODO: open hsm */
 	if ((appletId < e_EU) || (appletId > e_US_AND_GS)) {
 		*pHsmStatusCode = V2XSE_WRONG_DATA;
@@ -234,10 +225,10 @@ int32_t v2xSe_getSeInfo
 	/* TODO: Figure out real values */
 
 	/*Maximum Runtime keys supported by applet*/
-        pInfo->maxRtKeysAllowed = 10000;
+        pInfo->maxRtKeysAllowed = NUM_STORAGE_SLOTS;
 
         /*Maximum Base keys supported by applet*/
-        pInfo->maxBaKeysAllowed = 10000;
+        pInfo->maxBaKeysAllowed = NUM_STORAGE_SLOTS;
 
         /*Maximum number of prepared values supported */
         pInfo->numPreparedVal = 1;
@@ -258,7 +249,7 @@ int32_t v2xSe_getSeInfo
         pInfo->eciesSupport = 1;
 
         /*Maximum number of data slots supported by Generic storage applet */
-        pInfo->maxDataSlots = 10000;
+        pInfo->maxDataSlots = NUM_STORAGE_SLOTS;
 
 	*pHsmStatusCode = V2XSE_NO_ERROR;
 	return V2XSE_SUCCESS;
@@ -382,7 +373,8 @@ int32_t v2xSe_getKeyLenFromCurveID(TypeCurveId_t curveID);
 int32_t v2xSe_getSigLenFromHashLen(TypeHashLength_t hashLength);
 */
 
-int32_t v2xSe_sendReceive(uint8_t *pTxBuf, uint16_t txLen,  uint16_t *pRxLen, uint8_t *pRxBuf,TypeSW_t *pHsmStatusCode)
+int32_t v2xSe_sendReceive(uint8_t *pTxBuf, uint16_t txLen,  uint16_t *pRxLen,
+				uint8_t *pRxBuf,TypeSW_t *pHsmStatusCode)
 {
 	if (!pHsmStatusCode)
 		return V2XSE_FAILURE;
@@ -390,11 +382,85 @@ int32_t v2xSe_sendReceive(uint8_t *pTxBuf, uint16_t txLen,  uint16_t *pRxLen, ui
 	return V2XSE_FAILURE;
 }
 
-/*
-int32_t v2xSe_storeData(TypeGsDataIndex_t index, TypeLen_t length, uint8_t  *pData,TypeSW_t *pHsmStatusCode);
-int32_t v2xSe_getData(TypeGsDataIndex_t index, TypeLen_t *pLength, uint8_t *pData,TypeSW_t *pHsmStatusCode);
-int32_t v2xSe_deleteData(TypeGsDataIndex_t index, TypeSW_t *pHsmStatusCode);
-*/
+
+int32_t v2xSe_storeData(TypeGsDataIndex_t index, TypeLen_t length,
+				uint8_t  *pData,TypeSW_t *pHsmStatusCode)
+{
+	if (!pHsmStatusCode)
+		return V2XSE_FAILURE;
+	if (v2xseState != V2XSE_STATE_ACTIVATED) {
+		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
+		return V2XSE_DEVICE_NOT_CONNECTED;
+	}
+	if ((v2xseAppletId != e_EU_AND_GS) &&
+		(v2xseAppletId != e_US_AND_GS)) {
+		*pHsmStatusCode = V2XSE_INACTIVE_CHANNEL;
+		return V2XSE_FAILURE;
+	}
+	if (!pData || (length < V2XSE_MIN_DATA_SIZE_GSA) ||
+			(length > V2XSE_MAX_DATA_SIZE_GSA) ||
+			(index > (NUM_STORAGE_SLOTS-1))) {
+		*pHsmStatusCode = V2XSE_WRONG_DATA;
+		return V2XSE_DEVICE_NOT_CONNECTED;
+	}
+	if (nvm_update_generic_data(index, pData, length) == -1) {
+		*pHsmStatusCode = V2XSE_FILE_FULL;
+		return V2XSE_DEVICE_NOT_CONNECTED;
+	}
+	*pHsmStatusCode = V2XSE_NO_ERROR;
+	return V2XSE_SUCCESS;
+}
+
+int32_t v2xSe_getData(TypeGsDataIndex_t index, TypeLen_t *pLength,
+				uint8_t *pData,TypeSW_t *pHsmStatusCode)
+{
+	if (!pHsmStatusCode)
+		return V2XSE_FAILURE;
+	if (v2xseState != V2XSE_STATE_ACTIVATED) {
+		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
+		return V2XSE_DEVICE_NOT_CONNECTED;
+	}
+	if ((v2xseAppletId != e_EU_AND_GS) &&
+		(v2xseAppletId != e_US_AND_GS)) {
+		*pHsmStatusCode = V2XSE_INACTIVE_CHANNEL;
+		return V2XSE_FAILURE;
+	}
+	if (!pData || (!pLength) || (index > (NUM_STORAGE_SLOTS-1))) {
+		*pHsmStatusCode = V2XSE_WRONG_DATA;
+		return V2XSE_DEVICE_NOT_CONNECTED;
+	}
+	if (nvm_retrieve_generic_data(index, pData, pLength) == -1) {
+		*pHsmStatusCode = V2XSE_WRONG_DATA;
+		return V2XSE_DEVICE_NOT_CONNECTED;
+	}
+	*pHsmStatusCode = V2XSE_NO_ERROR;
+	return V2XSE_SUCCESS;
+}
+
+int32_t v2xSe_deleteData(TypeGsDataIndex_t index, TypeSW_t *pHsmStatusCode)
+{
+	if (!pHsmStatusCode)
+		return V2XSE_FAILURE;
+	if (v2xseState != V2XSE_STATE_ACTIVATED) {
+		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
+		return V2XSE_DEVICE_NOT_CONNECTED;
+	}
+	if ((v2xseAppletId != e_EU_AND_GS) &&
+		(v2xseAppletId != e_US_AND_GS)) {
+		*pHsmStatusCode = V2XSE_INACTIVE_CHANNEL;
+		return V2XSE_FAILURE;
+	}
+	if (index > (NUM_STORAGE_SLOTS-1)) {
+		*pHsmStatusCode = V2XSE_WRONG_DATA;
+		return V2XSE_DEVICE_NOT_CONNECTED;
+	}
+	if (nvm_delete_generic_data(index) == -1) {
+		*pHsmStatusCode = V2XSE_WRONG_DATA;
+		return V2XSE_DEVICE_NOT_CONNECTED;
+	}
+	*pHsmStatusCode = V2XSE_NO_ERROR;
+	return V2XSE_SUCCESS;
+}
 
 int32_t v2xSe_invokeGarbageCollector(TypeSW_t *pHsmStatusCode)
 {
@@ -432,8 +498,9 @@ int32_t v2xSe_endKeyInjection (TypeSW_t *pHsmStatusCode)
 		*pHsmStatusCode = V2XSE_SECURITY_STATUS_NOT_SATISFIED;
 		return V2XSE_FAILURE;
 	}
-	/*TODO: update nvm */
 	v2xsePhase = V2XSE_NORMAL_OPERATING_PHASE;
+	nvm_update_var(STORAGE_PATH"v2xsePhase", &v2xsePhase,
+							sizeof(v2xsePhase));
 	*pHsmStatusCode = V2XSE_NO_ERROR;
 	return V2XSE_SUCCESS;
 }

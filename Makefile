@@ -1,8 +1,16 @@
 
-LIB_NAME=v2x_hsm_adaptation
+LIB_NAME = v2x_hsm_adaptation.a
+C_OBJ = adaptlib.o nvm.o
+C_HEADERS = adaptlib.h nvm.h
 
-C_SOURCE=adaptlib.c
+all: $(LIB_NAME)
 
-$(LIB_NAME): $(C_SOURCE)
-	$(CC) -c -Wall -o $(LIB_NAME).o $(C_SOURCE)
-	ar rcs $(LIB_NAME).a $(LIB_NAME).o
+.PHONY : clean
+clean:
+	rm *.o *.a
+
+%.o: %.c $(C_HEADERS)
+	$(CC) -c -Wall $< -o $@
+
+$(LIB_NAME): $(C_OBJ) $(C_HEADERS)
+	ar rcs $(LIB_NAME) $(C_OBJ)

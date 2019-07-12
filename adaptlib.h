@@ -14,3 +14,19 @@
 #define V2XSE_STATE_INIT	0
 #define V2XSE_STATE_CONNECTED	1
 #define V2XSE_STATE_ACTIVATED	2
+
+#define STORAGE_PATH "/etc/v2x_hsm_adaptation/"
+
+#define NUM_STORAGE_SLOTS	10000
+
+extern uint8_t	v2xsePhase;
+
+#define ENFORCE_STATE_INIT() {					\
+	if (v2xseState != V2XSE_STATE_INIT) {			\
+		if (v2xseState == V2XSE_STATE_CONNECTED)	\
+			return V2XSE_FAILURE_CONNECTED;		\
+		if (v2xseState == V2XSE_STATE_ACTIVATED)	\
+			return V2XSE_FAILURE_ACTIVATED;		\
+		return V2XSE_FAILURE;				\
+	}							\
+}
