@@ -26,8 +26,7 @@ int32_t v2xSe_activate(appletSelection_t appletId, TypeSW_t *pHsmStatusCode)
 
 int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId, channelSecLevel_t securityLevel, TypeSW_t *pHsmStatusCode)
 {
-	if (!pHsmStatusCode)
-		return V2XSE_FAILURE;
+	VERIFY_STATUS_CODE_PTR()
 	ENFORCE_STATE_INIT();
 	if (nvm_load()) {
 		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
@@ -169,15 +168,12 @@ int32_t v2xSe_getAppletVersion
     TypeVersion_t *pVersion
 )
 {
-	if (!pHsmStatusCode)
-		return V2XSE_FAILURE;
+	VERIFY_STATUS_CODE_PTR()
+	ENFORCE_STATE_ACTIVATED()
+	ENFORCE_POINTER_NOT_NULL(pVersion)
 	if ((appletType != e_V2X) && (appletType != e_GS)) {
 		*pHsmStatusCode = V2XSE_WRONG_DATA;
 		return V2XSE_FAILURE;
-	}
-	if (v2xseState != V2XSE_STATE_ACTIVATED) {
-		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
-		return V2XSE_DEVICE_NOT_CONNECTED;
 	}
 	if (appletType == e_GS) {
 		if ((v2xseAppletId != e_EU_AND_GS) &&
@@ -185,10 +181,6 @@ int32_t v2xSe_getAppletVersion
 			*pHsmStatusCode = V2XSE_INACTIVE_CHANNEL;
 			return V2XSE_FAILURE;
 		}
-	}
-	if (!pVersion) {
-		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
-		return V2XSE_FAILURE;
 	}
 	pVersion->data[0] = VERSION_GENERATION;
 	pVersion->data[1] = VERSION_MAJOR;
@@ -212,16 +204,10 @@ int32_t v2xSe_getSeInfo
     TypeInformation_t *pInfo
 )
 {
-	if (!pHsmStatusCode)
-		return V2XSE_FAILURE;
-	if (v2xseState != V2XSE_STATE_ACTIVATED) {
-		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
-		return V2XSE_DEVICE_NOT_CONNECTED;
-	}
-	if (!pInfo) {
-		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
-		return V2XSE_FAILURE;
-	}
+	VERIFY_STATUS_CODE_PTR()
+	ENFORCE_STATE_ACTIVATED()
+	ENFORCE_POINTER_NOT_NULL(pInfo)
+
 	/* TODO: Figure out real values */
 
 	/*Maximum Runtime keys supported by applet*/
@@ -271,16 +257,10 @@ int32_t v2xSe_getCryptoLibVersion
 int32_t v2xSe_getPlatformInfo(TypeSW_t *pHsmStatusCode,
 			TypePlatformIdentity_t *pPlatformIdentifier)
 {
-	if (!pHsmStatusCode)
-		return V2XSE_FAILURE;
-	if (!pPlatformIdentifier) {
-		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
-		return V2XSE_FAILURE;
-	}
-	if (v2xseState == V2XSE_STATE_INIT) {
-		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
-		return V2XSE_DEVICE_NOT_CONNECTED;
-	}
+	VERIFY_STATUS_CODE_PTR()
+	ENFORCE_STATE_NOT_INIT()
+	ENFORCE_POINTER_NOT_NULL(pPlatformIdentifier)
+
 	/* TODO: Figure out real values */
 	memcpy(pPlatformIdentifier->data, PLATFORMINFO_STRING,
 					V2XSE_PLATFORM_IDENTITY);
@@ -291,16 +271,10 @@ int32_t v2xSe_getPlatformInfo(TypeSW_t *pHsmStatusCode,
 int32_t v2xSe_getPlatformConfig(TypeSW_t *pHsmStatusCode,
 			TypePlatformConfiguration_t *pPlatformConfig)
 {
-	if (!pHsmStatusCode)
-		return V2XSE_FAILURE;
-	if (!pPlatformConfig) {
-		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
-		return V2XSE_FAILURE;
-	}
-	if (v2xseState == V2XSE_STATE_INIT) {
-		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
-		return V2XSE_DEVICE_NOT_CONNECTED;
-	}
+	VERIFY_STATUS_CODE_PTR()
+	ENFORCE_STATE_NOT_INIT()
+	ENFORCE_POINTER_NOT_NULL(pPlatformConfig)
+
 	/* TODO: Figure out real values */
 	pPlatformConfig->data[0] = 0;
 	pPlatformConfig->data[1] = 'H';
@@ -313,16 +287,10 @@ int32_t v2xSe_getPlatformConfig(TypeSW_t *pHsmStatusCode,
 int32_t v2xSe_getChipInfo(TypeSW_t *pHsmStatusCode,
 					TypeChipInformation_t *pChipInfo)
 {
-	if (!pHsmStatusCode)
-		return V2XSE_FAILURE;
-	if (!pChipInfo) {
-		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
-		return V2XSE_FAILURE;
-	}
-	if (v2xseState == V2XSE_STATE_INIT) {
-		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
-		return V2XSE_DEVICE_NOT_CONNECTED;
-	}
+	VERIFY_STATUS_CODE_PTR()
+	ENFORCE_STATE_NOT_INIT()
+	ENFORCE_POINTER_NOT_NULL(pChipInfo)
+
 	/* TODO: Figure out real values */
 	memcpy(pChipInfo->data, serialNumber, V2XSE_SERIAL_NUMBER);
 	*pHsmStatusCode = V2XSE_NO_ERROR;
@@ -332,16 +300,10 @@ int32_t v2xSe_getChipInfo(TypeSW_t *pHsmStatusCode,
 int32_t v2xSe_getAttackLog(TypeSW_t *pHsmStatusCode,
 					TypeAttackLog_t *pAttackLog)
 {
-	if (!pHsmStatusCode)
-		return V2XSE_FAILURE;
-	if (!pAttackLog) {
-		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
-		return V2XSE_FAILURE;
-	}
-	if (v2xseState == V2XSE_STATE_INIT) {
-		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
-		return V2XSE_DEVICE_NOT_CONNECTED;
-	}
+	VERIFY_STATUS_CODE_PTR()
+	ENFORCE_STATE_NOT_INIT()
+	ENFORCE_POINTER_NOT_NULL(pAttackLog)
+
 	pAttackLog->currAttackCntrStatus = V2XSE_ATTACK_CNT_ZERO;
 	pAttackLog->len = 0;
 	*pHsmStatusCode = V2XSE_NO_ERROR;
@@ -369,15 +331,44 @@ int32_t v2xSe_decryptUsingBaEcies
     TypeLen_t *pMsgLen,
     TypePlainText_t *pMsgData
 );
-int32_t v2xSe_getKeyLenFromCurveID(TypeCurveId_t curveID);
-int32_t v2xSe_getSigLenFromHashLen(TypeHashLength_t hashLength);
 */
+
+int32_t v2xSe_getKeyLenFromCurveID(TypeCurveId_t curveID)
+{
+	switch(curveID)
+	{
+		case V2XSE_CURVE_NISTP256:
+		case V2XSE_CURVE_BP256R1:
+		case V2XSE_CURVE_BP256T1:
+			return V2XSE_256_EC_PUB_KEY;
+
+		case V2XSE_CURVE_NISTP384:
+		case V2XSE_CURVE_BP384R1:
+		case V2XSE_CURVE_BP384T1:
+			return V2XSE_384_EC_PUB_KEY;
+
+		default:
+			return V2XSE_FAILURE;
+	}
+}
+
+int32_t v2xSe_getSigLenFromHashLen(TypeHashLength_t hashLength)
+{
+	switch(hashLength)
+	{
+		case V2XSE_256_EC_HASH_SIZE:
+		case V2XSE_384_EC_HASH_SIZE:
+			return hashLength*2;
+		default:
+			return V2XSE_FAILURE;
+	}
+}
 
 int32_t v2xSe_sendReceive(uint8_t *pTxBuf, uint16_t txLen,  uint16_t *pRxLen,
 				uint8_t *pRxBuf,TypeSW_t *pHsmStatusCode)
 {
-	if (!pHsmStatusCode)
-		return V2XSE_FAILURE;
+	VERIFY_STATUS_CODE_PTR()
+
 	*pHsmStatusCode = V2XSE_FUNC_NOT_SUPPORTED;
 	return V2XSE_FAILURE;
 }
@@ -386,12 +377,9 @@ int32_t v2xSe_sendReceive(uint8_t *pTxBuf, uint16_t txLen,  uint16_t *pRxLen,
 int32_t v2xSe_storeData(TypeGsDataIndex_t index, TypeLen_t length,
 				uint8_t  *pData,TypeSW_t *pHsmStatusCode)
 {
-	if (!pHsmStatusCode)
-		return V2XSE_FAILURE;
-	if (v2xseState != V2XSE_STATE_ACTIVATED) {
-		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
-		return V2XSE_DEVICE_NOT_CONNECTED;
-	}
+	VERIFY_STATUS_CODE_PTR()
+	ENFORCE_STATE_ACTIVATED()
+
 	if ((v2xseAppletId != e_EU_AND_GS) &&
 		(v2xseAppletId != e_US_AND_GS)) {
 		*pHsmStatusCode = V2XSE_INACTIVE_CHANNEL;
@@ -414,12 +402,9 @@ int32_t v2xSe_storeData(TypeGsDataIndex_t index, TypeLen_t length,
 int32_t v2xSe_getData(TypeGsDataIndex_t index, TypeLen_t *pLength,
 				uint8_t *pData,TypeSW_t *pHsmStatusCode)
 {
-	if (!pHsmStatusCode)
-		return V2XSE_FAILURE;
-	if (v2xseState != V2XSE_STATE_ACTIVATED) {
-		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
-		return V2XSE_DEVICE_NOT_CONNECTED;
-	}
+	VERIFY_STATUS_CODE_PTR()
+	ENFORCE_STATE_ACTIVATED()
+
 	if ((v2xseAppletId != e_EU_AND_GS) &&
 		(v2xseAppletId != e_US_AND_GS)) {
 		*pHsmStatusCode = V2XSE_INACTIVE_CHANNEL;
@@ -439,12 +424,9 @@ int32_t v2xSe_getData(TypeGsDataIndex_t index, TypeLen_t *pLength,
 
 int32_t v2xSe_deleteData(TypeGsDataIndex_t index, TypeSW_t *pHsmStatusCode)
 {
-	if (!pHsmStatusCode)
-		return V2XSE_FAILURE;
-	if (v2xseState != V2XSE_STATE_ACTIVATED) {
-		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
-		return V2XSE_DEVICE_NOT_CONNECTED;
-	}
+	VERIFY_STATUS_CODE_PTR()
+	ENFORCE_STATE_ACTIVATED()
+
 	if ((v2xseAppletId != e_EU_AND_GS) &&
 		(v2xseAppletId != e_US_AND_GS)) {
 		*pHsmStatusCode = V2XSE_INACTIVE_CHANNEL;
@@ -464,32 +446,33 @@ int32_t v2xSe_deleteData(TypeGsDataIndex_t index, TypeSW_t *pHsmStatusCode)
 
 int32_t v2xSe_invokeGarbageCollector(TypeSW_t *pHsmStatusCode)
 {
-	if (!pHsmStatusCode)
-		return V2XSE_FAILURE;
-	if (v2xseState != V2XSE_STATE_ACTIVATED) {
-		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
-		return V2XSE_DEVICE_NOT_CONNECTED;
-	}
-	if (v2xsePhase != V2XSE_NORMAL_OPERATING_PHASE) {
-		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
-		return V2XSE_FAILURE;
-	}
+	VERIFY_STATUS_CODE_PTR()
+	ENFORCE_STATE_ACTIVATED()
+	ENFORCE_NORMAL_OPERATING_PHASE()
+
 	*pHsmStatusCode = V2XSE_NO_ERROR;
 	return V2XSE_SUCCESS;
 }
 
-/*
-int32_t v2xSe_getRemainingNvm (uint32_t *pSize, TypeSW_t *pHsmStatusCode);
-*/
+int32_t v2xSe_getRemainingNvm (uint32_t *pSize, TypeSW_t *pHsmStatusCode)
+{
+	VERIFY_STATUS_CODE_PTR()
+	ENFORCE_STATE_NOT_INIT()
+	ENFORCE_POINTER_NOT_NULL(pSize)
+
+	/* For now, return fixed value 2MB */
+	*pSize = 2 * 1024 * 1024;
+
+	*pHsmStatusCode = V2XSE_NO_ERROR;
+	return V2XSE_SUCCESS;
+}
+
 
 int32_t v2xSe_endKeyInjection (TypeSW_t *pHsmStatusCode)
 {
-	if (!pHsmStatusCode)
-		return V2XSE_FAILURE;
-	if (v2xseState != V2XSE_STATE_ACTIVATED) {
-		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
-		return V2XSE_DEVICE_NOT_CONNECTED;
-	}
+	VERIFY_STATUS_CODE_PTR()
+	ENFORCE_STATE_ACTIVATED()
+
 	if (v2xsePhase != V2XSE_KEY_INJECTION_PHASE) {
 		*pHsmStatusCode = V2XSE_FUNC_NOT_SUPPORTED;
 		return V2XSE_FAILURE;
@@ -507,21 +490,14 @@ int32_t v2xSe_endKeyInjection (TypeSW_t *pHsmStatusCode)
 
 int32_t v2xSe_getSePhase (uint8_t *pPhaseInfo, TypeSW_t *pHsmStatusCode)
 {
-	if (!pHsmStatusCode)
-		return V2XSE_FAILURE;
-	if (v2xseState != V2XSE_STATE_ACTIVATED) {
-		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
-		return V2XSE_DEVICE_NOT_CONNECTED;
-	}
+	VERIFY_STATUS_CODE_PTR()
+	ENFORCE_STATE_ACTIVATED()
+	ENFORCE_POINTER_NOT_NULL(pPhaseInfo)
+
 	if (v2xseSecurityLevel != e_channelSecLevel_5) {
 		*pHsmStatusCode = V2XSE_SECURITY_STATUS_NOT_SATISFIED;
 		return V2XSE_FAILURE;
 	}
-	if (!pPhaseInfo) {
-		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
-		return V2XSE_FAILURE;
-	}
-
 	*pPhaseInfo = v2xsePhase;
 	*pHsmStatusCode = V2XSE_NO_ERROR;
 	return V2XSE_SUCCESS;
