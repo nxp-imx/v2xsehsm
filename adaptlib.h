@@ -1,5 +1,6 @@
 
 #include "v2xSe.h"
+#include "../hsmstub/hsmstub.h"
 
 #define VERSION_GENERATION	3
 #define VERSION_MAJOR		1
@@ -21,6 +22,9 @@
 #define NUM_STORAGE_SLOTS	10000
 
 extern uint8_t	v2xsePhase;
+
+#define MAGIC_KEYSTORE_IDENTIFIER	0x87131966
+#define MAX_KEYSTORE_UPDATES		0xffff
 
 #define VERIFY_STATUS_CODE_PTR() {				\
 	if (!pHsmStatusCode)					\

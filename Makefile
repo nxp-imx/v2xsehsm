@@ -1,7 +1,7 @@
 
 LIB_NAME = v2x_hsm_adaptation.a
-C_OBJ = adaptlib.o nvm.o
-C_HEADERS = adaptlib.h nvm.h
+C_OBJ = adaptlib.o nvm.o ../hsmstub/hsmstub.a
+C_HEADERS = adaptlib.h nvm.h ../hsmstub/hsmstub.h
 
 all: $(LIB_NAME)
 

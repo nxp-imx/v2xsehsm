@@ -11,7 +11,7 @@ static int nvm_clear(void) {
 	return 0;
 }
 
-static int nvm_load_var(char* name, uint8_t* data, TypeLen_t size)
+int nvm_load_var(char* name, uint8_t* data, TypeLen_t size)
 {
 	int fd;
 	int retval;

@@ -8,8 +8,17 @@ channelSecLevel_t v2xseSecurityLevel;
 appletSelection_t v2xseAppletId;
 const uint8_t serialNumber[V2XSE_SERIAL_NUMBER] = SERIALNUM_BYTES;
 
+/* HSM handles */
+hsm_hdl_t hsmSessionHandle;
+hsm_hdl_t hsmRngHandle;
+hsm_hdl_t hsmKeyStoreHandle;
+hsm_hdl_t hsmKeyMgmtHandle;
+hsm_hdl_t hsmCipherHandle;
+hsm_hdl_t hsmSigGenHandle;
+
 /* NVM vars, initialized from filesystem */
 uint8_t	v2xsePhase;
+uint32_t key_store_nonce;
 
 int32_t v2xSe_connect(void)
 {
@@ -21,24 +30,102 @@ int32_t v2xSe_connect(void)
 
 int32_t v2xSe_activate(appletSelection_t appletId, TypeSW_t *pHsmStatusCode)
 {
-	return v2xSe_activateWithSecurityLevel(appletId, e_channelSecLevel_5, pHsmStatusCode);
+	return v2xSe_activateWithSecurityLevel(appletId, e_channelSecLevel_5,
+						pHsmStatusCode);
 }
 
-int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId, channelSecLevel_t securityLevel, TypeSW_t *pHsmStatusCode)
+int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId,
+		channelSecLevel_t securityLevel, TypeSW_t *pHsmStatusCode)
 {
+	open_session_args_t session_args;
+	open_svc_rng_args_t rng_open_args;
+	op_get_random_args_t rng_get_args;
+	open_svc_key_store_args_t key_store_args;
+	open_svc_key_management_args_t key_mgmt_args;
+	open_svc_cipher_args_t cipher_args;
+	open_svc_sign_gen_args_t sig_gen_args;
+
 	VERIFY_STATUS_CODE_PTR()
 	ENFORCE_STATE_INIT();
+
+	if ((appletId < e_EU) || (appletId > e_US_AND_GS)) {
+		*pHsmStatusCode = V2XSE_APP_MISSING;
+		return V2XSE_FAILURE;
+	}
+	if ((securityLevel < e_channelSecLevel_1) ||
+			(securityLevel > e_channelSecLevel_5)){
+		*pHsmStatusCode = V2XSE_WRONG_DATA;
+		return V2XSE_FAILURE;
+	}
+
 	if (nvm_load()) {
 		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
 		return V2XSE_FAILURE;
 	}
-	/* TODO: open hsm */
-	if ((appletId < e_EU) || (appletId > e_US_AND_GS)) {
-		*pHsmStatusCode = V2XSE_WRONG_DATA;
+
+	session_args.session_priority = EXPECTED_SESSION_PRIORITY;
+	session_args.operating_mode = EXPECTED_OPERATING_MODE;
+	if (hsm_open_session(&session_args, &hsmSessionHandle)) {
+		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
 		return V2XSE_FAILURE;
 	}
-	if ((securityLevel < e_channelSecLevel_1)||(securityLevel > e_channelSecLevel_5)){
-		*pHsmStatusCode = V2XSE_WRONG_DATA;
+	rng_open_args.flags = 0;
+	if (hsm_open_rng_service(hsmSessionHandle, &rng_open_args,
+							&hsmRngHandle)) {
+		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
+		return V2XSE_FAILURE;
+	}
+
+	if (nvm_load_var("key_store_nonce", (uint8_t*)&key_store_nonce,
+			sizeof(key_store_nonce)) != sizeof(key_store_nonce)) {
+		/* value doesn't exist, create key store */
+		rng_get_args.output = (uint8_t*)&key_store_nonce;
+		rng_get_args.random_size = sizeof(key_store_nonce);
+		if (hsm_get_random(hsmRngHandle, &rng_get_args)) {
+			*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
+			return V2XSE_FAILURE;
+		}
+		key_store_args.key_store_identifier =
+						EXPECTED_KEYSTORE_IDENTIFIER;
+		key_store_args.authentication_nonce = key_store_nonce;
+		key_store_args.max_updates_number = EXPECTED_MAX_UPDATES;
+		key_store_args.flags = HSM_SVC_KEY_STORE_FLAGS_CREATE |
+						HSM_SVC_KEY_STORE_FLAGS_UPDATE;
+		if (hsm_open_key_store_service(hsmSessionHandle,
+					&key_store_args, &hsmKeyStoreHandle)) {
+			*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
+			return V2XSE_FAILURE;
+		}
+		nvm_update_var("key_store_nonce", (uint8_t*)&key_store_nonce,
+						sizeof(key_store_nonce));
+	} else {
+		key_store_args.key_store_identifier =
+						EXPECTED_KEYSTORE_IDENTIFIER;
+		key_store_args.authentication_nonce = key_store_nonce;
+		key_store_args.max_updates_number = EXPECTED_MAX_UPDATES;
+		key_store_args.flags = HSM_SVC_KEY_STORE_FLAGS_UPDATE;
+		if (hsm_open_key_store_service(hsmSessionHandle,
+					&key_store_args, &hsmKeyStoreHandle)) {
+			*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
+			return V2XSE_FAILURE;
+		}
+	}
+	key_mgmt_args.flags = 0;
+	if (hsm_open_key_management_service(hsmKeyStoreHandle, &key_mgmt_args,
+							&hsmKeyMgmtHandle)) {
+		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
+		return V2XSE_FAILURE;
+	}
+	cipher_args.flags = 0;
+	if (hsm_open_cipher_service(hsmKeyStoreHandle, &cipher_args,
+							&hsmCipherHandle)) {
+		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
+		return V2XSE_FAILURE;
+	}
+	sig_gen_args.flags = 0;
+	if (hsm_open_signature_generation_service(hsmKeyStoreHandle,
+					&sig_gen_args, &hsmSigGenHandle)) {
+		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
 		return V2XSE_FAILURE;
 	}
 	v2xseState = V2XSE_STATE_ACTIVATED;
@@ -58,7 +145,8 @@ int32_t v2xSe_deactivate(void)
 	if (v2xseState == V2XSE_STATE_INIT)
 		return V2XSE_FAILURE_INIT;
 	if (v2xseState == V2XSE_STATE_ACTIVATED) {
-		/* TODO: close hsm */
+		if (hsm_close_session(hsmSessionHandle))
+			return V2XSE_FAILURE;
 	}
 	v2xseState = V2XSE_STATE_INIT;
 	return V2XSE_SUCCESS;
