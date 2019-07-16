@@ -22,6 +22,13 @@
 #define NUM_STORAGE_SLOTS	10000
 
 extern uint8_t	v2xsePhase;
+extern uint32_t key_store_nonce;
+extern uint32_t maKeyHandle;
+extern uint32_t rtKeyHandle[NUM_STORAGE_SLOTS];
+extern TypeCurveId_t rtCurveId[NUM_STORAGE_SLOTS];
+extern uint32_t baKeyHandle[NUM_STORAGE_SLOTS];
+extern TypeCurveId_t baCurveId[NUM_STORAGE_SLOTS];
+
 
 #define MAGIC_KEYSTORE_IDENTIFIER	0x87131966
 #define MAX_KEYSTORE_UPDATES		0xffff

@@ -16,9 +16,48 @@ hsm_hdl_t hsmKeyMgmtHandle;
 hsm_hdl_t hsmCipherHandle;
 hsm_hdl_t hsmSigGenHandle;
 
-/* NVM vars, initialized from filesystem */
+/* NVM vars, initialized from filesystem on activate */
 uint8_t	v2xsePhase;
 uint32_t key_store_nonce;
+
+/* NVM Key handles, initialized as zero, read from fs when first used */
+uint32_t maKeyHandle;
+TypeCurveId_t maCurveId;
+uint32_t rtKeyHandle[NUM_STORAGE_SLOTS];
+TypeCurveId_t rtCurveId[NUM_STORAGE_SLOTS];
+uint32_t baKeyHandle[NUM_STORAGE_SLOTS];
+TypeCurveId_t baCurveId[NUM_STORAGE_SLOTS];
+
+uint16_t convertCurveId(TypeCurveId_t curveId)
+{
+	switch(curveId) {
+		case V2XSE_CURVE_NISTP256:
+			return HSM_KEY_TYPE_ECDSA_NIST_P256;
+		case V2XSE_CURVE_BP256R1:
+			return HSM_KEY_TYPE_ECDSA_BRAINPOOL_R1_256;
+		case V2XSE_CURVE_BP256T1:
+			return HSM_KEY_TYPE_ECDSA_BRAINPOOL_T1_256;
+		case V2XSE_CURVE_NISTP384:
+			return HSM_KEY_TYPE_ECDSA_NIST_P384;
+		case V2XSE_CURVE_BP384R1:
+			return HSM_KEY_TYPE_ECDSA_BRAINPOOL_R1_384;
+		case V2XSE_CURVE_BP384T1:
+			return HSM_KEY_TYPE_ECDSA_BRAINPOOL_T1_384;
+		default:
+			return 0;
+	}
+}
+
+int is256bitCurve(uint32_t keyType)
+{
+	switch (keyType) {
+		case HSM_KEY_TYPE_ECDSA_NIST_P256:
+		case HSM_KEY_TYPE_ECDSA_BRAINPOOL_R1_256:
+		case HSM_KEY_TYPE_ECDSA_BRAINPOOL_T1_256:
+			return 1;
+	}
+	return 0;
+}
 
 int32_t v2xSe_connect(void)
 {
@@ -58,7 +97,7 @@ int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId,
 		return V2XSE_FAILURE;
 	}
 
-	if (nvm_load()) {
+	if (nvm_init()) {
 		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
 		return V2XSE_FAILURE;
 	}
@@ -76,14 +115,16 @@ int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId,
 		return V2XSE_FAILURE;
 	}
 
-	if (nvm_load_var("key_store_nonce", (uint8_t*)&key_store_nonce,
-			sizeof(key_store_nonce)) != sizeof(key_store_nonce)) {
+	if (key_store_nonce == 0) {
 		/* value doesn't exist, create key store */
 		rng_get_args.output = (uint8_t*)&key_store_nonce;
 		rng_get_args.random_size = sizeof(key_store_nonce);
-		if (hsm_get_random(hsmRngHandle, &rng_get_args)) {
-			*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
-			return V2XSE_FAILURE;
+		while (key_store_nonce == 0) {
+			/* Get non-zero random number (0 = initialized) */
+			if (hsm_get_random(hsmRngHandle, &rng_get_args)) {
+				*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
+				return V2XSE_FAILURE;
+			}
 		}
 		key_store_args.key_store_identifier =
 						EXPECTED_KEYSTORE_IDENTIFIER;
@@ -110,6 +151,7 @@ int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId,
 			return V2XSE_FAILURE;
 		}
 	}
+
 	key_mgmt_args.flags = 0;
 	if (hsm_open_key_management_service(hsmKeyStoreHandle, &key_mgmt_args,
 							&hsmKeyMgmtHandle)) {
@@ -151,13 +193,64 @@ int32_t v2xSe_deactivate(void)
 	v2xseState = V2XSE_STATE_INIT;
 	return V2XSE_SUCCESS;
 }
-/*
+
 int32_t v2xSe_generateMaEccKeyPair
 (
     TypeCurveId_t curveId,
     TypeSW_t *pHsmStatusCode,
     TypePublicKey_t *pPublicKeyPlain
-);
+)
+{
+	op_generate_key_args_t args;
+	uint16_t keyType;
+
+	VERIFY_STATUS_CODE_PTR()
+	ENFORCE_STATE_ACTIVATED()
+	ENFORCE_NORMAL_OPERATING_PHASE()
+	ENFORCE_POINTER_NOT_NULL(pPublicKeyPlain)
+
+	keyType = convertCurveId(curveId);
+	if (!keyType) {
+		*pHsmStatusCode = V2XSE_WRONG_DATA;
+		return V2XSE_FAILURE;
+	}
+
+	/* Check if MA is already assigned (so in NVM) */
+	if(!nvm_load_var("maKeyHandle", (uint8_t*)&maKeyHandle,
+						sizeof(maKeyHandle))) {
+		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
+		return V2XSE_FAILURE;
+	}
+
+	args.key_identifier = &maKeyHandle;
+	args.out_size = v2xSe_getKeyLenFromCurveID(curveId);
+	args.flags = HSM_OP_KEY_GENERATION_FLAGS_CREATE_PERSISTENT |
+				HSM_OP_KEY_GENERATION_FLAGS_STRICT_OPERATION;
+	args.key_type = keyType;
+	args.key_type_ext = 0;
+	args.key_info = HSM_KEY_INFO_PERMANENT;
+	args.out_key = (uint8_t*)pPublicKeyPlain;
+	if (hsm_generate_key(hsmKeyMgmtHandle, &args)) {
+		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
+		return V2XSE_FAILURE;
+	}
+	maCurveId = curveId;
+	if (nvm_update_var("maCurveId", (uint8_t*)&maCurveId,
+							sizeof(maCurveId))) {
+		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
+		return V2XSE_FAILURE;
+	}
+	if (nvm_update_var("maKeyHandle", (uint8_t*)&maKeyHandle,
+							sizeof(maKeyHandle))) {
+		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
+		return V2XSE_FAILURE;
+	}
+
+	*pHsmStatusCode = V2XSE_NO_ERROR;
+	return V2XSE_SUCCESS;
+}
+
+/*
 int32_t v2xSe_getMaEccPublicKey
 (
     TypeSW_t *pHsmStatusCode,
@@ -171,18 +264,133 @@ int32_t v2xSe_createMaSign
     TypeSW_t *pHsmStatusCode,
     TypeSignature_t *pSignature
 );
+*/
+
 int32_t v2xSe_generateRtEccKeyPair
 (
     TypeRtKeyId_t rtKeyId,
     TypeCurveId_t curveId,
     TypeSW_t *pHsmStatusCode,
     TypePublicKey_t *pPublicKeyPlain
-) ;
+)
+{
+	op_generate_key_args_t args;
+	uint16_t keyType;
+	uint32_t keyHandle;
+	TypeCurveId_t storedCurveId;
+
+	VERIFY_STATUS_CODE_PTR()
+	ENFORCE_STATE_ACTIVATED()
+	ENFORCE_NORMAL_OPERATING_PHASE()
+	ENFORCE_POINTER_NOT_NULL(pPublicKeyPlain)
+
+	if (rtKeyId >= NUM_STORAGE_SLOTS){
+		*pHsmStatusCode = V2XSE_WRONG_DATA;
+		return V2XSE_FAILURE;
+	}
+
+	keyType = convertCurveId(curveId);
+	if (!is256bitCurve(keyType)) {
+		*pHsmStatusCode = V2XSE_WRONG_DATA;
+		return V2XSE_FAILURE;
+	}
+
+	if (!nvm_retrieve_rt_key_handle(rtKeyId, &keyHandle, &storedCurveId)) {
+		op_manage_key_args_t del_args;
+
+		del_args.key_identifier = &keyHandle;
+		del_args.flags = HSM_OP_MANAGE_KEY_FLAGS_DELETE;
+		del_args.key_type = convertCurveId(storedCurveId);
+		del_args.key_type_ext = 0;
+		if (hsm_manage_key(hsmKeyMgmtHandle, &del_args)) {
+			*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
+			return V2XSE_FAILURE;
+		}
+		if (nvm_delete_array_data("rtCurveId", rtKeyId)) {
+			rtKeyHandle[rtKeyId] = 0;
+			*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
+			return V2XSE_FAILURE;
+		}
+		if (nvm_delete_array_data("rtKeyHandle", rtKeyId)) {
+			rtKeyHandle[rtKeyId] = 0;
+			*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
+			return V2XSE_FAILURE;
+		}
+	}
+
+	args.key_identifier = &keyHandle;
+	args.out_size = v2xSe_getKeyLenFromCurveID(curveId);
+	args.flags = HSM_OP_KEY_GENERATION_FLAGS_CREATE_PERSISTENT |
+				HSM_OP_KEY_GENERATION_FLAGS_STRICT_OPERATION;
+	args.key_type = keyType;
+	args.key_type_ext = 0;
+	args.key_info = 0;
+	args.out_key = (uint8_t*)pPublicKeyPlain;
+	if (hsm_generate_key(hsmKeyMgmtHandle, &args)) {
+		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
+		return V2XSE_FAILURE;
+	}
+	if (nvm_update_array_data("rtCurveId", rtKeyId,	(uint8_t*)&curveId,
+							sizeof(curveId))) {
+		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
+		return V2XSE_FAILURE;
+	}
+	if (nvm_update_array_data("rtKeyHandle", rtKeyId, (uint8_t*)&keyHandle,
+							sizeof(keyHandle))) {
+		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
+		return V2XSE_FAILURE;
+	}
+	rtKeyHandle[rtKeyId] = keyHandle;
+	rtCurveId[rtKeyId] = curveId;
+	*pHsmStatusCode = V2XSE_NO_ERROR;
+	return V2XSE_SUCCESS;
+}
+
+
 int32_t v2xSe_deleteRtEccPrivateKey
 (
     TypeRtKeyId_t rtKeyId,
     TypeSW_t *pHsmStatusCode
-);
+)
+{
+	uint32_t keyHandle;
+	TypeCurveId_t storedCurveId;
+	op_manage_key_args_t del_args;
+
+	VERIFY_STATUS_CODE_PTR()
+	ENFORCE_STATE_ACTIVATED()
+	ENFORCE_NORMAL_OPERATING_PHASE()
+
+	if (nvm_retrieve_rt_key_handle(rtKeyId, &keyHandle, &storedCurveId)) {
+		*pHsmStatusCode = V2XSE_WRONG_DATA;
+		return V2XSE_FAILURE;
+	}
+
+	del_args.key_identifier = &keyHandle;
+	del_args.flags = HSM_OP_MANAGE_KEY_FLAGS_DELETE;
+	del_args.key_type = convertCurveId(storedCurveId);
+	del_args.key_type_ext = 0;
+	if (hsm_manage_key(hsmKeyMgmtHandle, &del_args)) {
+		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
+		return V2XSE_FAILURE;
+	}
+	if (nvm_delete_array_data("rtCurveId", rtKeyId)) {
+		rtKeyHandle[rtKeyId] = 0;
+		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
+		return V2XSE_FAILURE;
+	}
+	if (nvm_delete_array_data("rtKeyHandle", rtKeyId)) {
+		rtKeyHandle[rtKeyId] = 0;
+		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
+		return V2XSE_FAILURE;
+	}
+
+	rtKeyHandle[rtKeyId] = 0;
+	*pHsmStatusCode = V2XSE_NO_ERROR;
+	return V2XSE_SUCCESS;
+}
+
+/*
 int32_t v2xSe_getRtEccPublicKey
 (
     TypeRtKeyId_t rtKeyId,
@@ -205,18 +413,137 @@ int32_t v2xSe_createRtSign
     TypeSignature_t *pSignature
 
 );
+*/
+
 int32_t v2xSe_generateBaEccKeyPair
 (
     TypeBaseKeyId_t baseKeyId,
     TypeCurveId_t curveId,
     TypeSW_t *pHsmStatusCode,
     TypePublicKey_t *pPublicKeyPlain
-);
+)
+{
+	op_generate_key_args_t args;
+	uint16_t keyType;
+	uint32_t keyHandle;
+	TypeCurveId_t storedCurveId;
+
+	VERIFY_STATUS_CODE_PTR()
+	ENFORCE_STATE_ACTIVATED()
+	ENFORCE_NORMAL_OPERATING_PHASE()
+	ENFORCE_POINTER_NOT_NULL(pPublicKeyPlain)
+
+	if (baseKeyId >= NUM_STORAGE_SLOTS){
+		*pHsmStatusCode = V2XSE_WRONG_DATA;
+		return V2XSE_FAILURE;
+	}
+
+	keyType = convertCurveId(curveId);
+	if (!keyType) {
+		*pHsmStatusCode = V2XSE_WRONG_DATA;
+		return V2XSE_FAILURE;
+	}
+
+	if (!nvm_retrieve_ba_key_handle(baseKeyId, &keyHandle,
+							&storedCurveId)) {
+		op_manage_key_args_t del_args;
+
+		del_args.key_identifier = &keyHandle;
+		del_args.flags = HSM_OP_MANAGE_KEY_FLAGS_DELETE;
+		del_args.key_type = convertCurveId(storedCurveId);
+		del_args.key_type_ext = 0;
+		if (hsm_manage_key(hsmKeyMgmtHandle, &del_args)) {
+			*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
+			return V2XSE_FAILURE;
+		}
+		if (nvm_delete_array_data("baCurveId", baseKeyId)) {
+			baKeyHandle[baseKeyId] = 0;
+			*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
+			return V2XSE_FAILURE;
+		}
+		if (nvm_delete_array_data("baKeyHandle", baseKeyId)) {
+			baKeyHandle[baseKeyId] = 0;
+			*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
+			return V2XSE_FAILURE;
+		}
+		baKeyHandle[baseKeyId] = 0;
+	}
+
+	args.key_identifier = &keyHandle;
+	args.out_size = v2xSe_getKeyLenFromCurveID(curveId);
+	args.flags = HSM_OP_KEY_GENERATION_FLAGS_CREATE_PERSISTENT |
+				HSM_OP_KEY_GENERATION_FLAGS_STRICT_OPERATION;
+	args.key_type = keyType;
+	args.key_type_ext = 0;
+	args.key_info = 0;
+	args.out_key = (uint8_t*)pPublicKeyPlain;
+	if (hsm_generate_key(hsmKeyMgmtHandle, &args)) {
+		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
+		return V2XSE_FAILURE;
+	}
+	if (nvm_update_array_data("baCurveId", baseKeyId,
+					(uint8_t*)&curveId,
+					sizeof(curveId))) {
+		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
+		return V2XSE_FAILURE;
+	}
+	if (nvm_update_array_data("baKeyHandle", baseKeyId,
+					(uint8_t*)&keyHandle,
+					sizeof(keyHandle))) {
+		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
+		return V2XSE_FAILURE;
+	}
+
+	baKeyHandle[baseKeyId] = keyHandle;
+	baCurveId[baseKeyId] = curveId;
+	*pHsmStatusCode = V2XSE_NO_ERROR;
+	return V2XSE_SUCCESS;
+}
+
 int32_t v2xSe_deleteBaEccPrivateKey
 (
     TypeBaseKeyId_t baseKeyId,
     TypeSW_t *pHsmStatusCode
-);
+)
+{
+	uint32_t keyHandle;
+	TypeCurveId_t storedCurveId;
+	op_manage_key_args_t del_args;
+
+	VERIFY_STATUS_CODE_PTR()
+	ENFORCE_STATE_ACTIVATED()
+	ENFORCE_NORMAL_OPERATING_PHASE()
+
+	if (nvm_retrieve_ba_key_handle(baseKeyId, &keyHandle, &storedCurveId)) {
+		*pHsmStatusCode = V2XSE_WRONG_DATA;
+		return V2XSE_FAILURE;
+	}
+
+	del_args.key_identifier = &keyHandle;
+	del_args.flags = HSM_OP_MANAGE_KEY_FLAGS_DELETE;
+	del_args.key_type = convertCurveId(storedCurveId);
+	del_args.key_type_ext = 0;
+	if (hsm_manage_key(hsmKeyMgmtHandle, &del_args)) {
+		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
+		return V2XSE_FAILURE;
+	}
+	if (nvm_delete_array_data("baCurveId", baseKeyId)) {
+		baKeyHandle[baseKeyId] = 0;
+		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
+		return V2XSE_FAILURE;
+	}
+	if (nvm_delete_array_data("baKeyHandle", baseKeyId)) {
+		baKeyHandle[baseKeyId] = 0;
+		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
+		return V2XSE_FAILURE;
+	}
+
+	baKeyHandle[baseKeyId] = 0;
+	*pHsmStatusCode = V2XSE_NO_ERROR;
+	return V2XSE_SUCCESS;
+}
+
+/*
 int32_t v2xSe_getBaEccPublicKey
 (
     TypeBaseKeyId_t baseKeyId,
@@ -259,6 +586,7 @@ int32_t v2xSe_getAppletVersion
 	VERIFY_STATUS_CODE_PTR()
 	ENFORCE_STATE_ACTIVATED()
 	ENFORCE_POINTER_NOT_NULL(pVersion)
+
 	if ((appletType != e_V2X) && (appletType != e_GS)) {
 		*pHsmStatusCode = V2XSE_WRONG_DATA;
 		return V2XSE_FAILURE;
@@ -479,7 +807,8 @@ int32_t v2xSe_storeData(TypeGsDataIndex_t index, TypeLen_t length,
 		*pHsmStatusCode = V2XSE_WRONG_DATA;
 		return V2XSE_DEVICE_NOT_CONNECTED;
 	}
-	if (nvm_update_generic_data(index, pData, length) == -1) {
+	if (nvm_update_array_data("genericStorage", index, pData, length) ==
+	 								-1) {
 		*pHsmStatusCode = V2XSE_FILE_FULL;
 		return V2XSE_DEVICE_NOT_CONNECTED;
 	}
@@ -524,7 +853,7 @@ int32_t v2xSe_deleteData(TypeGsDataIndex_t index, TypeSW_t *pHsmStatusCode)
 		*pHsmStatusCode = V2XSE_WRONG_DATA;
 		return V2XSE_DEVICE_NOT_CONNECTED;
 	}
-	if (nvm_delete_generic_data(index) == -1) {
+	if (nvm_delete_array_data("genericStorage", index) == -1) {
 		*pHsmStatusCode = V2XSE_WRONG_DATA;
 		return V2XSE_DEVICE_NOT_CONNECTED;
 	}
