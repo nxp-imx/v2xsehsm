@@ -450,14 +450,14 @@ int32_t v2xSe_getRtEccPublicKey
 	}
 
 	if(nvm_retrieve_rt_key_handle(rtKeyId, &keyHandle, &curveId)) {
-		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
+		*pHsmStatusCode = V2XSE_WRONG_DATA;
 		return V2XSE_FAILURE;
 	}
 
 	args.key_identifier = &keyHandle;
 	args.output_key = (uint8_t*)pPublicKeyPlain;
 	if (hsm_calculate_public_key(hsmKeyMgmtHandle, &args)) {
-		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
+		*pHsmStatusCode = V2XSE_WRONG_DATA;
 		return V2XSE_FAILURE;
 	}
 
@@ -640,14 +640,14 @@ int32_t v2xSe_getBaEccPublicKey
 	}
 
 	if(nvm_retrieve_ba_key_handle(baseKeyId, &keyHandle, &curveId)) {
-		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
+		*pHsmStatusCode = V2XSE_WRONG_DATA;
 		return V2XSE_FAILURE;
 	}
 
 	args.key_identifier = &keyHandle;
 	args.output_key = (uint8_t*)pPublicKeyPlain;
 	if (hsm_calculate_public_key(hsmKeyMgmtHandle, &args)) {
-		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
+		*pHsmStatusCode = V2XSE_WRONG_DATA;
 		return V2XSE_FAILURE;
 	}
 
@@ -712,14 +712,29 @@ int32_t v2xSe_getAppletVersion
 	return V2XSE_SUCCESS;
 }
 
-/*
 int32_t v2xSe_getRandomNumber
 (
     TypeLen_t length,
     TypeSW_t *pHsmStatusCode,
     TypeRandomNumber_t *pRandomNumber
-);
-*/
+)
+{
+	op_get_random_args_t args;
+
+	VERIFY_STATUS_CODE_PTR()
+	ENFORCE_STATE_ACTIVATED()
+	ENFORCE_POINTER_NOT_NULL(pRandomNumber)
+
+	args.output = (uint8_t*)pRandomNumber;
+	args.random_size = length;
+	if (hsm_get_random(hsmRngHandle, &args)) {
+		*pHsmStatusCode = V2XSE_WRONG_DATA;
+		return V2XSE_FAILURE;
+	}
+
+	*pHsmStatusCode = V2XSE_NO_ERROR;
+	return V2XSE_SUCCESS;
+}
 
 int32_t v2xSe_getSeInfo
 (
