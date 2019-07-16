@@ -7,6 +7,7 @@ uint8_t	v2xseState = V2XSE_STATE_INIT;
 channelSecLevel_t v2xseSecurityLevel;
 appletSelection_t v2xseAppletId;
 const uint8_t serialNumber[V2XSE_SERIAL_NUMBER] = SERIALNUM_BYTES;
+uint32_t preparedKeyHandle = 0;
 
 /* HSM handles */
 hsm_hdl_t hsmSessionHandle;
@@ -286,16 +287,60 @@ int32_t v2xSe_getMaEccPublicKey
 	return V2XSE_SUCCESS;
 }
 
-
-/*
 int32_t v2xSe_createMaSign
 (
     TypeHashLength_t hashLength,
     TypeHash_t *pHashValue,
     TypeSW_t *pHsmStatusCode,
     TypeSignature_t *pSignature
-);
-*/
+)
+{
+	uint32_t keyHandle;
+	TypeCurveId_t curveId;
+	hsm_signature_scheme_id_t sig_scheme;
+	TypeHashLength_t expectedHashLength;
+	op_generate_sign_args_t args;
+
+	VERIFY_STATUS_CODE_PTR()
+	ENFORCE_STATE_ACTIVATED()
+	ENFORCE_NORMAL_OPERATING_PHASE()
+	ENFORCE_POINTER_NOT_NULL(pHashValue)
+	ENFORCE_POINTER_NOT_NULL(pSignature)
+
+	if(nvm_retrieve_ma_key_handle(&keyHandle, &curveId)) {
+		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
+		return V2XSE_FAILURE;
+	}
+
+	sig_scheme = convertCurveId(curveId);
+	if (!sig_scheme) {
+		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
+		return V2XSE_FAILURE;
+	}
+	if (is256bitCurve(sig_scheme))
+		expectedHashLength = V2XSE_256_EC_HASH_SIZE;
+	else
+		expectedHashLength = V2XSE_384_EC_HASH_SIZE;
+	if (hashLength != expectedHashLength) {
+		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
+		return V2XSE_FAILURE;
+	}
+
+	args.key_identifier = keyHandle;
+	args.message = pHashValue->data;
+	args.signature = (uint8_t*)pSignature;
+	args.message_size = hashLength;
+	args.signature_size = v2xSe_getSigLenFromHashLen(hashLength);
+	args.scheme_id = sig_scheme;
+	args.flags = HSM_OP_GENERATE_SIGN_FLAGS_INPUT_DIGEST;
+	if (hsm_generate_signature(hsmSigGenHandle, &args)) {
+		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
+		return V2XSE_FAILURE;
+	}
+
+	*pHsmStatusCode = V2XSE_NO_ERROR;
+	return V2XSE_SUCCESS;
+}
 
 int32_t v2xSe_generateRtEccKeyPair
 (
@@ -466,14 +511,45 @@ int32_t v2xSe_getRtEccPublicKey
 	return V2XSE_SUCCESS;
 }
 
-/*
 int32_t v2xSe_createRtSignLowLatency
 (
     TypeHash_t *pHashValue,
     TypeSW_t *pHsmStatusCode,
     TypeSignature_t *pSignature,
     TypeLowlatencyIndicator_t *pFastIndicator
-);
+)
+{
+	op_finalize_sign_args_t args;
+
+	VERIFY_STATUS_CODE_PTR()
+	ENFORCE_STATE_ACTIVATED()
+	ENFORCE_NORMAL_OPERATING_PHASE()
+	ENFORCE_POINTER_NOT_NULL(pHashValue)
+	ENFORCE_POINTER_NOT_NULL(pSignature)
+	ENFORCE_POINTER_NOT_NULL(pFastIndicator)
+
+	if (!preparedKeyHandle) {
+		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
+		return V2XSE_FAILURE;
+	}
+
+	args.key_identifier = preparedKeyHandle;
+	args.message = pHashValue->data;
+	args.signature = (uint8_t*)pSignature;
+	args.message_size = V2XSE_256_EC_HASH_SIZE;
+	args.signature_size =
+		v2xSe_getSigLenFromHashLen(V2XSE_256_EC_HASH_SIZE);
+	args.flags = HSM_OP_GENERATE_SIGN_FLAGS_INPUT_DIGEST;
+	if (hsm_finalize_signature(hsmSigGenHandle, &args)) {
+		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
+		return V2XSE_FAILURE;
+	}
+
+	*pFastIndicator = 1;
+	*pHsmStatusCode = V2XSE_NO_ERROR;
+	return V2XSE_SUCCESS;
+}
+
 int32_t v2xSe_createRtSign
 (
     TypeRtKeyId_t rtKeyId,
@@ -481,8 +557,56 @@ int32_t v2xSe_createRtSign
     TypeSW_t *pHsmStatusCode,
     TypeSignature_t *pSignature
 
-);
-*/
+)
+{
+	uint32_t keyHandle;
+	TypeCurveId_t curveId;
+	hsm_signature_scheme_id_t sig_scheme;
+	op_generate_sign_args_t args;
+
+	VERIFY_STATUS_CODE_PTR()
+	ENFORCE_STATE_ACTIVATED()
+	ENFORCE_NORMAL_OPERATING_PHASE()
+	ENFORCE_POINTER_NOT_NULL(pHashValue)
+	ENFORCE_POINTER_NOT_NULL(pSignature)
+
+	if (rtKeyId >= NUM_STORAGE_SLOTS){
+		*pHsmStatusCode = V2XSE_WRONG_DATA;
+		return V2XSE_FAILURE;
+	}
+
+	if(nvm_retrieve_rt_key_handle(rtKeyId, &keyHandle, &curveId)) {
+		*pHsmStatusCode = V2XSE_WRONG_DATA;
+		return V2XSE_FAILURE;
+	}
+
+	sig_scheme = convertCurveId(curveId);
+	if (!sig_scheme) {
+		*pHsmStatusCode = V2XSE_WRONG_DATA;
+		return V2XSE_FAILURE;
+	}
+	if (!is256bitCurve(sig_scheme)){
+		*pHsmStatusCode = V2XSE_WRONG_DATA;
+		return V2XSE_FAILURE;
+	}
+
+	args.key_identifier = keyHandle;
+	args.message = pHashValue->data;
+	args.signature = (uint8_t*)pSignature;
+	args.message_size = V2XSE_256_EC_HASH_SIZE;
+	args.signature_size =
+		v2xSe_getSigLenFromHashLen(V2XSE_256_EC_HASH_SIZE);
+	args.scheme_id = sig_scheme;
+	args.flags = HSM_OP_GENERATE_SIGN_FLAGS_INPUT_DIGEST;
+	if (hsm_generate_signature(hsmSigGenHandle, &args)) {
+		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
+		return V2XSE_FAILURE;
+	}
+
+	*pHsmStatusCode = V2XSE_NO_ERROR;
+	return V2XSE_SUCCESS;
+}
+
 
 int32_t v2xSe_generateBaEccKeyPair
 (
@@ -656,7 +780,7 @@ int32_t v2xSe_getBaEccPublicKey
 	return V2XSE_SUCCESS;
 }
 
-/*
+
 int32_t v2xSe_createBaSign
 (
     TypeBaseKeyId_t baseKeyId,
@@ -664,7 +788,61 @@ int32_t v2xSe_createBaSign
     TypeHash_t *pHashValue,
     TypeSW_t *pHsmStatusCode,
     TypeSignature_t *pSignature
-);
+)
+{
+	uint32_t keyHandle;
+	TypeCurveId_t curveId;
+	hsm_signature_scheme_id_t sig_scheme;
+	TypeHashLength_t expectedHashLength;
+	op_generate_sign_args_t args;
+
+	VERIFY_STATUS_CODE_PTR()
+	ENFORCE_STATE_ACTIVATED()
+	ENFORCE_NORMAL_OPERATING_PHASE()
+	ENFORCE_POINTER_NOT_NULL(pHashValue)
+	ENFORCE_POINTER_NOT_NULL(pSignature)
+
+	if (baseKeyId >= NUM_STORAGE_SLOTS){
+		*pHsmStatusCode = V2XSE_WRONG_DATA;
+		return V2XSE_FAILURE;
+	}
+
+	if(nvm_retrieve_ba_key_handle(baseKeyId, &keyHandle, &curveId)) {
+		*pHsmStatusCode = V2XSE_WRONG_DATA;
+		return V2XSE_FAILURE;
+	}
+
+	sig_scheme = convertCurveId(curveId);
+	if (!sig_scheme) {
+		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
+		return V2XSE_FAILURE;
+	}
+	if (is256bitCurve(sig_scheme))
+		expectedHashLength = V2XSE_256_EC_HASH_SIZE;
+	else
+		expectedHashLength = V2XSE_384_EC_HASH_SIZE;
+	if (hashLength != expectedHashLength) {
+		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
+		return V2XSE_FAILURE;
+	}
+
+	args.key_identifier = keyHandle;
+	args.message = pHashValue->data;
+	args.signature = (uint8_t*)pSignature;
+	args.message_size = hashLength;
+	args.signature_size = v2xSe_getSigLenFromHashLen(hashLength);
+	args.scheme_id = sig_scheme;
+	args.flags = HSM_OP_GENERATE_SIGN_FLAGS_INPUT_DIGEST;
+	if (hsm_generate_signature(hsmSigGenHandle, &args)) {
+		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
+		return V2XSE_FAILURE;
+	}
+
+	*pHsmStatusCode = V2XSE_NO_ERROR;
+	return V2XSE_SUCCESS;
+}
+
+/*
 int32_t v2xSe_deriveRtEccKeyPair
 (
     TypeBaseKeyId_t baseKeyId,
@@ -677,12 +855,51 @@ int32_t v2xSe_deriveRtEccKeyPair
     TypeCurveId_t *pCurveID,
     TypePublicKey_t *pPublicKeyPlain
 );
+*/
+
 int32_t v2xSe_activateRtKeyForSigning
 (
     TypeRtKeyId_t rtKeyId,
     TypeSW_t *pHsmStatusCode
-);
-*/
+)
+{
+	uint32_t keyHandle;
+	TypeCurveId_t curveId;
+	hsm_signature_scheme_id_t sig_scheme;
+	op_prepare_sign_args_t args;
+
+	VERIFY_STATUS_CODE_PTR()
+	ENFORCE_STATE_ACTIVATED()
+	ENFORCE_NORMAL_OPERATING_PHASE()
+
+	if (rtKeyId >= NUM_STORAGE_SLOTS){
+		*pHsmStatusCode = V2XSE_WRONG_DATA;
+		return V2XSE_FAILURE;
+	}
+
+	if(nvm_retrieve_rt_key_handle(rtKeyId, &keyHandle, &curveId)) {
+		*pHsmStatusCode = V2XSE_WRONG_DATA;
+		return V2XSE_FAILURE;
+	}
+
+	sig_scheme = convertCurveId(curveId);
+	if (!sig_scheme) {
+		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
+		return V2XSE_FAILURE;
+	}
+	preparedKeyHandle = keyHandle;
+	//?? args does not have a field for key handle!?
+	args.scheme_id = sig_scheme;
+	args.flags = 0;
+	if (hsm_prepare_signature(hsmSigGenHandle, &args)) {
+		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
+		return V2XSE_FAILURE;
+	}
+
+	*pHsmStatusCode = V2XSE_NO_ERROR;
+	return V2XSE_SUCCESS;
+}
+
 int32_t v2xSe_getAppletVersion
 (
     appletSelection_t appletType,
