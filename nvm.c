@@ -1,4 +1,7 @@
 
+#ifndef NVM_H
+#define NVM_H
+
 #include <unistd.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -98,10 +101,27 @@ int nvm_retrieve_generic_data(int index, uint8_t* data, TypeLen_t* size)
 	return 0;
 }
 
+int nvm_retrieve_ma_key_handle(uint32_t* handle, TypeCurveId_t* id)
+{
+	if (maKeyHandle) {
+		/* Key already in memory, return info */
+		*handle = maKeyHandle;
+		*id = maCurveId;
+		return 0;
+	}
+
+	/* Key not in memory, check if in NVM and load if it is */
+	if (nvm_load_var("maKeyHandle", (uint8_t*)handle, sizeof(*handle)))
+		return -1;
+
+	if (nvm_load_var("maCurveId", id, sizeof(*id)))
+		return -1;
+
+	return 0;
+}
+
 int nvm_retrieve_rt_key_handle(int index, uint32_t* handle, TypeCurveId_t* id)
 {
-	char filename[MAX_FILENAME_SIZE];
-
 	if (rtKeyHandle[index]) {
 		/* Key already in memory, return info */
 		*handle = rtKeyHandle[index];
@@ -110,12 +130,11 @@ int nvm_retrieve_rt_key_handle(int index, uint32_t* handle, TypeCurveId_t* id)
 	}
 
 	/* Key not in memory, check if in NVM and load if it is */
-	snprintf(filename, MAX_FILENAME_SIZE, "rtKeyHandle/%d",	index);
-	if (nvm_load_var(filename, (uint8_t*)handle, sizeof(*handle)))
+	if (nvm_load_array_data("rtKeyHandle", index, (uint8_t*)handle,
+							sizeof(*handle)))
 		return -1;
 
-	snprintf(filename, MAX_FILENAME_SIZE, "rtCurveId/%d", index);
-	if (nvm_load_var(filename, id, sizeof(*id)))
+	if (nvm_load_array_data("rtCurveId", index, id, sizeof(*id)))
 		return -1;
 
 	return 0;
@@ -123,8 +142,6 @@ int nvm_retrieve_rt_key_handle(int index, uint32_t* handle, TypeCurveId_t* id)
 
 int nvm_retrieve_ba_key_handle(int index, uint32_t* handle, TypeCurveId_t* id)
 {
-	char filename[MAX_FILENAME_SIZE];
-
 	if (baKeyHandle[index]) {
 		/* Key already in memory, return info */
 		*handle = baKeyHandle[index];
@@ -133,12 +150,11 @@ int nvm_retrieve_ba_key_handle(int index, uint32_t* handle, TypeCurveId_t* id)
 	}
 
 	/* Key not in memory, check if in NVM and load if it is */
-	snprintf(filename, MAX_FILENAME_SIZE, "baKeyHandle/%d",	index);
-	if (nvm_load_var(filename, (uint8_t*)handle, sizeof(*handle)))
+	if (nvm_load_array_data("baKeyHandle", index, (uint8_t*)handle,
+							sizeof(*handle)))
 		return -1;
 
-	snprintf(filename, MAX_FILENAME_SIZE, "baCurveId/%d", index);
-	if (nvm_load_var(filename, id, sizeof(*id)))
+	if (nvm_load_array_data("baCurveId", index, id, sizeof(*id)))
 		return -1;
 
 	return 0;
@@ -215,3 +231,5 @@ int nvm_init(void)
 
 	return 0;
 }
+
+#endif

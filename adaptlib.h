@@ -1,4 +1,7 @@
 
+#ifndef ADAPTLIB_H
+#define ADAPTLIB_H
+
 #include "v2xSe.h"
 #include "../hsmstub/hsmstub.h"
 
@@ -24,6 +27,7 @@
 extern uint8_t	v2xsePhase;
 extern uint32_t key_store_nonce;
 extern uint32_t maKeyHandle;
+extern TypeCurveId_t maCurveId;
 extern uint32_t rtKeyHandle[NUM_STORAGE_SLOTS];
 extern TypeCurveId_t rtCurveId[NUM_STORAGE_SLOTS];
 extern uint32_t baKeyHandle[NUM_STORAGE_SLOTS];
@@ -75,3 +79,5 @@ extern TypeCurveId_t baCurveId[NUM_STORAGE_SLOTS];
 		return V2XSE_FAILURE;				\
 	}							\
 }
+
+#endif

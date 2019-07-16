@@ -203,6 +203,8 @@ int32_t v2xSe_generateMaEccKeyPair
 {
 	op_generate_key_args_t args;
 	uint16_t keyType;
+	uint32_t keyHandle;
+	TypeCurveId_t savedCurveId;
 
 	VERIFY_STATUS_CODE_PTR()
 	ENFORCE_STATE_ACTIVATED()
@@ -215,14 +217,13 @@ int32_t v2xSe_generateMaEccKeyPair
 		return V2XSE_FAILURE;
 	}
 
-	/* Check if MA is already assigned (so in NVM) */
-	if(!nvm_load_var("maKeyHandle", (uint8_t*)&maKeyHandle,
-						sizeof(maKeyHandle))) {
+	/* Check if MA is already assigned */
+	if(!nvm_retrieve_ma_key_handle(&keyHandle, &savedCurveId)) {
 		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 		return V2XSE_FAILURE;
 	}
 
-	args.key_identifier = &maKeyHandle;
+	args.key_identifier = &keyHandle;
 	args.out_size = v2xSe_getKeyLenFromCurveID(curveId);
 	args.flags = HSM_OP_KEY_GENERATION_FLAGS_CREATE_PERSISTENT |
 				HSM_OP_KEY_GENERATION_FLAGS_STRICT_OPERATION;
@@ -234,29 +235,59 @@ int32_t v2xSe_generateMaEccKeyPair
 		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 		return V2XSE_FAILURE;
 	}
-	maCurveId = curveId;
-	if (nvm_update_var("maCurveId", (uint8_t*)&maCurveId,
-							sizeof(maCurveId))) {
+	if (nvm_update_var("maCurveId", (uint8_t*)&curveId,
+							sizeof(curveId))) {
 		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 		return V2XSE_FAILURE;
 	}
-	if (nvm_update_var("maKeyHandle", (uint8_t*)&maKeyHandle,
-							sizeof(maKeyHandle))) {
+	if (nvm_update_var("maKeyHandle", (uint8_t*)&keyHandle,
+							sizeof(keyHandle))) {
 		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 		return V2XSE_FAILURE;
 	}
 
+	maCurveId = curveId;
+	maKeyHandle = keyHandle;
 	*pHsmStatusCode = V2XSE_NO_ERROR;
 	return V2XSE_SUCCESS;
 }
 
-/*
+
 int32_t v2xSe_getMaEccPublicKey
 (
     TypeSW_t *pHsmStatusCode,
     TypeCurveId_t *pCurveId,
     TypePublicKey_t *pPublicKeyPlain
-);
+)
+{
+	uint32_t keyHandle;
+	TypeCurveId_t curveId;
+	op_calc_pubkey_args_t args;
+
+	VERIFY_STATUS_CODE_PTR()
+	ENFORCE_STATE_ACTIVATED()
+	ENFORCE_POINTER_NOT_NULL(pCurveId)
+	ENFORCE_POINTER_NOT_NULL(pPublicKeyPlain)
+
+	if(nvm_retrieve_ma_key_handle(&keyHandle, &curveId)) {
+		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
+		return V2XSE_FAILURE;
+	}
+
+	args.key_identifier = &keyHandle;
+	args.output_key = (uint8_t*)pPublicKeyPlain;
+	if (hsm_calculate_public_key(hsmKeyMgmtHandle, &args)) {
+		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
+		return V2XSE_FAILURE;
+	}
+
+	*pCurveId = curveId;
+	*pHsmStatusCode = V2XSE_NO_ERROR;
+	return V2XSE_SUCCESS;
+}
+
+
+/*
 int32_t v2xSe_createMaSign
 (
     TypeHashLength_t hashLength,
@@ -361,6 +392,11 @@ int32_t v2xSe_deleteRtEccPrivateKey
 	ENFORCE_STATE_ACTIVATED()
 	ENFORCE_NORMAL_OPERATING_PHASE()
 
+	if (rtKeyId >= NUM_STORAGE_SLOTS){
+		*pHsmStatusCode = V2XSE_WRONG_DATA;
+		return V2XSE_FAILURE;
+	}
+
 	if (nvm_retrieve_rt_key_handle(rtKeyId, &keyHandle, &storedCurveId)) {
 		*pHsmStatusCode = V2XSE_WRONG_DATA;
 		return V2XSE_FAILURE;
@@ -390,14 +426,47 @@ int32_t v2xSe_deleteRtEccPrivateKey
 	return V2XSE_SUCCESS;
 }
 
-/*
+
 int32_t v2xSe_getRtEccPublicKey
 (
     TypeRtKeyId_t rtKeyId,
     TypeSW_t *pHsmStatusCode,
     TypeCurveId_t *pCurveId,
     TypePublicKey_t *pPublicKeyPlain
-);
+)
+{
+	uint32_t keyHandle;
+	TypeCurveId_t curveId;
+	op_calc_pubkey_args_t args;
+
+	VERIFY_STATUS_CODE_PTR()
+	ENFORCE_STATE_ACTIVATED()
+	ENFORCE_POINTER_NOT_NULL(pCurveId)
+	ENFORCE_POINTER_NOT_NULL(pPublicKeyPlain)
+
+	if (rtKeyId >= NUM_STORAGE_SLOTS){
+		*pHsmStatusCode = V2XSE_WRONG_DATA;
+		return V2XSE_FAILURE;
+	}
+
+	if(nvm_retrieve_rt_key_handle(rtKeyId, &keyHandle, &curveId)) {
+		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
+		return V2XSE_FAILURE;
+	}
+
+	args.key_identifier = &keyHandle;
+	args.output_key = (uint8_t*)pPublicKeyPlain;
+	if (hsm_calculate_public_key(hsmKeyMgmtHandle, &args)) {
+		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
+		return V2XSE_FAILURE;
+	}
+
+	*pCurveId = curveId;
+	*pHsmStatusCode = V2XSE_NO_ERROR;
+	return V2XSE_SUCCESS;
+}
+
+/*
 int32_t v2xSe_createRtSignLowLatency
 (
     TypeHash_t *pHashValue,
@@ -514,6 +583,11 @@ int32_t v2xSe_deleteBaEccPrivateKey
 	ENFORCE_STATE_ACTIVATED()
 	ENFORCE_NORMAL_OPERATING_PHASE()
 
+	if (baseKeyId >= NUM_STORAGE_SLOTS){
+		*pHsmStatusCode = V2XSE_WRONG_DATA;
+		return V2XSE_FAILURE;
+	}
+
 	if (nvm_retrieve_ba_key_handle(baseKeyId, &keyHandle, &storedCurveId)) {
 		*pHsmStatusCode = V2XSE_WRONG_DATA;
 		return V2XSE_FAILURE;
@@ -543,14 +617,47 @@ int32_t v2xSe_deleteBaEccPrivateKey
 	return V2XSE_SUCCESS;
 }
 
-/*
 int32_t v2xSe_getBaEccPublicKey
 (
     TypeBaseKeyId_t baseKeyId,
     TypeSW_t *pHsmStatusCode,
     TypeCurveId_t *pCurveId,
     TypePublicKey_t *pPublicKeyPlain
-);int32_t v2xSe_createBaSign
+)
+{
+	uint32_t keyHandle;
+	TypeCurveId_t curveId;
+	op_calc_pubkey_args_t args;
+
+	VERIFY_STATUS_CODE_PTR()
+	ENFORCE_STATE_ACTIVATED()
+	ENFORCE_POINTER_NOT_NULL(pCurveId)
+	ENFORCE_POINTER_NOT_NULL(pPublicKeyPlain)
+
+	if (baseKeyId >= NUM_STORAGE_SLOTS){
+		*pHsmStatusCode = V2XSE_WRONG_DATA;
+		return V2XSE_FAILURE;
+	}
+
+	if(nvm_retrieve_ba_key_handle(baseKeyId, &keyHandle, &curveId)) {
+		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
+		return V2XSE_FAILURE;
+	}
+
+	args.key_identifier = &keyHandle;
+	args.output_key = (uint8_t*)pPublicKeyPlain;
+	if (hsm_calculate_public_key(hsmKeyMgmtHandle, &args)) {
+		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
+		return V2XSE_FAILURE;
+	}
+
+	*pCurveId = curveId;
+	*pHsmStatusCode = V2XSE_NO_ERROR;
+	return V2XSE_SUCCESS;
+}
+
+/*
+int32_t v2xSe_createBaSign
 (
     TypeBaseKeyId_t baseKeyId,
     TypeHashLength_t hashLength,
