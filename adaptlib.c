@@ -1190,9 +1190,44 @@ int32_t v2xSe_getAttackLog(TypeSW_t *pHsmStatusCode,
 	return V2XSE_SUCCESS;
 }
 
+
+int32_t v2xSe_encryptUsingEcies (TypeEncryptEcies_t *pEciesData,
+					TypeSW_t *pHsmStatusCode,
+					TypeLen_t *pVctLen,
+					TypeVCTData_t *pVctData )
+{
+	hsm_op_ecies_enc_args_t args;
+
+	VERIFY_STATUS_CODE_PTR()
+	ENFORCE_STATE_ACTIVATED()
+	ENFORCE_NORMAL_OPERATING_PHASE()
+	ENFORCE_POINTER_NOT_NULL(pEciesData)
+	ENFORCE_POINTER_NOT_NULL(pVctLen)
+	ENFORCE_POINTER_NOT_NULL(pVctData)
+
+	args.input = pEciesData->pMsgData->data;
+	args.pub_key = (uint8_t*)(pEciesData->pEccPublicKey);
+	args.p1 = pEciesData->kdfParamP1;
+	args.p2 = pEciesData->macParamP2;
+	args.output = pVctData->data;
+	args.input_size = pEciesData->msgLen;
+	args.p1_size = pEciesData->kdfParamP1Len;
+	args.p2_size = pEciesData->macParamP2Len;
+	args.pub_key_size = v2xSe_getKeyLenFromCurveID(pEciesData->curveId);
+	args.mac_size = pEciesData->macLen;
+	args.key_type = convertCurveId(pEciesData->curveId);
+	args.flags = 0;
+	if (hsm_ecies_encryption(hsmSessionHandle, &args)) {
+		*pHsmStatusCode = V2XSE_WRONG_DATA;
+		return V2XSE_FAILURE;
+	}
+
+	*pVctLen = args.out_size;
+	*pHsmStatusCode = V2XSE_NO_ERROR;
+	return V2XSE_SUCCESS;
+}
+
 /*
-int32_t v2xSe_encryptUsingEcies (TypeEncryptEcies_t *pEciesData, TypeSW_t *pHsmStatusCode,
-                                 TypeLen_t *pVctLen,TypeVCTData_t *pVctData );
 int32_t v2xSe_decryptUsingRtEcies (TypeRtKeyId_t rtKeyId,
                                    TypeDecryptEcies_t *pEciesData,TypeSW_t *pHsmStatusCode, TypeLen_t *pMsgLen,
                                    TypePlainText_t *pMsgData );
