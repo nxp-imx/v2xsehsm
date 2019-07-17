@@ -1215,29 +1215,112 @@ int32_t v2xSe_encryptUsingEcies (TypeEncryptEcies_t *pEciesData,
 	args.p2_size = pEciesData->macParamP2Len;
 	args.pub_key_size = v2xSe_getKeyLenFromCurveID(pEciesData->curveId);
 	args.mac_size = pEciesData->macLen;
+	/* expect args.out_size to be filled in by HSM */
 	args.key_type = convertCurveId(pEciesData->curveId);
 	args.flags = 0;
 	if (hsm_ecies_encryption(hsmSessionHandle, &args)) {
 		*pHsmStatusCode = V2XSE_WRONG_DATA;
 		return V2XSE_FAILURE;
 	}
-
 	*pVctLen = args.out_size;
 	*pHsmStatusCode = V2XSE_NO_ERROR;
 	return V2XSE_SUCCESS;
 }
 
-/*
 int32_t v2xSe_decryptUsingRtEcies (TypeRtKeyId_t rtKeyId,
-                                   TypeDecryptEcies_t *pEciesData,TypeSW_t *pHsmStatusCode, TypeLen_t *pMsgLen,
-                                   TypePlainText_t *pMsgData );
+					TypeDecryptEcies_t *pEciesData,
+					TypeSW_t *pHsmStatusCode,
+					TypeLen_t *pMsgLen,
+					TypePlainText_t *pMsgData )
+{
+	uint32_t keyHandle;
+	TypeCurveId_t curveId;
+	hsm_op_ecies_dec_args_t args;
+
+	VERIFY_STATUS_CODE_PTR()
+	ENFORCE_STATE_ACTIVATED()
+	ENFORCE_NORMAL_OPERATING_PHASE()
+	ENFORCE_POINTER_NOT_NULL(pEciesData)
+	ENFORCE_POINTER_NOT_NULL(pMsgLen)
+	ENFORCE_POINTER_NOT_NULL(pMsgData)
+
+	if (rtKeyId >= NUM_STORAGE_SLOTS){
+		*pHsmStatusCode = V2XSE_WRONG_DATA;
+		return V2XSE_FAILURE;
+	}
+	if(nvm_retrieve_rt_key_handle(rtKeyId, &keyHandle, &curveId)) {
+		*pHsmStatusCode = V2XSE_WRONG_DATA;
+		return V2XSE_FAILURE;
+	}
+
+	args.key_identifier = keyHandle;
+	args.input = pEciesData->pVctData->data;
+	args.p1 = pEciesData->kdfParamP1;
+	args.p2 = pEciesData->macParamP2;
+	args.output = pMsgData->data;
+	args.input_size = pEciesData->vctLen;
+	/* expect args.output_size to be filled in by HSM */
+	args.p1_size = pEciesData->kdfParamP1Len;
+	args.p2_size = pEciesData->macParamP2Len;
+	args.mac_size = pEciesData->macLen;
+	args.key_type = convertCurveId(curveId);
+	args.flags = 0;
+
+	if (hsm_ecies_decryption(hsmCipherHandle, &args)) {
+		*pHsmStatusCode = V2XSE_WRONG_DATA;
+		return V2XSE_FAILURE;
+	}
+	*pMsgLen = args.output_size;
+	*pHsmStatusCode = V2XSE_NO_ERROR;
+	return V2XSE_SUCCESS;
+}
+
 int32_t v2xSe_decryptUsingMaEcies
 (
     TypeDecryptEcies_t  *pEciesData,
     TypeSW_t *pHsmStatusCode,
     TypeLen_t *pMsgLen,
     TypePlainText_t *pMsgData
-);
+)
+{
+	uint32_t keyHandle;
+	TypeCurveId_t curveId;
+	hsm_op_ecies_dec_args_t args;
+
+	VERIFY_STATUS_CODE_PTR()
+	ENFORCE_STATE_ACTIVATED()
+	ENFORCE_NORMAL_OPERATING_PHASE()
+	ENFORCE_POINTER_NOT_NULL(pEciesData)
+	ENFORCE_POINTER_NOT_NULL(pMsgLen)
+	ENFORCE_POINTER_NOT_NULL(pMsgData)
+
+	if(nvm_retrieve_ma_key_handle(&keyHandle, &curveId)) {
+		*pHsmStatusCode = V2XSE_WRONG_DATA;
+		return V2XSE_FAILURE;
+	}
+
+	args.key_identifier = keyHandle;
+	args.input = pEciesData->pVctData->data;
+	args.p1 = pEciesData->kdfParamP1;
+	args.p2 = pEciesData->macParamP2;
+	args.output = pMsgData->data;
+	args.input_size = pEciesData->vctLen;
+	/* expect args.output_size to be filled in by HSM */
+	args.p1_size = pEciesData->kdfParamP1Len;
+	args.p2_size = pEciesData->macParamP2Len;
+	args.mac_size = pEciesData->macLen;
+	args.key_type = convertCurveId(curveId);
+	args.flags = 0;
+
+	if (hsm_ecies_decryption(hsmCipherHandle, &args)) {
+		*pHsmStatusCode = V2XSE_WRONG_DATA;
+		return V2XSE_FAILURE;
+	}
+	*pMsgLen = args.output_size;
+	*pHsmStatusCode = V2XSE_NO_ERROR;
+	return V2XSE_SUCCESS;
+}
+
 int32_t v2xSe_decryptUsingBaEcies
 (
     TypeBaseKeyId_t baseKeyId,
@@ -1245,8 +1328,49 @@ int32_t v2xSe_decryptUsingBaEcies
     TypeSW_t *pHsmStatusCode,
     TypeLen_t *pMsgLen,
     TypePlainText_t *pMsgData
-);
-*/
+)
+{
+	uint32_t keyHandle;
+	TypeCurveId_t curveId;
+	hsm_op_ecies_dec_args_t args;
+
+	VERIFY_STATUS_CODE_PTR()
+	ENFORCE_STATE_ACTIVATED()
+	ENFORCE_NORMAL_OPERATING_PHASE()
+	ENFORCE_POINTER_NOT_NULL(pEciesData)
+	ENFORCE_POINTER_NOT_NULL(pMsgLen)
+	ENFORCE_POINTER_NOT_NULL(pMsgData)
+
+	if (baseKeyId >= NUM_STORAGE_SLOTS){
+		*pHsmStatusCode = V2XSE_WRONG_DATA;
+		return V2XSE_FAILURE;
+	}
+	if(nvm_retrieve_ba_key_handle(baseKeyId, &keyHandle, &curveId)) {
+		*pHsmStatusCode = V2XSE_WRONG_DATA;
+		return V2XSE_FAILURE;
+	}
+
+	args.key_identifier = keyHandle;
+	args.input = pEciesData->pVctData->data;
+	args.p1 = pEciesData->kdfParamP1;
+	args.p2 = pEciesData->macParamP2;
+	args.output = pMsgData->data;
+	args.input_size = pEciesData->vctLen;
+	/* expect args.output_size to be filled in by HSM */
+	args.p1_size = pEciesData->kdfParamP1Len;
+	args.p2_size = pEciesData->macParamP2Len;
+	args.mac_size = pEciesData->macLen;
+	args.key_type = convertCurveId(curveId);
+	args.flags = 0;
+
+	if (hsm_ecies_decryption(hsmCipherHandle, &args)) {
+		*pHsmStatusCode = V2XSE_WRONG_DATA;
+		return V2XSE_FAILURE;
+	}
+	*pMsgLen = args.output_size;
+	*pHsmStatusCode = V2XSE_NO_ERROR;
+	return V2XSE_SUCCESS;
+}
 
 int32_t v2xSe_getKeyLenFromCurveID(TypeCurveId_t curveID)
 {
