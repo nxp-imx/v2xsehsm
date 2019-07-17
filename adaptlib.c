@@ -874,6 +874,10 @@ int32_t v2xSe_deriveRtEccKeyPair
 		ENFORCE_POINTER_NOT_NULL(pCurveID)
 	}
 
+	if ((v2xseAppletId != e_US_AND_GS) && (v2xseAppletId != e_US)){
+		*pHsmStatusCode = V2XSE_INS_NOT_SUPPORTED;
+		return V2XSE_FAILURE;
+	}
 	if (baseKeyId >= NUM_STORAGE_SLOTS){
 		*pHsmStatusCode = V2XSE_WRONG_DATA;
 		return V2XSE_FAILURE;
