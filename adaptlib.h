@@ -20,6 +20,9 @@
 #define V2XSE_STATE_CONNECTED	1
 #define V2XSE_STATE_ACTIVATED	2
 
+#define V2XSE_APP_US	0
+#define V2XSE_APP_EU	1
+
 #define STORAGE_PATH "/etc/v2x_hsm_adaptation/"
 
 #define NUM_STORAGE_SLOTS	10000

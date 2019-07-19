@@ -6,12 +6,14 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include "adaptlib.h"
 #include "nvm.h"
 
-static int nvm_clear(void) {
-	/* TODO: clear all existing data */
-	return 0;
+static int nvm_clear(void)
+{
+	/* Clear all NVM data  */
+	return system("rm -rf "STORAGE_PATH"*");
 }
 
 static int nvm_raw_load(char* name, uint8_t* data, TypeLen_t size)

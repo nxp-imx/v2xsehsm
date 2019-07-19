@@ -382,36 +382,39 @@ int32_t v2xSe_generateRtEccKeyPair
 	}
 
 	if (!nvm_retrieve_rt_key_handle(rtKeyId, &keyHandle, &storedCurveId)) {
-		op_manage_key_args_t del_args;
+		if (curveId != storedCurveId) {
+			op_manage_key_args_t del_args;
 
-		del_args.key_identifier = &keyHandle;
-		del_args.input_size = 0;
-		del_args.flags = HSM_OP_MANAGE_KEY_FLAGS_DELETE;
-		del_args.key_type = convertCurveId(storedCurveId);
-		del_args.key_type_ext = 0;
-		del_args.key_info = 0;
-		del_args.input_key = NULL;
-		if (hsm_manage_key(hsmKeyMgmtHandle, &del_args)) {
-			*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
-			return V2XSE_FAILURE;
-		}
-		if (nvm_delete_array_data("rtCurveId", rtKeyId)) {
+			del_args.key_identifier = &keyHandle;
+			del_args.input_size = 0;
+			del_args.flags = HSM_OP_MANAGE_KEY_FLAGS_DELETE;
+			del_args.key_type = convertCurveId(storedCurveId);
+			del_args.key_type_ext = 0;
+			del_args.key_info = 0;
+			del_args.input_key = NULL;
+			if (hsm_manage_key(hsmKeyMgmtHandle, &del_args)) {
+				*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
+				return V2XSE_FAILURE;
+			}
+			if (nvm_delete_array_data("rtCurveId", rtKeyId)) {
+				rtKeyHandle[rtKeyId] = 0;
+				*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
+				return V2XSE_FAILURE;
+			}
+			if (nvm_delete_array_data("rtKeyHandle", rtKeyId)) {
+				rtKeyHandle[rtKeyId] = 0;
+				*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
+				return V2XSE_FAILURE;
+			}
 			rtKeyHandle[rtKeyId] = 0;
-			*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
-			return V2XSE_FAILURE;
 		}
-		if (nvm_delete_array_data("rtKeyHandle", rtKeyId)) {
-			rtKeyHandle[rtKeyId] = 0;
-			*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
-			return V2XSE_FAILURE;
-		}
-		rtKeyHandle[rtKeyId] = 0;
 	}
 
 	args.key_identifier = &keyHandle;
 	args.out_size = v2xSe_getKeyLenFromCurveID(curveId);
-	args.flags = HSM_OP_KEY_GENERATION_FLAGS_CREATE_PERSISTENT |
-				HSM_OP_KEY_GENERATION_FLAGS_STRICT_OPERATION;
+	args.flags = HSM_OP_KEY_GENERATION_FLAGS_CREATE_PERSISTENT;
+	if (rtKeyHandle[rtKeyId])
+		args.flags |= HSM_OP_KEY_GENERATION_FLAGS_UPDATE;
 	args.key_type = keyType;
 	args.key_type_ext = 0;
 	args.key_info = 0;
@@ -667,36 +670,39 @@ int32_t v2xSe_generateBaEccKeyPair
 
 	if (!nvm_retrieve_ba_key_handle(baseKeyId, &keyHandle,
 							&storedCurveId)) {
-		op_manage_key_args_t del_args;
+		if (curveId != storedCurveId) {
+			op_manage_key_args_t del_args;
 
-		del_args.key_identifier = &keyHandle;
-		del_args.input_size = 0;
-		del_args.flags = HSM_OP_MANAGE_KEY_FLAGS_DELETE;
-		del_args.key_type = convertCurveId(storedCurveId);
-		del_args.key_type_ext = 0;
-		del_args.key_info = 0;
-		del_args.input_key = NULL;
-		if (hsm_manage_key(hsmKeyMgmtHandle, &del_args)) {
-			*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
-			return V2XSE_FAILURE;
-		}
-		if (nvm_delete_array_data("baCurveId", baseKeyId)) {
+			del_args.key_identifier = &keyHandle;
+			del_args.input_size = 0;
+			del_args.flags = HSM_OP_MANAGE_KEY_FLAGS_DELETE;
+			del_args.key_type = convertCurveId(storedCurveId);
+			del_args.key_type_ext = 0;
+			del_args.key_info = 0;
+			del_args.input_key = NULL;
+			if (hsm_manage_key(hsmKeyMgmtHandle, &del_args)) {
+				*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
+				return V2XSE_FAILURE;
+			}
+			if (nvm_delete_array_data("baCurveId", baseKeyId)) {
+				baKeyHandle[baseKeyId] = 0;
+				*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
+				return V2XSE_FAILURE;
+			}
+			if (nvm_delete_array_data("baKeyHandle", baseKeyId)) {
+				baKeyHandle[baseKeyId] = 0;
+				*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
+				return V2XSE_FAILURE;
+			}
 			baKeyHandle[baseKeyId] = 0;
-			*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
-			return V2XSE_FAILURE;
 		}
-		if (nvm_delete_array_data("baKeyHandle", baseKeyId)) {
-			baKeyHandle[baseKeyId] = 0;
-			*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
-			return V2XSE_FAILURE;
-		}
-		baKeyHandle[baseKeyId] = 0;
 	}
 
 	args.key_identifier = &keyHandle;
 	args.out_size = v2xSe_getKeyLenFromCurveID(curveId);
-	args.flags = HSM_OP_KEY_GENERATION_FLAGS_CREATE_PERSISTENT |
-				HSM_OP_KEY_GENERATION_FLAGS_STRICT_OPERATION;
+	args.flags = HSM_OP_KEY_GENERATION_FLAGS_CREATE_PERSISTENT;
+	if (baKeyHandle[baseKeyId])
+		args.flags |= HSM_OP_KEY_GENERATION_FLAGS_UPDATE;
 	args.key_type = keyType;
 	args.key_type_ext = 0;
 	args.key_info = 0;
@@ -973,23 +979,6 @@ int32_t v2xSe_deriveRtEccKeyPair
 		}
 	}
 
-	if (rtKeyHandle[rtKeyId] == 0) {
-		/* Not overwriting existing key, create new one to overwrite */
-		op_generate_key_args_t gen_args;
-
-		gen_args.key_identifier = &outputRtKeyHandle;
-		gen_args.out_size = 0;
-		gen_args.flags = HSM_OP_KEY_GENERATION_FLAGS_CREATE_PERSISTENT |
-				HSM_OP_KEY_GENERATION_FLAGS_STRICT_OPERATION;
-		gen_args.key_type = keyType;
-		gen_args.key_type_ext = 0;
-		gen_args.key_info = 0;
-		if (hsm_generate_key(hsmKeyMgmtHandle, &gen_args)) {
-			*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
-			return V2XSE_FAILURE;
-		}
-	}
-
 	args.key_identifier = inputBaKeyHandle;
 	args.data1 = pFvSign->data;
 	args.data2 = pHvij->data;
@@ -997,7 +986,9 @@ int32_t v2xSe_deriveRtEccKeyPair
 	args.data1_size = V2XSE_INT256_SIZE;
 	args.data2_size = V2XSE_INT256_SIZE;
 	args.data3_size = V2XSE_INT256_SIZE;
-	args.flags = 0;
+	args.flags = HSM_OP_KEY_GENERATION_FLAGS_CREATE_PERSISTENT;
+	if (rtKeyHandle[rtKeyId])
+		args.flags |= HSM_OP_KEY_GENERATION_FLAGS_UPDATE;
 	args.dest_key_identifier = outputRtKeyHandle;
 	if (returnPubKey == V2XSE_RSP_WITH_PUBKEY) {
 		args.output = (uint8_t*)pPublicKeyPlain;
