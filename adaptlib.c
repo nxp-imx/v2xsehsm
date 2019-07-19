@@ -103,8 +103,8 @@ int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId,
 		return V2XSE_FAILURE;
 	}
 
-	session_args.session_priority = EXPECTED_SESSION_PRIORITY;
-	session_args.operating_mode = EXPECTED_OPERATING_MODE;
+	session_args.session_priority = HSM_SESSION_PRIORITY;
+	session_args.operating_mode = HSM_OPERATING_MODE;
 	if (hsm_open_session(&session_args, &hsmSessionHandle)) {
 		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
 		return V2XSE_FAILURE;
@@ -128,11 +128,10 @@ int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId,
 			}
 		}
 		key_store_args.key_store_identifier =
-						EXPECTED_KEYSTORE_IDENTIFIER;
+						MAGIC_KEYSTORE_IDENTIFIER;
 		key_store_args.authentication_nonce = key_store_nonce;
-		key_store_args.max_updates_number = EXPECTED_MAX_UPDATES;
-		key_store_args.flags = HSM_SVC_KEY_STORE_FLAGS_CREATE |
-						HSM_SVC_KEY_STORE_FLAGS_UPDATE;
+		key_store_args.max_updates_number = MAX_KEYSTORE_UPDATES;
+		key_store_args.flags = HSM_SVC_KEY_STORE_FLAGS_CREATE;
 		if (hsm_open_key_store_service(hsmSessionHandle,
 					&key_store_args, &hsmKeyStoreHandle)) {
 			*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
@@ -142,7 +141,7 @@ int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId,
 						sizeof(key_store_nonce));
 	} else {
 		key_store_args.key_store_identifier =
-						EXPECTED_KEYSTORE_IDENTIFIER;
+						MAGIC_KEYSTORE_IDENTIFIER;
 		key_store_args.authentication_nonce = key_store_nonce;
 		key_store_args.max_updates_number = EXPECTED_MAX_UPDATES;
 		key_store_args.flags = HSM_SVC_KEY_STORE_FLAGS_UPDATE;
@@ -263,6 +262,7 @@ int32_t v2xSe_getMaEccPublicKey
 {
 	uint32_t keyHandle;
 	TypeCurveId_t curveId;
+	uint16_t keyType;
 	op_calc_pubkey_args_t args;
 
 	VERIFY_STATUS_CODE_PTR()
@@ -275,7 +275,17 @@ int32_t v2xSe_getMaEccPublicKey
 		return V2XSE_FAILURE;
 	}
 
+	keyType = convertCurveId(curveId);
+	if (!keyType) {
+		*pHsmStatusCode = V2XSE_WRONG_DATA;
+		return V2XSE_FAILURE;
+	}
+
 	args.key_identifier = &keyHandle;
+	args.out_size = v2xSe_getKeyLenFromCurveID(curveId);
+	args.flags = 0;
+	args.key_type = keyType;
+	args.key_type_ext = 0;
 	args.output_key = (uint8_t*)pPublicKeyPlain;
 	if (hsm_calculate_public_key(hsmKeyMgmtHandle, &args)) {
 		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
@@ -375,9 +385,12 @@ int32_t v2xSe_generateRtEccKeyPair
 		op_manage_key_args_t del_args;
 
 		del_args.key_identifier = &keyHandle;
+		del_args.input_size = 0;
 		del_args.flags = HSM_OP_MANAGE_KEY_FLAGS_DELETE;
 		del_args.key_type = convertCurveId(storedCurveId);
 		del_args.key_type_ext = 0;
+		del_args.key_info = 0;
+		del_args.input_key = NULL;
 		if (hsm_manage_key(hsmKeyMgmtHandle, &del_args)) {
 			*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 			return V2XSE_FAILURE;
@@ -449,9 +462,12 @@ int32_t v2xSe_deleteRtEccPrivateKey
 	}
 
 	del_args.key_identifier = &keyHandle;
+	del_args.input_size = 0;
 	del_args.flags = HSM_OP_MANAGE_KEY_FLAGS_DELETE;
 	del_args.key_type = convertCurveId(storedCurveId);
 	del_args.key_type_ext = 0;
+	del_args.key_info = 0;
+	del_args.input_key = NULL;
 	if (hsm_manage_key(hsmKeyMgmtHandle, &del_args)) {
 		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 		return V2XSE_FAILURE;
@@ -483,6 +499,7 @@ int32_t v2xSe_getRtEccPublicKey
 {
 	uint32_t keyHandle;
 	TypeCurveId_t curveId;
+	uint16_t keyType;
 	op_calc_pubkey_args_t args;
 
 	VERIFY_STATUS_CODE_PTR()
@@ -500,7 +517,17 @@ int32_t v2xSe_getRtEccPublicKey
 		return V2XSE_FAILURE;
 	}
 
+	keyType = convertCurveId(curveId);
+	if (!is256bitCurve(keyType)) {
+		*pHsmStatusCode = V2XSE_WRONG_DATA;
+		return V2XSE_FAILURE;
+	}
+
 	args.key_identifier = &keyHandle;
+	args.out_size = v2xSe_getKeyLenFromCurveID(curveId);
+	args.flags = 0;
+	args.key_type = keyType;
+	args.key_type_ext = 0;
 	args.output_key = (uint8_t*)pPublicKeyPlain;
 	if (hsm_calculate_public_key(hsmKeyMgmtHandle, &args)) {
 		*pHsmStatusCode = V2XSE_WRONG_DATA;
@@ -643,9 +670,12 @@ int32_t v2xSe_generateBaEccKeyPair
 		op_manage_key_args_t del_args;
 
 		del_args.key_identifier = &keyHandle;
+		del_args.input_size = 0;
 		del_args.flags = HSM_OP_MANAGE_KEY_FLAGS_DELETE;
 		del_args.key_type = convertCurveId(storedCurveId);
 		del_args.key_type_ext = 0;
+		del_args.key_info = 0;
+		del_args.input_key = NULL;
 		if (hsm_manage_key(hsmKeyMgmtHandle, &del_args)) {
 			*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 			return V2XSE_FAILURE;
@@ -719,9 +749,12 @@ int32_t v2xSe_deleteBaEccPrivateKey
 	}
 
 	del_args.key_identifier = &keyHandle;
+	del_args.input_size = 0;
 	del_args.flags = HSM_OP_MANAGE_KEY_FLAGS_DELETE;
 	del_args.key_type = convertCurveId(storedCurveId);
 	del_args.key_type_ext = 0;
+	del_args.key_info = 0;
+	del_args.input_key = NULL;
 	if (hsm_manage_key(hsmKeyMgmtHandle, &del_args)) {
 		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 		return V2XSE_FAILURE;
@@ -752,6 +785,7 @@ int32_t v2xSe_getBaEccPublicKey
 {
 	uint32_t keyHandle;
 	TypeCurveId_t curveId;
+	uint16_t keyType;
 	op_calc_pubkey_args_t args;
 
 	VERIFY_STATUS_CODE_PTR()
@@ -769,7 +803,17 @@ int32_t v2xSe_getBaEccPublicKey
 		return V2XSE_FAILURE;
 	}
 
+	keyType = convertCurveId(curveId);
+	if (!keyType) {
+		*pHsmStatusCode = V2XSE_WRONG_DATA;
+		return V2XSE_FAILURE;
+	}
+
 	args.key_identifier = &keyHandle;
+	args.out_size = v2xSe_getKeyLenFromCurveID(curveId);
+	args.flags = 0;
+	args.key_type = keyType;
+	args.key_type_ext = 0;
 	args.output_key = (uint8_t*)pPublicKeyPlain;
 	if (hsm_calculate_public_key(hsmKeyMgmtHandle, &args)) {
 		*pHsmStatusCode = V2XSE_WRONG_DATA;
@@ -905,9 +949,12 @@ int32_t v2xSe_deriveRtEccKeyPair
 			op_manage_key_args_t del_args;
 
 			del_args.key_identifier = &outputRtKeyHandle;
+			del_args.input_size = 0;
 			del_args.flags = HSM_OP_MANAGE_KEY_FLAGS_DELETE;
 			del_args.key_type = convertCurveId(storedRtCurveId);
 			del_args.key_type_ext = 0;
+			del_args.key_info = 0;
+			del_args.input_key = NULL;
 			if (hsm_manage_key(hsmKeyMgmtHandle, &del_args)) {
 				*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 				return V2XSE_FAILURE;
@@ -1215,7 +1262,7 @@ int32_t v2xSe_encryptUsingEcies (TypeEncryptEcies_t *pEciesData,
 	args.p2_size = pEciesData->macParamP2Len;
 	args.pub_key_size = v2xSe_getKeyLenFromCurveID(pEciesData->curveId);
 	args.mac_size = pEciesData->macLen;
-	/* expect args.out_size to be filled in by HSM */
+	args.out_size = *pVctLen;
 	args.key_type = convertCurveId(pEciesData->curveId);
 	args.flags = 0;
 	if (hsm_ecies_encryption(hsmSessionHandle, &args)) {
@@ -1259,7 +1306,7 @@ int32_t v2xSe_decryptUsingRtEcies (TypeRtKeyId_t rtKeyId,
 	args.p2 = pEciesData->macParamP2;
 	args.output = pMsgData->data;
 	args.input_size = pEciesData->vctLen;
-	/* expect args.output_size to be filled in by HSM */
+	args.output_size = *pMsgLen;
 	args.p1_size = pEciesData->kdfParamP1Len;
 	args.p2_size = pEciesData->macParamP2Len;
 	args.mac_size = pEciesData->macLen;
