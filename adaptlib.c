@@ -6,8 +6,13 @@
 uint8_t	v2xseState = V2XSE_STATE_INIT;
 channelSecLevel_t v2xseSecurityLevel;
 appletSelection_t v2xseAppletId;
-const uint8_t serialNumber[V2XSE_SERIAL_NUMBER] = SERIALNUM_BYTES;
+const char* appletVarStoragePath;
 uint32_t preparedKeyHandle = 0;
+
+const uint8_t serialNumber[V2XSE_SERIAL_NUMBER] = SERIALNUM_BYTES;
+const char usVarStorage[] = US_NVM_VAR_PATH;
+const char euVarStorage[] = EU_NVM_VAR_PATH;
+
 
 /* HSM handles */
 hsm_hdl_t hsmSessionHandle;
@@ -84,11 +89,18 @@ int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId,
 	open_svc_key_management_args_t key_mgmt_args;
 	open_svc_cipher_args_t cipher_args;
 	open_svc_sign_gen_args_t sig_gen_args;
+	uint32_t keystore_identifier;
 
 	VERIFY_STATUS_CODE_PTR()
 	ENFORCE_STATE_INIT();
 
-	if ((appletId < e_EU) || (appletId > e_US_AND_GS)) {
+	if ((appletId == e_US_AND_GS) || (appletId == e_US)){
+		appletVarStoragePath = usVarStorage;
+		keystore_identifier = MAGIC_KEYSTORE_IDENTIFIER_US;
+	} else if ((appletId == e_EU_AND_GS) || (appletId == e_EU)){
+		appletVarStoragePath = euVarStorage;
+		keystore_identifier = MAGIC_KEYSTORE_IDENTIFIER_EU;
+	} else {
 		*pHsmStatusCode = V2XSE_APP_MISSING;
 		return V2XSE_FAILURE;
 	}
@@ -115,7 +127,6 @@ int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId,
 		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
 		return V2XSE_FAILURE;
 	}
-
 	if (key_store_nonce == 0) {
 		/* value doesn't exist, create key store */
 		rng_get_args.output = (uint8_t*)&key_store_nonce;
@@ -127,8 +138,7 @@ int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId,
 				return V2XSE_FAILURE;
 			}
 		}
-		key_store_args.key_store_identifier =
-						MAGIC_KEYSTORE_IDENTIFIER;
+		key_store_args.key_store_identifier = keystore_identifier;
 		key_store_args.authentication_nonce = key_store_nonce;
 		key_store_args.max_updates_number = MAX_KEYSTORE_UPDATES;
 		key_store_args.flags = HSM_SVC_KEY_STORE_FLAGS_CREATE;
@@ -137,11 +147,14 @@ int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId,
 			*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
 			return V2XSE_FAILURE;
 		}
-		nvm_update_var("key_store_nonce", (uint8_t*)&key_store_nonce,
-						sizeof(key_store_nonce));
+		if (nvm_update_var("key_store_nonce",
+						(uint8_t*)&key_store_nonce,
+						sizeof(key_store_nonce))) {
+			*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
+			return V2XSE_FAILURE;
+		}
 	} else {
-		key_store_args.key_store_identifier =
-						MAGIC_KEYSTORE_IDENTIFIER;
+		key_store_args.key_store_identifier = keystore_identifier;
 		key_store_args.authentication_nonce = key_store_nonce;
 		key_store_args.max_updates_number = EXPECTED_MAX_UPDATES;
 		key_store_args.flags = HSM_SVC_KEY_STORE_FLAGS_UPDATE;
@@ -158,6 +171,8 @@ int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId,
 		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
 		return V2XSE_FAILURE;
 	}
+	preparedKeyHandle = 0; /* Keys just opened, so no prepared key yet */
+
 	cipher_args.flags = 0;
 	if (hsm_open_cipher_service(hsmKeyStoreHandle, &cipher_args,
 							&hsmCipherHandle)) {
@@ -1468,8 +1483,7 @@ int32_t v2xSe_storeData(TypeGsDataIndex_t index, TypeLen_t length,
 		*pHsmStatusCode = V2XSE_WRONG_DATA;
 		return V2XSE_DEVICE_NOT_CONNECTED;
 	}
-	if (nvm_update_array_data("genericStorage", index, pData, length) ==
-	 								-1) {
+	if (nvm_update_generic_data(index, pData, length) == -1) {
 		*pHsmStatusCode = V2XSE_FILE_FULL;
 		return V2XSE_DEVICE_NOT_CONNECTED;
 	}
@@ -1492,7 +1506,7 @@ int32_t v2xSe_getData(TypeGsDataIndex_t index, TypeLen_t *pLength,
 		*pHsmStatusCode = V2XSE_WRONG_DATA;
 		return V2XSE_DEVICE_NOT_CONNECTED;
 	}
-	if (nvm_retrieve_generic_data(index, pData, pLength) == -1) {
+	if (nvm_load_generic_data(index, pData, pLength) == -1) {
 		*pHsmStatusCode = V2XSE_WRONG_DATA;
 		return V2XSE_DEVICE_NOT_CONNECTED;
 	}
@@ -1514,7 +1528,7 @@ int32_t v2xSe_deleteData(TypeGsDataIndex_t index, TypeSW_t *pHsmStatusCode)
 		*pHsmStatusCode = V2XSE_WRONG_DATA;
 		return V2XSE_DEVICE_NOT_CONNECTED;
 	}
-	if (nvm_delete_array_data("genericStorage", index) == -1) {
+	if (nvm_delete_generic_data(index) == -1) {
 		*pHsmStatusCode = V2XSE_WRONG_DATA;
 		return V2XSE_DEVICE_NOT_CONNECTED;
 	}

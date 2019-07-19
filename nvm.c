@@ -12,18 +12,19 @@
 
 static int nvm_clear(void)
 {
-	/* Clear all NVM data  */
-	return system("rm -rf "STORAGE_PATH"*");
+	char clearCmd[MAX_FILENAME_SIZE];
+
+	/* Clear all NVM data for appropriate applet */
+	snprintf(clearCmd, MAX_FILENAME_SIZE, "rm -rf %s*", appletVarStoragePath);
+	return system(clearCmd);
 }
 
 static int nvm_raw_load(char* name, uint8_t* data, TypeLen_t size)
 {
 	int fd;
 	int numread;
-	char filename[MAX_FILENAME_SIZE];
 
-	snprintf(filename, MAX_FILENAME_SIZE, STORAGE_PATH"%s", name);
-	fd = open(filename, O_RDONLY);
+	fd = open(name, O_RDONLY);
 	if (fd == -1)
 		return -1;
 	numread = read(fd, data, size);
@@ -31,20 +32,11 @@ static int nvm_raw_load(char* name, uint8_t* data, TypeLen_t size)
 	return numread;
 }
 
-int nvm_load_var(char* name, uint8_t* data, TypeLen_t size)
-{
-	if (nvm_raw_load(name, data, size) != size)
-		return -1;
-	return 0;
-}
-
-int nvm_update_var(char* name, uint8_t* data, TypeLen_t size)
+static int nvm_raw_update(char* name, uint8_t* data, TypeLen_t size)
 {
 	int fd;
-	char filename[MAX_FILENAME_SIZE];
 
-	snprintf(filename, MAX_FILENAME_SIZE, STORAGE_PATH"%s", name);
-	fd = open(filename, O_CREAT|O_WRONLY|O_TRUNC, S_IRUSR|S_IWUSR);
+	fd = open(name, O_CREAT|O_WRONLY|O_TRUNC, S_IRUSR|S_IWUSR);
 	if (fd == -1)
 		return -1;
 	if (write(fd, data, size) == -1)
@@ -53,18 +45,45 @@ int nvm_update_var(char* name, uint8_t* data, TypeLen_t size)
 	return 0;
 }
 
-int nvm_delete_var(char* name)
+static int nvm_raw_delete(char* name)
+{
+	if (access(name, F_OK))
+		return -1;
+
+	return remove(name);
+}
+
+static int nvm_load_var(char* name, uint8_t* data, TypeLen_t size)
 {
 	char filename[MAX_FILENAME_SIZE];
 
-	snprintf(filename, MAX_FILENAME_SIZE, STORAGE_PATH"%s", name);
-	if (access(filename, F_OK))
+	snprintf(filename, MAX_FILENAME_SIZE, "%s%s", appletVarStoragePath,
+									name);
+	if (nvm_raw_load(filename, data, size) != size)
 		return -1;
-
-	return remove(filename);
+	return 0;
 }
 
-int nvm_load_array_data(char* name, int index, uint8_t* data, TypeLen_t size)
+int nvm_update_var(char* name, uint8_t* data, TypeLen_t size)
+{
+	char filename[MAX_FILENAME_SIZE];
+
+	snprintf(filename, MAX_FILENAME_SIZE, "%s%s", appletVarStoragePath,
+									name);
+	return nvm_raw_update(filename, data, size);
+}
+
+static int nvm_delete_var(char* name)
+{
+	char filename[MAX_FILENAME_SIZE];
+
+	snprintf(filename, MAX_FILENAME_SIZE, "%s%s", appletVarStoragePath,
+									name);
+	return nvm_raw_delete(filename);
+}
+
+static int nvm_load_array_data(char* name, int index, uint8_t* data,
+								TypeLen_t size)
 {
 	char filename[MAX_FILENAME_SIZE];
 
@@ -88,13 +107,12 @@ int nvm_delete_array_data(char* name, int index)
 	return nvm_delete_var(filename);
 }
 
-/* Generic data requires separate read function as data length is variable */
-int nvm_retrieve_generic_data(int index, uint8_t* data, TypeLen_t* size)
+int nvm_load_generic_data(int index, uint8_t* data, TypeLen_t* size)
 {
 	char filename[MAX_FILENAME_SIZE];
 	int sizeread;
 
-	snprintf(filename, MAX_FILENAME_SIZE, "genericStorage/%d", index);
+	snprintf(filename, MAX_FILENAME_SIZE, GENERIC_STORAGE_PATH"%d", index);
 	sizeread = nvm_raw_load(filename, data, V2XSE_MAX_DATA_SIZE_GSA);
 	if (sizeread < V2XSE_MIN_DATA_SIZE_GSA)
 		return -1;
@@ -102,6 +120,25 @@ int nvm_retrieve_generic_data(int index, uint8_t* data, TypeLen_t* size)
 	*size = sizeread;
 	return 0;
 }
+
+int nvm_update_generic_data(int index, uint8_t* data, TypeLen_t size)
+{
+	char filename[MAX_FILENAME_SIZE];
+
+	snprintf(filename, MAX_FILENAME_SIZE, GENERIC_STORAGE_PATH"%d", index);
+	return nvm_raw_update(filename, data, size);
+}
+
+
+int nvm_delete_generic_data(int index)
+{
+	char filename[MAX_FILENAME_SIZE];
+
+	snprintf(filename, MAX_FILENAME_SIZE, GENERIC_STORAGE_PATH"%d", index);
+
+	return nvm_raw_delete(filename);
+}
+
 
 int nvm_retrieve_ma_key_handle(uint32_t* handle, TypeCurveId_t* id)
 {
@@ -162,19 +199,45 @@ int nvm_retrieve_ba_key_handle(int index, uint32_t* handle, TypeCurveId_t* id)
 	return 0;
 }
 
+static int var_access(char* varname, int mode)
+{
+	char filename[MAX_FILENAME_SIZE];
+
+	snprintf(filename, MAX_FILENAME_SIZE, "%s%s", appletVarStoragePath,
+								varname);
+	return access(filename, mode);
+
+}
+
+static int var_mkdir(char* varname, int mode)
+{
+	char filename[MAX_FILENAME_SIZE];
+
+	snprintf(filename, MAX_FILENAME_SIZE, "%s%s", appletVarStoragePath,
+								varname);
+	return mkdir(filename, mode);
+
+}
 int nvm_init(void)
 {
 	int i;
 
-	/* Verify storage directory exists, create if not */
-	if (access(STORAGE_PATH, F_OK)) {
-		if (mkdir(STORAGE_PATH, 0700)) {
+	/* Verify top level storage directory exists, create if not */
+	if (access(COMMON_STORAGE_PATH, F_OK)) {
+		if (mkdir(COMMON_STORAGE_PATH, 0700)) {
 			return -1;
 		}
 	}
 
+	/* Verify applet specific storage directory exists, create if not */
+	if (access(appletVarStoragePath, F_OK)) {
+		if (mkdir(appletVarStoragePath, 0700)) {
+			return -1;
+		}
+	}
 	/* Verify phase variable exists, create if not and clear all data */
-	if (access(STORAGE_PATH"v2xsePhase", F_OK)) {
+	if (var_access("v2xsePhase", F_OK)) {
+
 		if (nvm_clear())
 			return -1;
 		v2xsePhase = V2XSE_KEY_INJECTION_PHASE;
@@ -186,32 +249,32 @@ int nvm_init(void)
 	}
 
 	/* Verify generic storage directory exists, create if not */
-	if (access(STORAGE_PATH"genericStorage", F_OK)) {
-		if (mkdir(STORAGE_PATH"genericStorage", 0700)) {
+	if (access(GENERIC_STORAGE_PATH, F_OK)) {
+		if (mkdir(GENERIC_STORAGE_PATH, 0700)) {
 			return -1;
 		}
 	}
 
 	/* Verify rt key handle & curve directories exist, create if not */
-	if (access(STORAGE_PATH"rtKeyHandle", F_OK)) {
-		if (mkdir(STORAGE_PATH"rtKeyHandle", 0700)) {
+	if (var_access("rtKeyHandle", F_OK)) {
+		if (var_mkdir("rtKeyHandle", 0700)) {
 			return -1;
 		}
 	}
-	if (access(STORAGE_PATH"rtCurveId", F_OK)) {
-		if (mkdir(STORAGE_PATH"rtCurveId", 0700)) {
+	if (var_access("rtCurveId", F_OK)) {
+		if (var_mkdir("rtCurveId", 0700)) {
 			return -1;
 		}
 	}
 
 	/* Verify ba key handle & curve directories exist, create if not */
-	if (access(STORAGE_PATH"baKeyHandle", F_OK)) {
-		if (mkdir(STORAGE_PATH"baKeyHandle", 0700)) {
+	if (var_access("baKeyHandle", F_OK)) {
+		if (var_mkdir("baKeyHandle", 0700)) {
 			return -1;
 		}
 	}
-	if (access(STORAGE_PATH"baCurveId", F_OK)) {
-		if (mkdir(STORAGE_PATH"baCurveId", 0700)) {
+	if (var_access("baCurveId", F_OK)) {
+		if (var_mkdir("baCurveId", 0700)) {
 			return -1;
 		}
 	}

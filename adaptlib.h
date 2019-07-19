@@ -23,11 +23,15 @@
 #define V2XSE_APP_US	0
 #define V2XSE_APP_EU	1
 
-#define STORAGE_PATH "/etc/v2x_hsm_adaptation/"
+#define COMMON_STORAGE_PATH "/etc/v2x_hsm_adaptation/"
+#define GENERIC_STORAGE_PATH COMMON_STORAGE_PATH"/genericStorage/"
+#define US_NVM_VAR_PATH COMMON_STORAGE_PATH"/US/"
+#define EU_NVM_VAR_PATH COMMON_STORAGE_PATH"/EU/"
 
 #define NUM_STORAGE_SLOTS	10000
 
 extern uint8_t	v2xsePhase;
+extern const char* appletVarStoragePath;
 extern uint32_t key_store_nonce;
 extern uint32_t maKeyHandle;
 extern TypeCurveId_t maCurveId;
@@ -36,7 +40,11 @@ extern TypeCurveId_t rtCurveId[NUM_STORAGE_SLOTS];
 extern uint32_t baKeyHandle[NUM_STORAGE_SLOTS];
 extern TypeCurveId_t baCurveId[NUM_STORAGE_SLOTS];
 
-#define MAGIC_KEYSTORE_IDENTIFIER	0x87131966
+extern const char usVarStorage[];
+extern const char euVarStorage[];
+
+#define MAGIC_KEYSTORE_IDENTIFIER_US	0x13196687
+#define MAGIC_KEYSTORE_IDENTIFIER_EU	0x87131966
 #define MAX_KEYSTORE_UPDATES		0xffff
 
 #define HSM_SESSION_PRIORITY	0
