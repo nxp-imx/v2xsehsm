@@ -225,8 +225,7 @@ int32_t v2xSe_generateMaEccKeyPair
 
 	args.key_identifier = &keyHandle;
 	args.out_size = v2xSe_getKeyLenFromCurveID(curveId);
-	args.flags = HSM_OP_KEY_GENERATION_FLAGS_CREATE_PERSISTENT |
-				HSM_OP_KEY_GENERATION_FLAGS_STRICT_OPERATION;
+	args.flags = HSM_OP_KEY_GENERATION_FLAGS_CREATE_PERSISTENT;
 	args.key_type = keyType;
 	args.key_type_ext = 0;
 	args.key_info = HSM_KEY_INFO_PERMANENT;
@@ -235,6 +234,7 @@ int32_t v2xSe_generateMaEccKeyPair
 		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 		return V2XSE_FAILURE;
 	}
+
 	if (nvm_update_var("maCurveId", (uint8_t*)&curveId,
 							sizeof(curveId))) {
 		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
