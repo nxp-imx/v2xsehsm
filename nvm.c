@@ -23,10 +23,18 @@ static int nvm_raw_load(char* name, uint8_t* data, TypeLen_t size)
 {
 	int fd;
 	int numread;
+	struct stat fileInfo;
+
+	/* Check length as expected before use */
+	if (stat(name, &fileInfo) == -1)
+		return 0;
+	if (fileInfo.st_size > size)
+		return 0;
 
 	fd = open(name, O_RDONLY);
 	if (fd == -1)
-		return -1;
+		return 0;
+
 	numread = read(fd, data, size);
 	close(fd);
 	return numread;
@@ -156,6 +164,8 @@ int nvm_retrieve_ma_key_handle(uint32_t* handle, TypeCurveId_t* id)
 	if (nvm_load_var("maCurveId", id, sizeof(*id)))
 		return -1;
 
+	if (!convertCurveId(*id))
+		return -1;
 	return 0;
 }
 
@@ -176,6 +186,9 @@ int nvm_retrieve_rt_key_handle(int index, uint32_t* handle, TypeCurveId_t* id)
 	if (nvm_load_array_data("rtCurveId", index, id, sizeof(*id)))
 		return -1;
 
+	if (!convertCurveId(*id))
+		return -1;
+
 	return 0;
 }
 
@@ -194,6 +207,9 @@ int nvm_retrieve_ba_key_handle(int index, uint32_t* handle, TypeCurveId_t* id)
 		return -1;
 
 	if (nvm_load_array_data("baCurveId", index, id, sizeof(*id)))
+		return -1;
+
+	if (!convertCurveId(*id))
 		return -1;
 
 	return 0;
@@ -221,6 +237,7 @@ static int var_mkdir(char* varname, int mode)
 int nvm_init(void)
 {
 	int i;
+	int phaseValid;
 
 	/* Verify top level storage directory exists, create if not */
 	if (access(COMMON_STORAGE_PATH, F_OK)) {
@@ -235,16 +252,23 @@ int nvm_init(void)
 			return -1;
 		}
 	}
-	/* Verify phase variable exists, create if not and clear all data */
-	if (var_access("v2xsePhase", F_OK)) {
-
+	/* Verify phase variable is valid, create if not and clear all data */
+	phaseValid = 0;
+	if (!var_access("v2xsePhase", F_OK)) {
+		if (!nvm_load_var("v2xsePhase", &v2xsePhase,
+							sizeof(v2xsePhase))) {
+			if ((v2xsePhase == V2XSE_KEY_INJECTION_PHASE) ||
+				(v2xsePhase == V2XSE_NORMAL_OPERATING_PHASE)) {
+					phaseValid = 1;
+			}
+		}
+	}
+	if (!phaseValid) {
 		if (nvm_clear())
 			return -1;
 		v2xsePhase = V2XSE_KEY_INJECTION_PHASE;
-		nvm_update_var("v2xsePhase", &v2xsePhase,
-							sizeof(v2xsePhase));
-	} else {
-		if (nvm_load_var("v2xsePhase", &v2xsePhase, sizeof(v2xsePhase)))
+		if (nvm_update_var("v2xsePhase", &v2xsePhase,
+							sizeof(v2xsePhase)))
 			return -1;
 	}
 

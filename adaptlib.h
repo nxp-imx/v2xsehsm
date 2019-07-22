@@ -50,6 +50,8 @@ extern const char euVarStorage[];
 #define HSM_SESSION_PRIORITY	0
 #define HSM_OPERATING_MODE	0
 
+uint16_t convertCurveId(TypeCurveId_t curveId);
+
 #define VERIFY_STATUS_CODE_PTR() {				\
 	if (!pHsmStatusCode)					\
 		return V2XSE_FAILURE;				\
