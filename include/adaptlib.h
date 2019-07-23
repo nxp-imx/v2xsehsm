@@ -3,7 +3,7 @@
 #define ADAPTLIB_H
 
 #include "v2xSe.h"
-#include "../hsmstub/hsmstub.h"
+#include "hsmstub.h"
 
 #define VERSION_GENERATION	3
 #define VERSION_MAJOR		1
