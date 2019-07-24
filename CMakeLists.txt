@@ -10,8 +10,8 @@ add_library (v2xhsm
 
 add_library(hsmstub STATIC IMPORTED)
 set_target_properties(hsmstub PROPERTIES
-	IMPORTED_LOCATION "${INSTALLED_LIBRARIES}/hsmstub/libhsmstub.a"
-	INTERFACE_INCLUDE_DIRECTORIES "${INSTALLED_INCLUDES}/hsmstub"
+	IMPORTED_LOCATION "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/hsmstub/libhsmstub.a"
+	INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}/hsmstub"
 	)
 
 target_link_libraries(v2xhsm
