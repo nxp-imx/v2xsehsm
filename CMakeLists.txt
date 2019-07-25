@@ -3,10 +3,10 @@ cmake_minimum_required (VERSION 3.4)
 
 project (libv2xhsm)
 
-set (v2xhsm_VERSION 1.0.0)
-
 include(GenerateExportHeader)
 include(CMakePackageConfigHelpers)
+
+set (v2xhsm_VERSION 1.0.0)
 
 find_package(hsmstub REQUIRED)
 
@@ -44,10 +44,9 @@ export (EXPORT v2xhsmTargets
 	FILE "${CMAKE_CURRENT_BINARY_DIR}/v2xhsm/v2xhsmTargets.cmake"
 	)
 
-configure_file(
+install (FILES
 	${PROJECT_SOURCE_DIR}/v2xhsmConfig.cmake
-	"${CMAKE_CURRENT_BINARY_DIR}/v2xhsmConfig.cmake"
-	COPYONLY
+	${CMAKE_CURRENT_BINARY_DIR}/v2xhsm/v2xhsmTargets.cmake
+	${CMAKE_CURRENT_BINARY_DIR}/v2xhsmConfigVersion.cmake
+	DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/share/cmake/v2xhsm
 	)
-
-export(PACKAGE v2xhsm)

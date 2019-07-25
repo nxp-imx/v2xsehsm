@@ -1,2 +1,2 @@
 
-include("${CMAKE_CURRENT_LIST_DIR}/v2xhsm/v2xhsmTargets.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/v2xhsmTargets.cmake")
