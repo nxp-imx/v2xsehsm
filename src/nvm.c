@@ -7,7 +7,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "adaptlib.h"
+#include "v2xsehsm.h"
 #include "nvm.h"
 
 static int nvm_clear(void)

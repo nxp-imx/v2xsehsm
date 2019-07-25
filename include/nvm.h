@@ -1,6 +1,4 @@
 
-#include "adaptlib.h"
-
 #define MAX_FILENAME_SIZE	128
 
 int nvm_init(void);
