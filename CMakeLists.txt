@@ -6,11 +6,14 @@ project (libv2xsehsm)
 include(GenerateExportHeader)
 include(CMakePackageConfigHelpers)
 
-set (v2xsehsm_VERSION 1.0.0)
+set (v2xsehsm_MAJOR 1)
+set (v2xsehsm_MINOR 0)
+set (v2xsehsm_PATCH 0)
+set (v2xsehsm_VERSION ${v2xsehsm_MAJOR}.${v2xsehsm_MINOR}.${v2xsehsm_PATCH})
 
 find_package(hsmstub REQUIRED)
 
-add_library (v2xsehsm
+add_library (v2xsehsm SHARED
 	src/v2xsehsm.c
 	src/nvm.c
 	)
@@ -24,13 +27,15 @@ target_include_directories (v2xsehsm PUBLIC
 	$<INSTALL_INTERFACE:include/v2xsehsm>
 	)
 
-set_target_properties (v2xsehsm
-	PROPERTIES PUBLIC_HEADER "include/v2xSe.h;include/v2xSeCommTypes.h"
+set_target_properties (v2xsehsm PROPERTIES
+	PUBLIC_HEADER "include/v2xSe.h;include/v2xSeCommTypes.h"
+	VERSION ${v2xsehsm_VERSION}
+	SOVERSION ${v2xsehsm_MAJOR}
 	)
 
 install (TARGETS v2xsehsm
 	EXPORT v2xsehsmTargets
-	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}/v2xsehsm
+	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/v2xsehsm
 	PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/v2xsehsm
 	)
 
