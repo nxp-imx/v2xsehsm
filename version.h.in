@@ -1,0 +1,28 @@
+
+/*
+ * Copyright 2019 NXP
+ */
+
+/**
+ *
+ * @file version.h
+ *
+ * @brief Header file containing version information for the various elements
+ *
+ * This is a header file containing version information for the different
+ * elements in the adaptation layer.
+ *
+ * DO NOT DIRECTLY EDIT version.h, IT IS GENERATED FROM verion.h.in BY cmake
+ *
+ */
+
+ #define VERSION_GENERATION	3
+ #define VERSION_MAJOR		@v2xsehsm_MAJOR@
+ #define VERSION_MINOR		@v2xsehsm_MINOR@
+
+ /* Length V2XSE_PLATFORM_IDENTITY = 16 bytes */
+ #define PLATFORMINFO_STRING "HSM0IMX800000001"
+
+ /* Length V2XSE_SERIAL_NUMBER = 24 bytes */
+ #define SERIALNUM_BYTES 	\
+ 	{0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1,2,3}

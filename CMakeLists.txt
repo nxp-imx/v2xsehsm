@@ -11,6 +11,11 @@ set (v2xsehsm_MINOR 0)
 set (v2xsehsm_PATCH 0)
 set (v2xsehsm_VERSION ${v2xsehsm_MAJOR}.${v2xsehsm_MINOR}.${v2xsehsm_PATCH})
 
+configure_file (
+	${PROJECT_SOURCE_DIR}/version.h.in
+	${CMAKE_CURRENT_SOURCE_DIR}/include/version.h
+	)
+
 find_package(hsmstub REQUIRED)
 
 add_library (v2xsehsm SHARED
