@@ -1,39 +1,90 @@
 
+/*
+ * Copyright 2019 NXP
+ */
+
+/**
+ *
+ * @file v2xsehsm.c
+ *
+ * @brief Core implementation of V2X SE to HSM adaptation layer
+ *
+ */
+
 #include "v2xsehsm.h"
 #include "nvm.h"
 #include <string.h>
 
+/** State of emulated SXF1800, can be INIT, CONNECTED or ACTIVATED */
 uint8_t	v2xseState = V2XSE_STATE_INIT;
+
+/** Security level of emulated SXF1800, can be 1 - 5 */
 channelSecLevel_t v2xseSecurityLevel;
+
+/** AppletId of emulated SXF1800: e_EU, e_US, e_EU_AND_GS or e_US_AND_GS */
 appletSelection_t v2xseAppletId;
+
+/** Path to NVM storage in filesystem for the current applet */
 const char* appletVarStoragePath;
+/** Fixed path to NVM storage for US applet */
+const char usVarStorage[] = US_NVM_VAR_PATH;
+/** Fixed path to NVM storage for EU applet */
+const char euVarStorage[] = EU_NVM_VAR_PATH;
+
+/** Handle of key pre-loaded for low latency certificate generation */
 uint32_t preparedKeyHandle = 0;
 
+/** Emulated serial number for device - currently fixed for all devices */
 const uint8_t serialNumber[V2XSE_SERIAL_NUMBER] = SERIALNUM_BYTES;
-const char usVarStorage[] = US_NVM_VAR_PATH;
-const char euVarStorage[] = EU_NVM_VAR_PATH;
 
 
 /* HSM handles */
+/** Handle for HSM session */
 hsm_hdl_t hsmSessionHandle;
+/** Handle for HSM RNG service */
 hsm_hdl_t hsmRngHandle;
+/** Handle for HSM key store service */
 hsm_hdl_t hsmKeyStoreHandle;
+/** Handle for HSM key management service */
 hsm_hdl_t hsmKeyMgmtHandle;
+/** Handle for HSM cipher service */
 hsm_hdl_t hsmCipherHandle;
+/** Handle for HSM signature generation service */
 hsm_hdl_t hsmSigGenHandle;
 
 /* NVM vars, initialized from filesystem on activate */
+/** Phase of emulated SXF1800, can be key injection or normal phase */
 uint8_t	v2xsePhase;
+/** Nonce value needed to access HSM key store */
 uint32_t key_store_nonce;
 
 /* NVM Key handles, initialized as zero, read from fs when first used */
+/* Module authentication key handle */
 uint32_t maKeyHandle;
+/* Module authentication key curve id */
 TypeCurveId_t maCurveId;
+/* Runtime key handle */
 uint32_t rtKeyHandle[NUM_STORAGE_SLOTS];
+/*Runtime key curve id */
 TypeCurveId_t rtCurveId[NUM_STORAGE_SLOTS];
+/* Base key handle */
 uint32_t baKeyHandle[NUM_STORAGE_SLOTS];
+/* Base key curve id */
 TypeCurveId_t baCurveId[NUM_STORAGE_SLOTS];
 
+/**
+ *
+ * @brief Convert curveId to keyType
+ *
+ * This function converts the curveId value from the V2XSE API to the
+ * corresponding keyType value for the HSM API.  Returns zero if the
+ * curveId is invalid, all valid values are non-zero.
+ *
+ * @param curveId ECC curve type in V2X SE API format
+ *
+ * @return keyType in HSM API format, or 0 if ERROR
+ *
+ */
 uint16_t convertCurveId(TypeCurveId_t curveId)
 {
 	switch(curveId) {
@@ -54,6 +105,19 @@ uint16_t convertCurveId(TypeCurveId_t curveId)
 	}
 }
 
+/**
+ *
+ * @brief Check whether keyType is 256 bits
+ *
+ * This function checks whether the ECC curve corresponding the the keyType
+ * passed as parameter is 256 bits or not.  Many V2X SE API functions only
+ * allow 256 bit keys.
+ *
+ * @param keyType keyType in HSM API format
+ *
+ * @return 1 if ECC curve is 256 bits, 0 if invalid or not 256 bits
+ *
+ */
 int is256bitCurve(uint32_t keyType)
 {
 	switch (keyType) {
@@ -65,20 +129,61 @@ int is256bitCurve(uint32_t keyType)
 	return 0;
 }
 
+/**
+ *
+ * @brief Move emulated SXF1800 state machine to Connected state
+ *
+ * Move emulated SXF1800 state machine to Connected state.  This state is
+ * only used to allow/disallow specific V2X SE API commands.
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
 int32_t v2xSe_connect(void)
 {
-	ENFORCE_STATE_INIT();
+	ENFORCE_STATE_INIT()
+
 	v2xseState = V2XSE_STATE_CONNECTED;
 	return V2XSE_SUCCESS;
 }
 
+/**
+ *
+ * @brief Activate V2X opertions using default security level
+ *
+ * This function activates V2X operations using the default security level.
+ * It simply calls v2xSe_activate specifying e_channelSecLevel_5 for security
+ * level.
 
+ * @param appletId Applet(s) to activate: US or EU, and optionally GS
+ * @param pHsmStatusCode pointer to location to write extended result code
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
 int32_t v2xSe_activate(appletSelection_t appletId, TypeSW_t *pHsmStatusCode)
 {
 	return v2xSe_activateWithSecurityLevel(appletId, e_channelSecLevel_5,
 						pHsmStatusCode);
 }
 
+/**
+ *
+ * @brief Activate V2X opertions
+ *
+ * This function activates V2X operations using the specified security level.
+ * The appletId and securtyLevel are stored in global variables for later
+ * use.  Non-volatile variables for the chosen applet are initialized from
+ * the filesystem.  A session is opened with the HSM, and all services
+ * that can be used are also opened.  The v2xseState is set to activated.
+ *
+ * @param appletId Applet(s) to activate: US or EU, and optionally GS
+ * @param: Security level for emulated SXF1800
+ * @param pHsmStatusCode pointer to location to write extended result code
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
 int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId,
 		channelSecLevel_t securityLevel, TypeSW_t *pHsmStatusCode)
 {
@@ -92,7 +197,7 @@ int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId,
 	uint32_t keystore_identifier;
 
 	VERIFY_STATUS_CODE_PTR()
-	ENFORCE_STATE_INIT();
+	ENFORCE_STATE_INIT()
 
 	if ((appletId == e_US_AND_GS) || (appletId == e_US)){
 		appletVarStoragePath = usVarStorage;
@@ -192,11 +297,36 @@ int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId,
 	return V2XSE_SUCCESS;
 }
 
+/**
+ *
+ * @brief Resets the connection to the emulated SXF1800
+ *
+ * This function resets the connection to the emulated SXF1800, which has no
+ * functional difference in this system to deactivate, so the v2xSe_deactivate
+ * function is directly called so avoid code duplication.
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
 int32_t v2xSe_reset(void)
 {
 	return v2xSe_deactivate();
 }
 
+/**
+ *
+ * @brief Deactivates the emulated SXF1800
+ *
+ * This function deactivates the emulated SXF1800.  This is performed by
+ * closing the session to the HSM and setting the v2xseState to idle.  By
+ * closing the HSM session, all previously opened HSM services are
+ * automatically closed.  All variables required for activated state cannot
+ * be accessed from init state, and will be initialized when activated state
+ * is enabled again.
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
 int32_t v2xSe_deactivate(void)
 {
 	if (v2xseState == V2XSE_STATE_INIT)
@@ -209,6 +339,24 @@ int32_t v2xSe_deactivate(void)
 	return V2XSE_SUCCESS;
 }
 
+/**
+ *
+ * @brief Generate Module Authentication ECC key pair
+ *
+ * This function instructs the system to randomly generate the Module
+ * Authentication ECC key pair for the current applet.  This will fail
+ * if the current applet already has an MA key pair.  The HSM is used to
+ * generate a new key pair, and the handle and curveId of the new key is
+ * stored in NVM.  The private key is stored by the HSM in the key store
+ * for the current applet.
+ *
+ * @param curveId The ECC curve to be used to generate the key pair
+ * @param pHsmStatusCode pointer to location to write extended result code
+ * @param pPublicKeyPlain pointer to location to write public key
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
 int32_t v2xSe_generateMaEccKeyPair
 (
     TypeCurveId_t curveId,
@@ -267,7 +415,23 @@ int32_t v2xSe_generateMaEccKeyPair
 	return V2XSE_SUCCESS;
 }
 
-
+/**
+ *
+ * @brief Get Module Authenitication public key
+ *
+ * This function retrieves the public key and curveId for the Module
+ * Authentication ECC key pair.  The handle of the MA key is retrieved
+ * from nvm then the HSM is requested to calculate the public key that
+ * corresponds to the private key stored in the key store.  The curveId
+ * is directly retrieved from nvm.
+ *
+ * @param pHsmStatusCode pointer to location to write extended result code
+ * @param pCurveId pointer to location to write retrieved curveId
+ * @param pPublicKeyPlain pointer to location to write calculated public key
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
 int32_t v2xSe_getMaEccPublicKey
 (
     TypeSW_t *pHsmStatusCode,
@@ -312,6 +476,21 @@ int32_t v2xSe_getMaEccPublicKey
 	return V2XSE_SUCCESS;
 }
 
+/**
+ *
+ * @brief Generate signature using MA private key
+ *
+ * This function calculates the signature of the given hash using the MA
+ * private key.
+ *
+ * @param hashLength length of the hash to sign
+ * @param pHashValue pointer to the hash data to sign
+ * @param pHsmStatusCode pointer to location to write extended result code
+ * @param pSignature pointer to location to write the generated signature
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
 int32_t v2xSe_createMaSign
 (
     TypeHashLength_t hashLength,
@@ -367,6 +546,26 @@ int32_t v2xSe_createMaSign
 	return V2XSE_SUCCESS;
 }
 
+/**
+ *
+ * @brief Generate Runtime ECC key pair
+ *
+ * This function instructs the system to randomly generate a Runtime ECC
+ * key pair in the specified slot for the current applet.  If a runtime
+ * key exists in the specified slot, it will be overwritten.  The HSM is
+ * used to generate a new key pair, and the handle and curveId of the
+ * new key is stored in NVM.  The slot number is used as the index into
+ * a table storing runtime key handles.  The private key is stored by the
+ * HSM in the key store for the current applet.
+ *
+ * @param rtKeyId slot number for the generated runtime key pair
+ * @param curveId The ECC curve to be used to generate the key pair
+ * @param pHsmStatusCode pointer to location to write extended result code
+ * @param pPublicKeyPlain pointer to location to write public key
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
 int32_t v2xSe_generateRtEccKeyPair
 (
     TypeRtKeyId_t rtKeyId,
@@ -454,7 +653,21 @@ int32_t v2xSe_generateRtEccKeyPair
 	return V2XSE_SUCCESS;
 }
 
-
+/**
+ *
+ * @brief Delete runtime ECC key pair
+ *
+ * This function deletes the runtime ECC key pair from the specified slot.
+ * The corresponding private key is deleted from the HSM key store, the
+ * key handle is removed from memory and nvm, and the curveId is removed
+ * from nvm.
+ *
+ * @param rtKeyId slot number of the runtime key pair to delete
+ * @param pPublicKeyPlain pointer to location to write public key
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
 int32_t v2xSe_deleteRtEccPrivateKey
 (
     TypeRtKeyId_t rtKeyId,
@@ -506,7 +719,24 @@ int32_t v2xSe_deleteRtEccPrivateKey
 	return V2XSE_SUCCESS;
 }
 
-
+/**
+ *
+ * @brief Get Runtime public key
+ *
+ * This function retrieves the public key and curveId for the runtime key
+ * in the specified slot.  The handle of the runtime key is retrieved
+ * from nvm then the HSM is requested to calculate the public key that
+ * corresponds to the private key stored in the key store.  The curveId
+ * is directly retrieved from nvm.
+ *
+ * @param rtKeyId slot number of the runtime key
+ * @param pHsmStatusCode pointer to location to write extended result code
+ * @param pCurveId pointer to location to write retrieved curveId
+ * @param pPublicKeyPlain pointer to location to write calculated public key
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
 int32_t v2xSe_getRtEccPublicKey
 (
     TypeRtKeyId_t rtKeyId,
@@ -557,6 +787,26 @@ int32_t v2xSe_getRtEccPublicKey
 	return V2XSE_SUCCESS;
 }
 
+/**
+ *
+ * @brief Generate low latency signature using runtime private key
+ *
+ * This function finalizes the signature calculation of the given hash.
+ * The key to use must already have been specified using the function
+ * v2xSe_activateRtKeyForSigning, which performs the initial signature
+ * calculations that do not rely on the data to sign.  A fast indicator
+ * is provided to indicate whether the signature was generated via a low
+ * latency calculation, this is always true for this implementation unless
+ * an error has occurred.
+ *
+ * @param pHashValue pointer to the hash data to sign
+ * @param pHsmStatusCode pointer to location to write extended result code
+ * @param pSignature pointer to location to write the generated signature
+ * @param pFastIndicator pointer to location to write fast indicator status
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
 int32_t v2xSe_createRtSignLowLatency
 (
     TypeHash_t *pHashValue,
@@ -596,6 +846,21 @@ int32_t v2xSe_createRtSignLowLatency
 	return V2XSE_SUCCESS;
 }
 
+/**
+ *
+ * @brief Generate signature using runtime private key
+ *
+ * This function calculates the signature of the given hash using the runtime
+ * private key in the specified slot.
+ *
+ * @param rtKeyId slot of runtime key to use
+ * @param pHashValue pointer to the hash data to sign
+ * @param pHsmStatusCode pointer to location to write extended result code
+ * @param pSignature pointer to location to write the generated signature
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
 int32_t v2xSe_createRtSign
 (
     TypeRtKeyId_t rtKeyId,
@@ -653,7 +918,26 @@ int32_t v2xSe_createRtSign
 	return V2XSE_SUCCESS;
 }
 
-
+/**
+ *
+ * @brief Generate Base ECC key pair
+ *
+ * This function instructs the system to randomly generate a Base ECC
+ * key pair in the specified slot for the current applet.  If a Base
+ * key exists in the specified slot, it will be overwritten.  The HSM is
+ * used to generate a new key pair, and the handle and curveId of the
+ * new key is stored in NVM.  The slot number is used as the index into
+ * a table storing base key handles.  The private key is stored by the
+ * HSM in the key store for the current applet.
+ *
+ * @param baseKeyId slot number for the generated base key pair
+ * @param curveId The ECC curve to be used to generate the key pair
+ * @param pHsmStatusCode pointer to location to write extended result code
+ * @param pPublicKeyPlain pointer to location to write public key
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
 int32_t v2xSe_generateBaEccKeyPair
 (
     TypeBaseKeyId_t baseKeyId,
@@ -745,6 +1029,21 @@ int32_t v2xSe_generateBaEccKeyPair
 	return V2XSE_SUCCESS;
 }
 
+/**
+ *
+ * @brief Delete base ECC key pair
+ *
+ * This function deletes the base ECC key pair from the specified slot.
+ * The corresponding private key is deleted from the HSM key store, the
+ * key handle is removed from memory and nvm, and the curveId is removed
+ * from nvm.
+ *
+ * @param baseKeyId slot number of the base key pair to delete
+ * @param pHsmStatusCode pointer to location to write extended result code
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
 int32_t v2xSe_deleteBaEccPrivateKey
 (
     TypeBaseKeyId_t baseKeyId,
@@ -796,6 +1095,24 @@ int32_t v2xSe_deleteBaEccPrivateKey
 	return V2XSE_SUCCESS;
 }
 
+/**
+ *
+ * @brief Get Base public key
+ *
+ * This function retrieves the public key and curveId for the base key
+ * in the specified slot.  The handle of the base key is retrieved
+ * from nvm then the HSM is requested to calculate the public key that
+ * corresponds to the private key stored in the key store.  The curveId
+ * is directly retrieved from nvm.
+ *
+ * @param baseKeyId slot number of the base key
+ * @param pHsmStatusCode pointer to location to write extended result code
+ * @param pCurveId pointer to location to write retrieved curveId
+ * @param pPublicKeyPlain pointer to location to write calculated public key
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
 int32_t v2xSe_getBaEccPublicKey
 (
     TypeBaseKeyId_t baseKeyId,
@@ -846,7 +1163,22 @@ int32_t v2xSe_getBaEccPublicKey
 	return V2XSE_SUCCESS;
 }
 
-
+/**
+ *
+ * @brief Generate signature using base private key
+ *
+ * This function calculates the signature of the given hash using the base
+ * private key in the specified slot.
+ *
+ * @param baseKeyId slot of base key to use
+ * @param hashLength length of the hash data to sign
+ * @param pHashValue pointer to the hash data to sign
+ * @param pHsmStatusCode pointer to location to write extended result code
+ * @param pSignature pointer to location to write the generated signature
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
 int32_t v2xSe_createBaSign
 (
     TypeBaseKeyId_t baseKeyId,
@@ -908,6 +1240,27 @@ int32_t v2xSe_createBaSign
 	return V2XSE_SUCCESS;
 }
 
+/**
+ *
+ * @brief Dervice a runtime key from the specified base key
+ *
+ * This function derives a runtime key from the specified base key using
+ * the butterfly algorithm.
+ * NOTE: This operation is only permitted for the US applet.
+ *
+ * @param baseKeyId slot of base key to use
+ * @param pFvSign pointer to expansion value used in key derivation
+ * @param pRvij pointer to private reconstruction value used in key derivation
+ * @param pHvij pointer to hash value used in key derivation
+ * @param rtKeyId slot to store the generated runtime key
+ * @param returnPubKey flag indicating whether public key should be returned
+ * @param pHsmStatusCode pointer to location to write extended result code
+ * @param pCurveId pointer to location to write curveId of derived key
+ * @param pPublicKeyPlain pointer to location to write derived public key
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
 int32_t v2xSe_deriveRtEccKeyPair
 (
     TypeBaseKeyId_t baseKeyId,
@@ -1035,6 +1388,21 @@ int32_t v2xSe_deriveRtEccKeyPair
 	return V2XSE_SUCCESS;
 }
 
+/**
+ *
+ * @brief Activate specified run time key for low latency signing
+ *
+ * This function prepares for low latency signing by performing
+ * the initial signature calculations that do not rely on the data to sign.
+ * A later call to v2xSe_createRtSignLowLatency will provide the data to
+ * sign and finalize the signature calcualtion.
+ *
+ * @param rtKeyId runtime key to use for initial calculations
+ * @param pHsmStatusCode pointer to location to write extended result code
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
 int32_t v2xSe_activateRtKeyForSigning
 (
     TypeRtKeyId_t rtKeyId,
@@ -1078,6 +1446,21 @@ int32_t v2xSe_activateRtKeyForSigning
 	return V2XSE_SUCCESS;
 }
 
+/**
+ *
+ * @brief Retrive the version of the V2X or storage applet
+ *
+ * This function retrieves the version of the V2X or storage applet.  As
+ * this system does not actually use applets, the version of this adaptation
+ * layer is returned
+ *
+ * @param appletType indicates applet to query: V2X or storage
+ * @param pHsmStatusCode pointer to location to write extended result code
+ * @param pVersion pointer to location to write version info (3 bytes)
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
 int32_t v2xSe_getAppletVersion
 (
     appletSelection_t appletType,
@@ -1107,6 +1490,20 @@ int32_t v2xSe_getAppletVersion
 	return V2XSE_SUCCESS;
 }
 
+/**
+ *
+ * @brief Generate a random number
+ *
+ * This function calls the HSM to generate a random number of the requested
+ * size.
+ *
+ * @param length size of random number to generate, in bytes
+ * @param pHsmStatusCode pointer to location to write extended result code
+ * @param pRandomNumber pointer to location to write random number
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
 int32_t v2xSe_getRandomNumber
 (
     TypeLen_t length,
@@ -1131,6 +1528,18 @@ int32_t v2xSe_getRandomNumber
 	return V2XSE_SUCCESS;
 }
 
+/**
+ *
+ * @brief Retrive information regarding SE capabilities
+ *
+ * This function fills a structure indicating SE capabilities.
+ *
+ * @param pHsmStatusCode pointer to location to write extended result code
+ * @param pInfo pointer to location to write SE capability info.
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
 int32_t v2xSe_getSeInfo
 (
     TypeSW_t *pHsmStatusCode,
@@ -1174,6 +1583,18 @@ int32_t v2xSe_getSeInfo
 	return V2XSE_SUCCESS;
 }
 
+/**
+ *
+ * @brief Retrieve version of CryptoLibrary
+ *
+ * This function retrieves the version of the CryptoLibrary, which in this
+ * system corresponds to this adaptation layer.
+
+ * @param pVersion pointer to location to write version info (3 bytes)
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
 int32_t v2xSe_getCryptoLibVersion
 (
     TypeVersion_t *pVersion
@@ -1187,6 +1608,19 @@ int32_t v2xSe_getCryptoLibVersion
 	return V2XSE_SUCCESS;
 }
 
+/**
+ *
+ * @brief Retrieve platform identification info
+ *
+ * This function retrieves a string that provides information about the
+ * platform being used to run the SE implementation.
+ *
+ * @param pHsmStatusCode pointer to location to write extended result code
+ * @param pPlatformIdentifier pointer to location to write platform info
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
 int32_t v2xSe_getPlatformInfo(TypeSW_t *pHsmStatusCode,
 			TypePlatformIdentity_t *pPlatformIdentifier)
 {
@@ -1201,6 +1635,19 @@ int32_t v2xSe_getPlatformInfo(TypeSW_t *pHsmStatusCode,
 	return V2XSE_SUCCESS;
 }
 
+/**
+ *
+ * @brief Retrieve trust provisioning profile info
+ *
+ * This function retrives a 4 byte indicator that refers to the trust
+ * provisioning profile of the SE implementation.
+ *
+ * @param pHsmStatusCode pointer to location to write extended result code
+ * @param pPlatformIdentifier pointer to location to write platform info
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
 int32_t v2xSe_getPlatformConfig(TypeSW_t *pHsmStatusCode,
 			TypePlatformConfiguration_t *pPlatformConfig)
 {
@@ -1217,6 +1664,19 @@ int32_t v2xSe_getPlatformConfig(TypeSW_t *pHsmStatusCode,
 	return V2XSE_SUCCESS;
 }
 
+/**
+ *
+ * @brief Retrieve serial number of SE chip
+ *
+ * This function retrives the serial number of the SE chip.  This is
+ * currently simulated by returning a fixed value.
+ *
+ * @param pHsmStatusCode pointer to location to write extended result code
+ * @param pChipInfo pointer to location to write serial number
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
 int32_t v2xSe_getChipInfo(TypeSW_t *pHsmStatusCode,
 					TypeChipInformation_t *pChipInfo)
 {
@@ -1230,6 +1690,19 @@ int32_t v2xSe_getChipInfo(TypeSW_t *pHsmStatusCode,
 	return V2XSE_SUCCESS;
 }
 
+/**
+ *
+ * @brief Retrieve SE attack log
+ *
+ * This function retrives the attack log from the SE device.  This system
+ * does not support an attack log, so the log will always be empty.
+ *
+ * @param pHsmStatusCode pointer to location to write extended result code
+ * @param pAttackLog pointer to location to write the attack log
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
 int32_t v2xSe_getAttackLog(TypeSW_t *pHsmStatusCode,
 					TypeAttackLog_t *pAttackLog)
 {
@@ -1244,6 +1717,22 @@ int32_t v2xSe_getAttackLog(TypeSW_t *pHsmStatusCode,
 }
 
 
+/**
+ *
+ * @brief Encrypt data using ECIES
+ *
+ * This function encrypts data using the ECIES encryption scheme.  The data to
+ * encrypt, public key, and all other parameters needed to perform the
+ * encryption are provided by the caller.
+ *
+ * @param pEciesData pointer to structure with data and encryption parameters
+ * @param pHsmStatusCode pointer to location to write extended result code
+ * @param pVctLen pointer to location to write the length of encrypted data
+ * @param pVctData pointer to location to write the encrypted data
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
 int32_t v2xSe_encryptUsingEcies (TypeEncryptEcies_t *pEciesData,
 					TypeSW_t *pHsmStatusCode,
 					TypeLen_t *pVctLen,
@@ -1280,6 +1769,23 @@ int32_t v2xSe_encryptUsingEcies (TypeEncryptEcies_t *pEciesData,
 	return V2XSE_SUCCESS;
 }
 
+/**
+ *
+ * @brief Decrypt data using ECIES and runtime key
+ *
+ * This function decrypts data using ECIES and the specified runtime key.
+ * The data to decrypt and all other parameters needed to perform the
+ * decryption are provided by the caller.
+ *
+ * @param rtKeyId key slot of runtime key to use
+ * @param pEciesData pointer to structure with data and decryption parameters
+ * @param pHsmStatusCode pointer to location to write extended result code
+ * @param pMsgLen pointer to location to write the length of decrypted data
+ * @param pMsgData pointer to location to write the decrypted data
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
 int32_t v2xSe_decryptUsingRtEcies (TypeRtKeyId_t rtKeyId,
 					TypeDecryptEcies_t *pEciesData,
 					TypeSW_t *pHsmStatusCode,
@@ -1328,6 +1834,22 @@ int32_t v2xSe_decryptUsingRtEcies (TypeRtKeyId_t rtKeyId,
 	return V2XSE_SUCCESS;
 }
 
+/**
+ *
+ * @brief Decrypt data using ECIES and module authentication key
+ *
+ * This function decrypts data using ECIES and the module authentication key.
+ * The data to decrypt and all other parameters needed to perform the
+ * decryption are provided by the caller.
+ *
+ * @param pEciesData pointer to structure with data and decryption parameters
+ * @param pHsmStatusCode pointer to location to write extended result code
+ * @param pMsgLen pointer to location to write the length of decrypted data
+ * @param pMsgData pointer to location to write the decrypted data
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
 int32_t v2xSe_decryptUsingMaEcies
 (
     TypeDecryptEcies_t  *pEciesData,
@@ -1374,6 +1896,23 @@ int32_t v2xSe_decryptUsingMaEcies
 	return V2XSE_SUCCESS;
 }
 
+/**
+ *
+ * @brief Decrypt data using ECIES and base key
+ *
+ * This function decrypts data using ECIES and the specified base key.
+ * The data to decrypt and all other parameters needed to perform the
+ * decryption are provided by the caller.
+ *
+ * @param baseKeyId key slot of base key to use
+ * @param pEciesData pointer to structure with data and decryption parameters
+ * @param pHsmStatusCode pointer to location to write extended result code
+ * @param pMsgLen pointer to location to write the length of decrypted data
+ * @param pMsgData pointer to location to write the decrypted data
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
 int32_t v2xSe_decryptUsingBaEcies
 (
     TypeBaseKeyId_t baseKeyId,
@@ -1425,6 +1964,18 @@ int32_t v2xSe_decryptUsingBaEcies
 	return V2XSE_SUCCESS;
 }
 
+/**
+ *
+ * @brief Get key length from curveId
+ *
+ * This  function returns the key length that corresponds to the specified
+ * curveId
+ *
+ * @param curveID curveId value to query
+ *
+ * @return key length, or V2XSE_FAILURE in case of error
+ *
+ */
 int32_t v2xSe_getKeyLenFromCurveID(TypeCurveId_t curveID)
 {
 	switch(curveID)
@@ -1444,6 +1995,18 @@ int32_t v2xSe_getKeyLenFromCurveID(TypeCurveId_t curveID)
 	}
 }
 
+/**
+ *
+ * @brief Get signature length from hash length
+ *
+ * This function returns the signature length used to sign a hash of the
+ * specified length.
+ *
+ * @param hashLength hash length to sign
+ *
+ * @return length of signature, or V2XSE_FAILURE on error
+ *
+ */
 int32_t v2xSe_getSigLenFromHashLen(TypeHashLength_t hashLength)
 {
 	switch(hashLength)
@@ -1456,6 +2019,22 @@ int32_t v2xSe_getSigLenFromHashLen(TypeHashLength_t hashLength)
 	}
 }
 
+/**
+ *
+ * @brief Exchange APDU packets with SE
+ *
+ * This function exchanges APDU packets with the SE.  As this system does
+ * not support APDU packets, this function will always return error
+ *
+ * @param pTxBuf pointer to APDU packets to send
+ * @param txLen length of APDU packet to send
+ * @param pRxLen pointer to location to write length of received APDU packet
+ * @param pRxBuf pointer to location to write received APDU packet
+ * @param pHsmStatusCode pointer to location to write extended result code
+ *
+ * @return V2XSE_FAILURE in all cases
+ *
+ */
 int32_t v2xSe_sendReceive(uint8_t *pTxBuf, uint16_t txLen,  uint16_t *pRxLen,
 				uint8_t *pRxBuf,TypeSW_t *pHsmStatusCode)
 {
@@ -1466,6 +2045,23 @@ int32_t v2xSe_sendReceive(uint8_t *pTxBuf, uint16_t txLen,  uint16_t *pRxLen,
 }
 
 
+/**
+ *
+ * @brief Store generic data in NVM
+ *
+ * This function stores generic data in NVM in the specified slot.  For this
+ * system, it is stored in plaintext in the filesystem.   The data must be
+ * between 1 and 239 bytes long. If data already exists in the specified
+ * slot, it is overwritten.
+ *
+ * @param index slot to use to store generic data
+ * @param length length of generic data to store
+ * @param pData pointer to generic data to store
+ * @param pHsmStatusCode pointer to location to write extended result code
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
 int32_t v2xSe_storeData(TypeGsDataIndex_t index, TypeLen_t length,
 				uint8_t  *pData,TypeSW_t *pHsmStatusCode)
 {
@@ -1491,6 +2087,20 @@ int32_t v2xSe_storeData(TypeGsDataIndex_t index, TypeLen_t length,
 	return V2XSE_SUCCESS;
 }
 
+/**
+ *
+ * @brief Retrieve generic data from NVM
+ *
+ * This function retrieves generic data in NVM from the specified slot.
+ *
+ * @param index slot to retrieve generic data from
+ * @param plength pointer to location to write length of generic data retrieved
+ * @param pData pointer to location to write generic data retrieved
+ * @param pHsmStatusCode pointer to location to write extended result code
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
 int32_t v2xSe_getData(TypeGsDataIndex_t index, TypeLen_t *pLength,
 				uint8_t *pData,TypeSW_t *pHsmStatusCode)
 {
@@ -1514,6 +2124,18 @@ int32_t v2xSe_getData(TypeGsDataIndex_t index, TypeLen_t *pLength,
 	return V2XSE_SUCCESS;
 }
 
+/**
+ *
+ * @brief Delete generic data from NVM
+ *
+ * This function deletes generic data in NVM from the specified slot.
+ *
+ * @param index slot to delete generic data from
+ * @param pHsmStatusCode pointer to location to write extended result code
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
 int32_t v2xSe_deleteData(TypeGsDataIndex_t index, TypeSW_t *pHsmStatusCode)
 {
 	VERIFY_STATUS_CODE_PTR()
@@ -1536,6 +2158,18 @@ int32_t v2xSe_deleteData(TypeGsDataIndex_t index, TypeSW_t *pHsmStatusCode)
 	return V2XSE_SUCCESS;
 }
 
+/**
+ *
+ * @brief Invoke garbage collector
+ *
+ * This function invokes the JavaCard garbage collector on an SE.  As this
+ * system does not use JavaCard, this function does nothing.
+ *
+ * @param pHsmStatusCode pointer to location to write extended result code
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
 int32_t v2xSe_invokeGarbageCollector(TypeSW_t *pHsmStatusCode)
 {
 	VERIFY_STATUS_CODE_PTR()
@@ -1546,6 +2180,21 @@ int32_t v2xSe_invokeGarbageCollector(TypeSW_t *pHsmStatusCode)
 	return V2XSE_SUCCESS;
 }
 
+/**
+ *
+ * @brief Retrieve amount of available NVM
+ *
+ * This function returns the amount of available NVM.  As this system only
+ * simulates NVM and actually uses the filesystem to store nvm data, for the
+ * moment this function simply returns a fixed value.  This may be changed in
+ * the future if needed.
+ *
+ * @param pSize pointer to location to write the amount of available nvm
+ * @param pHsmStatusCode pointer to location to write extended result code
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
 int32_t v2xSe_getRemainingNvm (uint32_t *pSize, TypeSW_t *pHsmStatusCode)
 {
 	VERIFY_STATUS_CODE_PTR()
@@ -1560,6 +2209,20 @@ int32_t v2xSe_getRemainingNvm (uint32_t *pSize, TypeSW_t *pHsmStatusCode)
 }
 
 
+/**
+ *
+ * @brief End key injection phase
+ *
+ * This function ends key injection phase for the selected applet.  For the
+ * moment this simply involves updating a variable in NVM.  This function
+ * will need to be updated when a more secure method to end key injection
+ * phase has been implemented on the HSM.
+ *
+ * @param pHsmStatusCode pointer to location to write extended result code
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
 int32_t v2xSe_endKeyInjection (TypeSW_t *pHsmStatusCode)
 {
 	VERIFY_STATUS_CODE_PTR()
@@ -1583,6 +2246,21 @@ int32_t v2xSe_endKeyInjection (TypeSW_t *pHsmStatusCode)
 	return V2XSE_SUCCESS;
 }
 
+/**
+ *
+ * @brief Retrieve the phase of the current applet
+ *
+ * This function retrieves the phase (key injection or normal operating) for
+ * the current applet.  For the moment this simply involves querying a variable
+ * in NVM.  This function will need to be updated when a more secure method to
+ * handle key injection phase has been implemented on the HSM.
+ *
+ * @param pPhaseInfo pointer to location to write the current phase
+ * @param pHsmStatusCode pointer to location to write extended result code
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
 int32_t v2xSe_getSePhase (uint8_t *pPhaseInfo, TypeSW_t *pHsmStatusCode)
 {
 	VERIFY_STATUS_CODE_PTR()

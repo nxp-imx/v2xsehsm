@@ -1,6 +1,18 @@
 
-#ifndef ADAPTLIB_H
-#define ADAPTLIB_H
+/*
+ * Copyright 2019 NXP
+ */
+
+/**
+ *
+ * @file v2xsehsm.h
+ *
+ * @brief Header file for V2X SE to HSM adaptation layer
+ *
+ */
+
+#ifndef V2XSEHSM_H
+#define V2XSEHSM_H
 
 #include "v2xSe.h"
 #include "hsmstub.h"
