@@ -81,28 +81,32 @@ uint16_t convertCurveId(TypeCurveId_t curveId);
 
 #define ENFORCE_STATE_NOT_INIT() {				\
 	if (v2xseState == V2XSE_STATE_INIT) {			\
-		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;	\
+		if (pHsmStatusCode)				\
+			*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;\
 		return V2XSE_DEVICE_NOT_CONNECTED;		\
 	}							\
 }
 
 #define ENFORCE_STATE_ACTIVATED() {				\
 	if (v2xseState != V2XSE_STATE_ACTIVATED) {		\
-		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;	\
+		if (pHsmStatusCode)				\
+			*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;\
 		return V2XSE_DEVICE_NOT_CONNECTED;		\
 	}							\
 }
 
 #define ENFORCE_POINTER_NOT_NULL(ptr) {				\
 	if (!ptr) {						\
-		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;	\
+		if (pHsmStatusCode)				\
+			*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;\
 		return V2XSE_FAILURE;				\
 	}							\
 }
 
 #define ENFORCE_NORMAL_OPERATING_PHASE() {			\
 	if (v2xsePhase != V2XSE_NORMAL_OPERATING_PHASE) {	\
-		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;	\
+		if (pHsmStatusCode)				\
+			*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;\
 		return V2XSE_FAILURE;				\
 	}							\
 }
