@@ -32,6 +32,14 @@
 
 #define NUM_STORAGE_SLOTS	10000
 
+extern uint8_t	v2xseState;
+extern appletSelection_t v2xseAppletId;
+
+extern hsm_hdl_t hsmSessionHandle;
+extern hsm_hdl_t hsmKeyMgmtHandle;
+extern hsm_hdl_t hsmCipherHandle;
+extern hsm_hdl_t hsmSigGenHandle;
+
 extern uint8_t	v2xsePhase;
 extern const char* appletVarStoragePath;
 extern uint32_t key_store_nonce;
@@ -45,6 +53,10 @@ extern TypeCurveId_t baCurveId[NUM_STORAGE_SLOTS];
 extern const char usVarStorage[];
 extern const char euVarStorage[];
 
+extern uint32_t preparedKeyHandle;
+
+extern const uint8_t serialNumber[V2XSE_SERIAL_NUMBER];
+
 #define MAGIC_KEYSTORE_IDENTIFIER_US	0x13196687
 #define MAGIC_KEYSTORE_IDENTIFIER_EU	0x87131966
 #define MAX_KEYSTORE_UPDATES		0xffff
@@ -53,6 +65,7 @@ extern const char euVarStorage[];
 #define HSM_OPERATING_MODE	0
 
 uint16_t convertCurveId(TypeCurveId_t curveId);
+int is256bitCurve(uint32_t keyType);
 
 #define VERIFY_STATUS_CODE_PTR() {				\
 	if (!pHsmStatusCode)					\

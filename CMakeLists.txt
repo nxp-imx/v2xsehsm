@@ -21,6 +21,11 @@ find_package(hsmstub REQUIRED)
 add_library (v2xsehsm SHARED
 	src/v2xsehsm.c
 	src/nvm.c
+	src/keymanagement.c
+	src/signature.c
+	src/ecies.c
+	src/datastorage.c
+	src/utility.c
 	)
 
 target_link_libraries(v2xsehsm
