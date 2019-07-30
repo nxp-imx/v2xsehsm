@@ -400,6 +400,7 @@ int nvm_retrieve_ma_key_handle(uint32_t* handle, TypeCurveId_t* id)
  * NVM, if present. An error is flagged if the key handle or curveId are
  * not in NVM, or the curveId is invalid.
  *
+ * @param index slot containing requested RT key
  * @param handle Pointer to location where RT key handle will be written
  * @param id Pointer to location where RT curveId will be written
  *
@@ -440,6 +441,7 @@ int nvm_retrieve_rt_key_handle(int index, uint32_t* handle, TypeCurveId_t* id)
  * NVM, if present. An error is flagged if the key handle or curveId are
  * not in NVM, or the curveId is invalid.
  *
+ * @param index slot containing requested BA key
  * @param handle Pointer to location where BA key handle will be written
  * @param id Pointer to location where BA curveId will be written
  *

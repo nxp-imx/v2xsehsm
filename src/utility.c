@@ -230,7 +230,7 @@ int32_t v2xSe_getPlatformInfo(TypeSW_t *pHsmStatusCode,
  * provisioning profile of the SE implementation.
  *
  * @param pHsmStatusCode pointer to location to write extended result code
- * @param pPlatformIdentifier pointer to location to write platform info
+ * @param pPlatformConfig pointer to location to write platform config
  *
  * @return V2XSE_SUCCESS if no error, non-zero on error
  *

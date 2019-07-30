@@ -269,7 +269,7 @@ int32_t v2xSe_generateRtEccKeyPair
  * from nvm.
  *
  * @param rtKeyId slot number of the runtime key pair to delete
- * @param pPublicKeyPlain pointer to location to write public key
+ * @param pHsmStatusCode pointer to location to write extended result code
  *
  * @return V2XSE_SUCCESS if no error, non-zero on error
  *
@@ -653,7 +653,7 @@ int32_t v2xSe_getBaEccPublicKey
  * @param rtKeyId slot to store the generated runtime key
  * @param returnPubKey flag indicating whether public key should be returned
  * @param pHsmStatusCode pointer to location to write extended result code
- * @param pCurveId pointer to location to write curveId of derived key
+ * @param pCurveID pointer to location to write curveId of derived key
  * @param pPublicKeyPlain pointer to location to write derived public key
  *
  * @return V2XSE_SUCCESS if no error, non-zero on error
@@ -691,7 +691,7 @@ int32_t v2xSe_deriveRtEccKeyPair
 	}
 
 	if ((v2xseAppletId != e_US_AND_GS) && (v2xseAppletId != e_US)){
-		*pHsmStatusCode = V2XSE_INS_NOT_SUPPORTED;
+		*pHsmStatusCode = V2XSE_FUNC_NOT_SUPPORTED;
 		return V2XSE_FAILURE;
 	}
 	if (baseKeyId >= NUM_STORAGE_SLOTS){

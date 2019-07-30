@@ -38,10 +38,21 @@ target_include_directories (v2xsehsm PUBLIC
 	)
 
 set_target_properties (v2xsehsm PROPERTIES
-	PUBLIC_HEADER "include/v2xSe.h;include/v2xSeCommTypes.h"
+	PUBLIC_HEADER "include/v2xseapi.h"
 	VERSION ${v2xsehsm_VERSION}
 	SOVERSION ${v2xsehsm_MAJOR}
 	)
+
+configure_file(
+	${PROJECT_SOURCE_DIR}/Doxyfile.in
+	${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
+	@ONLY
+	)
+
+add_custom_target(doc
+	COMMAND doxygen ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
+	WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+	VERBATIM)
 
 install (TARGETS v2xsehsm
 	EXPORT v2xsehsmTargets

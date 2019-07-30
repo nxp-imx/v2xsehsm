@@ -58,17 +58,17 @@ uint8_t	v2xsePhase;
 uint32_t key_store_nonce;
 
 /* NVM Key handles, initialized as zero, read from fs when first used */
-/* Module authentication key handle */
+/** Module authentication key handle */
 uint32_t maKeyHandle;
-/* Module authentication key curve id */
+/** Module authentication key curve id */
 TypeCurveId_t maCurveId;
-/* Runtime key handle */
+/** Runtime key handle */
 uint32_t rtKeyHandle[NUM_STORAGE_SLOTS];
-/*Runtime key curve id */
+/** Runtime key curve id */
 TypeCurveId_t rtCurveId[NUM_STORAGE_SLOTS];
-/* Base key handle */
+/** Base key handle */
 uint32_t baKeyHandle[NUM_STORAGE_SLOTS];
-/* Base key curve id */
+/** Base key curve id */
 TypeCurveId_t baCurveId[NUM_STORAGE_SLOTS];
 
 /**
@@ -120,7 +120,7 @@ int32_t v2xSe_activate(appletSelection_t appletId, TypeSW_t *pHsmStatusCode)
  * that can be used are also opened.  The v2xseState is set to activated.
  *
  * @param appletId Applet(s) to activate: US or EU, and optionally GS
- * @param: Security level for emulated SXF1800
+ * @param securityLevel Security level for emulated SXF1800
  * @param pHsmStatusCode pointer to location to write extended result code
  *
  * @return V2XSE_SUCCESS if no error, non-zero on error

@@ -14,6 +14,7 @@
 #ifndef NVM_H
 #define NVM_H
 
+/** Max absolute patch name expected for filesystem access */
 #define MAX_FILENAME_SIZE	128
 
 int nvm_init(void);

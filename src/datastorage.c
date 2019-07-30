@@ -63,7 +63,7 @@ int32_t v2xSe_storeData(TypeGsDataIndex_t index, TypeLen_t length,
  * This function retrieves generic data in NVM from the specified slot.
  *
  * @param index slot to retrieve generic data from
- * @param plength pointer to location to write length of generic data retrieved
+ * @param pLength pointer to location to write length of generic data retrieved
  * @param pData pointer to location to write generic data retrieved
  * @param pHsmStatusCode pointer to location to write extended result code
  *
