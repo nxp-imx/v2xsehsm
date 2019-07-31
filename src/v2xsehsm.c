@@ -283,6 +283,22 @@ int32_t v2xSe_deactivate(void)
 
 /**
  *
+ * @brief Disconnects the emulated SXF1800
+ *
+ * This function disconnects the emulated SXF1800, which has no
+ * functional difference in this system to deactivate, so the v2xSe_deactivate
+ * function is directly called so avoid code duplication.
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
+int32_t v2xSe_disconnect(void)
+{
+	return v2xSe_deactivate();
+}
+
+/**
+ *
  * @brief Generate a random number
  *
  * This function calls the HSM to generate a random number of the requested

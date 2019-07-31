@@ -411,6 +411,7 @@ int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId,
         channelSecLevel_t securityLevel, TypeSW_t *pHsmStatusCode);
 int32_t v2xSe_reset(void);
 int32_t v2xSe_deactivate(void);
+int32_t v2xSe_disconnect(void);
 int32_t v2xSe_generateMaEccKeyPair(TypeCurveId_t curveId,
         TypeSW_t *pHsmStatusCode, TypePublicKey_t *pPublicKeyPlain);
 int32_t v2xSe_getMaEccPublicKey(TypeSW_t *pHsmStatusCode,
