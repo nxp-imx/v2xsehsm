@@ -16,6 +16,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "v2xsehsm.h"
 #include "nvm.h"
 
@@ -565,7 +566,6 @@ static int var_mkdir(char* arrayname)
  */
 int nvm_init(void)
 {
-	int i;
 	int phaseValid;
 
 	/* Verify top level storage directory exists, create if not */
@@ -642,10 +642,8 @@ int nvm_init(void)
 	 * filesystem on first use
 	 */
 	maKeyHandle = 0;
-	for(i = 0; i < NUM_STORAGE_SLOTS; i++) {
-		rtKeyHandle[i] = 0;
-		baKeyHandle[i] = 0;
-	}
+	memset(rtKeyHandle, 0, sizeof(rtKeyHandle));
+	memset(baKeyHandle, 0, sizeof(baKeyHandle));
 
 	return 0;
 }
