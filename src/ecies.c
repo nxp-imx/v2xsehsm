@@ -24,7 +24,7 @@
  *
  * @param pEciesData pointer to structure with data and encryption parameters
  * @param pHsmStatusCode pointer to location to write extended result code
- * @param pVctLen pointer to location to write the length of encrypted data
+ * @param pVctLen data buffer size on input, length of encrypted data on output
  * @param pVctData pointer to location to write the encrypted data
  *
  * @return V2XSE_SUCCESS if no error, non-zero on error
@@ -77,7 +77,7 @@ int32_t v2xSe_encryptUsingEcies (TypeEncryptEcies_t *pEciesData,
  * @param rtKeyId key slot of runtime key to use
  * @param pEciesData pointer to structure with data and decryption parameters
  * @param pHsmStatusCode pointer to location to write extended result code
- * @param pMsgLen pointer to location to write the length of decrypted data
+ * @param pMsgLen msg buffer size on input, length of decrypted data on output
  * @param pMsgData pointer to location to write the decrypted data
  *
  * @return V2XSE_SUCCESS if no error, non-zero on error
@@ -141,7 +141,7 @@ int32_t v2xSe_decryptUsingRtEcies (TypeRtKeyId_t rtKeyId,
  *
  * @param pEciesData pointer to structure with data and decryption parameters
  * @param pHsmStatusCode pointer to location to write extended result code
- * @param pMsgLen pointer to location to write the length of decrypted data
+ * @param pMsgLen msg buffer size on input, length of decrypted data on output
  * @param pMsgData pointer to location to write the decrypted data
  *
  * @return V2XSE_SUCCESS if no error, non-zero on error
@@ -177,7 +177,7 @@ int32_t v2xSe_decryptUsingMaEcies
 	args.p2 = pEciesData->macParamP2;
 	args.output = pMsgData->data;
 	args.input_size = pEciesData->vctLen;
-	/* expect args.output_size to be filled in by HSM */
+	args.output_size = *pMsgLen;
 	args.p1_size = pEciesData->kdfParamP1Len;
 	args.p2_size = pEciesData->macParamP2Len;
 	args.mac_size = pEciesData->macLen;
@@ -204,7 +204,7 @@ int32_t v2xSe_decryptUsingMaEcies
  * @param baseKeyId key slot of base key to use
  * @param pEciesData pointer to structure with data and decryption parameters
  * @param pHsmStatusCode pointer to location to write extended result code
- * @param pMsgLen pointer to location to write the length of decrypted data
+ * @param pMsgLen msg buffer size on input, length of decrypted data on output
  * @param pMsgData pointer to location to write the decrypted data
  *
  * @return V2XSE_SUCCESS if no error, non-zero on error
@@ -245,7 +245,7 @@ int32_t v2xSe_decryptUsingBaEcies
 	args.p2 = pEciesData->macParamP2;
 	args.output = pMsgData->data;
 	args.input_size = pEciesData->vctLen;
-	/* expect args.output_size to be filled in by HSM */
+	args.output_size = *pMsgLen;
 	args.p1_size = pEciesData->kdfParamP1Len;
 	args.p2_size = pEciesData->macParamP2Len;
 	args.mac_size = pEciesData->macLen;
