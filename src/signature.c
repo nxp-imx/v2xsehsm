@@ -43,11 +43,11 @@ int32_t v2xSe_createMaSign
 	TypeHashLength_t expectedHashLength;
 	op_generate_sign_args_t args;
 
-	VERIFY_STATUS_CODE_PTR()
-	ENFORCE_STATE_ACTIVATED()
-	ENFORCE_NORMAL_OPERATING_PHASE()
-	ENFORCE_POINTER_NOT_NULL(pHashValue)
-	ENFORCE_POINTER_NOT_NULL(pSignature)
+	VERIFY_STATUS_CODE_PTR();
+	ENFORCE_STATE_ACTIVATED();
+	ENFORCE_NORMAL_OPERATING_PHASE();
+	ENFORCE_POINTER_NOT_NULL(pHashValue);
+	ENFORCE_POINTER_NOT_NULL(pSignature);
 
 	if(nvm_retrieve_ma_key_handle(&keyHandle, &curveId)) {
 		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
@@ -110,9 +110,9 @@ int32_t v2xSe_activateRtKeyForSigning
 	hsm_signature_scheme_id_t sig_scheme;
 	op_prepare_sign_args_t args;
 
-	VERIFY_STATUS_CODE_PTR()
-	ENFORCE_STATE_ACTIVATED()
-	ENFORCE_NORMAL_OPERATING_PHASE()
+	VERIFY_STATUS_CODE_PTR();
+	ENFORCE_STATE_ACTIVATED();
+	ENFORCE_NORMAL_OPERATING_PHASE();
 
 	if (rtKeyId >= NUM_STORAGE_SLOTS){
 		*pHsmStatusCode = V2XSE_WRONG_DATA;
@@ -172,12 +172,12 @@ int32_t v2xSe_createRtSignLowLatency
 {
 	op_finalize_sign_args_t args;
 
-	VERIFY_STATUS_CODE_PTR()
-	ENFORCE_STATE_ACTIVATED()
-	ENFORCE_NORMAL_OPERATING_PHASE()
-	ENFORCE_POINTER_NOT_NULL(pHashValue)
-	ENFORCE_POINTER_NOT_NULL(pSignature)
-	ENFORCE_POINTER_NOT_NULL(pFastIndicator)
+	VERIFY_STATUS_CODE_PTR();
+	ENFORCE_STATE_ACTIVATED();
+	ENFORCE_NORMAL_OPERATING_PHASE();
+	ENFORCE_POINTER_NOT_NULL(pHashValue);
+	ENFORCE_POINTER_NOT_NULL(pSignature);
+	ENFORCE_POINTER_NOT_NULL(pFastIndicator);
 
 	if (!preparedKeyHandle) {
 		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
@@ -230,11 +230,11 @@ int32_t v2xSe_createRtSign
 	hsm_signature_scheme_id_t sig_scheme;
 	op_generate_sign_args_t args;
 
-	VERIFY_STATUS_CODE_PTR()
-	ENFORCE_STATE_ACTIVATED()
-	ENFORCE_NORMAL_OPERATING_PHASE()
-	ENFORCE_POINTER_NOT_NULL(pHashValue)
-	ENFORCE_POINTER_NOT_NULL(pSignature)
+	VERIFY_STATUS_CODE_PTR();
+	ENFORCE_STATE_ACTIVATED();
+	ENFORCE_NORMAL_OPERATING_PHASE();
+	ENFORCE_POINTER_NOT_NULL(pHashValue);
+	ENFORCE_POINTER_NOT_NULL(pSignature);
 
 	if (rtKeyId >= NUM_STORAGE_SLOTS){
 		*pHsmStatusCode = V2XSE_WRONG_DATA;
@@ -304,11 +304,11 @@ int32_t v2xSe_createBaSign
 	TypeHashLength_t expectedHashLength;
 	op_generate_sign_args_t args;
 
-	VERIFY_STATUS_CODE_PTR()
-	ENFORCE_STATE_ACTIVATED()
-	ENFORCE_NORMAL_OPERATING_PHASE()
-	ENFORCE_POINTER_NOT_NULL(pHashValue)
-	ENFORCE_POINTER_NOT_NULL(pSignature)
+	VERIFY_STATUS_CODE_PTR();
+	ENFORCE_STATE_ACTIVATED();
+	ENFORCE_NORMAL_OPERATING_PHASE();
+	ENFORCE_POINTER_NOT_NULL(pHashValue);
+	ENFORCE_POINTER_NOT_NULL(pSignature);
 
 	if (baseKeyId >= NUM_STORAGE_SLOTS){
 		*pHsmStatusCode = V2XSE_WRONG_DATA;

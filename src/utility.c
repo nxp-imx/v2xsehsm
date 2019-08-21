@@ -93,9 +93,9 @@ int32_t v2xSe_getAppletVersion
     TypeVersion_t *pVersion
 )
 {
-	VERIFY_STATUS_CODE_PTR()
-	ENFORCE_STATE_ACTIVATED()
-	ENFORCE_POINTER_NOT_NULL(pVersion)
+	VERIFY_STATUS_CODE_PTR();
+	ENFORCE_STATE_ACTIVATED();
+	ENFORCE_POINTER_NOT_NULL(pVersion);
 
 	if ((appletType != e_V2X) && (appletType != e_GS)) {
 		*pHsmStatusCode = V2XSE_WRONG_DATA;
@@ -133,9 +133,9 @@ int32_t v2xSe_getSeInfo
     TypeInformation_t *pInfo
 )
 {
-	VERIFY_STATUS_CODE_PTR()
-	ENFORCE_STATE_ACTIVATED()
-	ENFORCE_POINTER_NOT_NULL(pInfo)
+	VERIFY_STATUS_CODE_PTR();
+	ENFORCE_STATE_ACTIVATED();
+	ENFORCE_POINTER_NOT_NULL(pInfo);
 
 	/* TODO: Figure out real values */
 
@@ -211,9 +211,9 @@ int32_t v2xSe_getCryptoLibVersion
 int32_t v2xSe_getPlatformInfo(TypeSW_t *pHsmStatusCode,
 			TypePlatformIdentity_t *pPlatformIdentifier)
 {
-	VERIFY_STATUS_CODE_PTR()
-	ENFORCE_STATE_NOT_INIT()
-	ENFORCE_POINTER_NOT_NULL(pPlatformIdentifier)
+	VERIFY_STATUS_CODE_PTR();
+	ENFORCE_STATE_NOT_INIT();
+	ENFORCE_POINTER_NOT_NULL(pPlatformIdentifier);
 
 	/* TODO: Figure out real values */
 	memcpy(pPlatformIdentifier->data, PLATFORMINFO_STRING,
@@ -238,9 +238,9 @@ int32_t v2xSe_getPlatformInfo(TypeSW_t *pHsmStatusCode,
 int32_t v2xSe_getPlatformConfig(TypeSW_t *pHsmStatusCode,
 			TypePlatformConfiguration_t *pPlatformConfig)
 {
-	VERIFY_STATUS_CODE_PTR()
-	ENFORCE_STATE_NOT_INIT()
-	ENFORCE_POINTER_NOT_NULL(pPlatformConfig)
+	VERIFY_STATUS_CODE_PTR();
+	ENFORCE_STATE_NOT_INIT();
+	ENFORCE_POINTER_NOT_NULL(pPlatformConfig);
 
 	/* TODO: Figure out real values */
 	pPlatformConfig->data[0] = 0;
@@ -267,9 +267,9 @@ int32_t v2xSe_getPlatformConfig(TypeSW_t *pHsmStatusCode,
 int32_t v2xSe_getChipInfo(TypeSW_t *pHsmStatusCode,
 					TypeChipInformation_t *pChipInfo)
 {
-	VERIFY_STATUS_CODE_PTR()
-	ENFORCE_STATE_NOT_INIT()
-	ENFORCE_POINTER_NOT_NULL(pChipInfo)
+	VERIFY_STATUS_CODE_PTR();
+	ENFORCE_STATE_NOT_INIT();
+	ENFORCE_POINTER_NOT_NULL(pChipInfo);
 
 	/* TODO: Figure out real values */
 	memcpy(pChipInfo->data, serialNumber, V2XSE_SERIAL_NUMBER);
@@ -293,9 +293,9 @@ int32_t v2xSe_getChipInfo(TypeSW_t *pHsmStatusCode,
 int32_t v2xSe_getAttackLog(TypeSW_t *pHsmStatusCode,
 					TypeAttackLog_t *pAttackLog)
 {
-	VERIFY_STATUS_CODE_PTR()
-	ENFORCE_STATE_NOT_INIT()
-	ENFORCE_POINTER_NOT_NULL(pAttackLog)
+	VERIFY_STATUS_CODE_PTR();
+	ENFORCE_STATE_NOT_INIT();
+	ENFORCE_POINTER_NOT_NULL(pAttackLog);
 
 	pAttackLog->currAttackCntrStatus = V2XSE_ATTACK_CNT_ZERO;
 	pAttackLog->len = 0;
@@ -372,9 +372,9 @@ int32_t v2xSe_getSigLenFromHashLen(TypeHashLength_t hashLength)
  */
 int32_t v2xSe_invokeGarbageCollector(TypeSW_t *pHsmStatusCode)
 {
-	VERIFY_STATUS_CODE_PTR()
-	ENFORCE_STATE_ACTIVATED()
-	ENFORCE_NORMAL_OPERATING_PHASE()
+	VERIFY_STATUS_CODE_PTR();
+	ENFORCE_STATE_ACTIVATED();
+	ENFORCE_NORMAL_OPERATING_PHASE();
 
 	*pHsmStatusCode = V2XSE_NO_ERROR;
 	return V2XSE_SUCCESS;

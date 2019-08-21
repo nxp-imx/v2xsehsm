@@ -83,7 +83,7 @@ TypeCurveId_t baCurveId[NUM_STORAGE_SLOTS];
  */
 int32_t v2xSe_connect(void)
 {
-	ENFORCE_STATE_INIT()
+	ENFORCE_STATE_INIT();
 
 	v2xseState = V2XSE_STATE_CONNECTED;
 	return V2XSE_SUCCESS;
@@ -138,8 +138,8 @@ int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId,
 	open_svc_sign_gen_args_t sig_gen_args;
 	uint32_t keystore_identifier;
 
-	VERIFY_STATUS_CODE_PTR()
-	ENFORCE_STATE_INIT()
+	VERIFY_STATUS_CODE_PTR();
+	ENFORCE_STATE_INIT();
 
 	if ((appletId == e_US_AND_GS) || (appletId == e_US)){
 		appletVarStoragePath = usVarStorage;
@@ -320,9 +320,9 @@ int32_t v2xSe_getRandomNumber
 {
 	op_get_random_args_t args;
 
-	VERIFY_STATUS_CODE_PTR()
-	ENFORCE_STATE_ACTIVATED()
-	ENFORCE_POINTER_NOT_NULL(pRandomNumber)
+	VERIFY_STATUS_CODE_PTR();
+	ENFORCE_STATE_ACTIVATED();
+	ENFORCE_POINTER_NOT_NULL(pRandomNumber);
 
 	args.output = (uint8_t*)pRandomNumber;
 	args.random_size = length;
@@ -354,7 +354,7 @@ int32_t v2xSe_getRandomNumber
 int32_t v2xSe_sendReceive(uint8_t *pTxBuf, uint16_t txLen,  uint16_t *pRxLen,
 				uint8_t *pRxBuf,TypeSW_t *pHsmStatusCode)
 {
-	VERIFY_STATUS_CODE_PTR()
+	VERIFY_STATUS_CODE_PTR();
 
 	*pHsmStatusCode = V2XSE_FUNC_NOT_SUPPORTED;
 	return V2XSE_FAILURE;
@@ -377,8 +377,8 @@ int32_t v2xSe_sendReceive(uint8_t *pTxBuf, uint16_t txLen,  uint16_t *pRxLen,
  */
 int32_t v2xSe_endKeyInjection (TypeSW_t *pHsmStatusCode)
 {
-	VERIFY_STATUS_CODE_PTR()
-	ENFORCE_STATE_ACTIVATED()
+	VERIFY_STATUS_CODE_PTR();
+	ENFORCE_STATE_ACTIVATED();
 
 	if (v2xsePhase != V2XSE_KEY_INJECTION_PHASE) {
 		*pHsmStatusCode = V2XSE_FUNC_NOT_SUPPORTED;
@@ -415,9 +415,9 @@ int32_t v2xSe_endKeyInjection (TypeSW_t *pHsmStatusCode)
  */
 int32_t v2xSe_getSePhase (uint8_t *pPhaseInfo, TypeSW_t *pHsmStatusCode)
 {
-	VERIFY_STATUS_CODE_PTR()
-	ENFORCE_STATE_ACTIVATED()
-	ENFORCE_POINTER_NOT_NULL(pPhaseInfo)
+	VERIFY_STATUS_CODE_PTR();
+	ENFORCE_STATE_ACTIVATED();
+	ENFORCE_POINTER_NOT_NULL(pPhaseInfo);
 
 	if (v2xseSecurityLevel != e_channelSecLevel_5) {
 		*pHsmStatusCode = V2XSE_SECURITY_STATUS_NOT_SATISFIED;

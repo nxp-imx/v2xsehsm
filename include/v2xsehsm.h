@@ -83,13 +83,13 @@ uint16_t convertCurveId(TypeCurveId_t curveId);
 int is256bitCurve(uint32_t keyType);
 
 /** Abort function (return) if pHsmStatusCode is NULL */
-#define VERIFY_STATUS_CODE_PTR() {				\
+#define VERIFY_STATUS_CODE_PTR() do {				\
 	if (!pHsmStatusCode)					\
 		return V2XSE_FAILURE;				\
-}
+} while (0)
 
 /** Abort function (return) if not in init state */
-#define ENFORCE_STATE_INIT() {					\
+#define ENFORCE_STATE_INIT() do {				\
 	if (v2xseState != V2XSE_STATE_INIT) {			\
 		if (v2xseState == V2XSE_STATE_CONNECTED)	\
 			return V2XSE_FAILURE_CONNECTED;		\
@@ -97,42 +97,42 @@ int is256bitCurve(uint32_t keyType);
 			return V2XSE_FAILURE_ACTIVATED;		\
 		return V2XSE_FAILURE;				\
 	}							\
-}
+} while (0)
 
 /** Abort function (return) if currently in init state */
-#define ENFORCE_STATE_NOT_INIT() {				\
+#define ENFORCE_STATE_NOT_INIT() do {				\
 	if (v2xseState == V2XSE_STATE_INIT) {			\
 		if (pHsmStatusCode)				\
 			*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;\
 		return V2XSE_DEVICE_NOT_CONNECTED;		\
 	}							\
-}
+} while (0)
 
 /** Abort function (return) if not in activated state */
-#define ENFORCE_STATE_ACTIVATED() {				\
+#define ENFORCE_STATE_ACTIVATED() do {				\
 	if (v2xseState != V2XSE_STATE_ACTIVATED) {		\
 		if (pHsmStatusCode)				\
 			*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;\
 		return V2XSE_DEVICE_NOT_CONNECTED;		\
 	}							\
-}
+} while (0)
 
 /** Abort function (return) if ptr is NULL */
-#define ENFORCE_POINTER_NOT_NULL(ptr) {				\
+#define ENFORCE_POINTER_NOT_NULL(ptr) do {			\
 	if (!ptr) {						\
 		if (pHsmStatusCode)				\
 			*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;\
 		return V2XSE_FAILURE;				\
 	}							\
-}
+} while (0)
 
 /** Abort function (return) if not in normal operating phase */
-#define ENFORCE_NORMAL_OPERATING_PHASE() {			\
+#define ENFORCE_NORMAL_OPERATING_PHASE() do {			\
 	if (v2xsePhase != V2XSE_NORMAL_OPERATING_PHASE) {	\
 		if (pHsmStatusCode)				\
 			*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;\
 		return V2XSE_FAILURE;				\
 	}							\
-}
+} while (0)
 
 #endif
