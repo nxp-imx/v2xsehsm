@@ -384,9 +384,19 @@ int nvm_retrieve_ma_key_handle(uint32_t* handle, TypeCurveId_t* id)
 	if (nvm_load_var("maCurveId", id, sizeof(*id)))
 		return -1;
 
-	/* Verify that curveId is valid, may have been changed in fs */
+	/*
+	 * Verify that curveId is valid, may have been changed in fs.
+	 * This is done by calling convertCurveId and verifying that it
+	 * returns a non-zero (ie valid) keyid - the returned keyid value
+	 * is not used.
+	 */
 	if (!convertCurveId(*id))
 		return -1;
+
+	/* Save values for fast reply next time */
+	maKeyHandle = *handle;
+	maCurveId = *id;
+
 	return 0;
 }
 
@@ -424,9 +434,18 @@ int nvm_retrieve_rt_key_handle(int index, uint32_t* handle, TypeCurveId_t* id)
 	if (nvm_load_array_data("rtCurveId", index, id, sizeof(*id)))
 		return -1;
 
-	/* Verify that curveId is valid, may have been changed in fs */
+	/*
+	 * Verify that curveId is valid, may have been changed in fs.
+	 * This is done by calling convertCurveId and verifying that it
+	 * returns a non-zero (ie valid) keyid - the returned keyid value
+	 * is not used.
+	 */
 	if (!convertCurveId(*id))
 		return -1;
+
+	/* Save values for fast reply next time */
+	rtKeyHandle[index] = *handle;
+	rtCurveId[index] = *id;
 
 	return 0;
 }
@@ -465,9 +484,18 @@ int nvm_retrieve_ba_key_handle(int index, uint32_t* handle, TypeCurveId_t* id)
 	if (nvm_load_array_data("baCurveId", index, id, sizeof(*id)))
 		return -1;
 
-	/* Verify that curveId is valid, may have been changed in fs */
+	/*
+	 * Verify that curveId is valid, may have been changed in fs.
+	 * This is done by calling convertCurveId and verifying that it
+	 * returns a non-zero (ie valid) keyid - the returned keyid value
+	 * is not used.
+	 */
 	if (!convertCurveId(*id))
 		return -1;
+
+	/* Save values for fast reply next time */
+	baKeyHandle[index] = *handle;
+	baCurveId[index] = *id;
 
 	return 0;
 }
