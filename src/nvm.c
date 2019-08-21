@@ -520,7 +520,7 @@ static int var_present(char* varname)
 
 	snprintf(filename, MAX_FILENAME_SIZE, "%s%s", appletVarStoragePath,
 								varname);
-	return access(filename, F_OK);
+	return !access(filename, F_OK);
 
 }
 
@@ -583,7 +583,7 @@ int nvm_init(void)
 	}
 	/* Verify phase variable is valid, create if not and clear all data */
 	phaseValid = 0;
-	if (!var_present("v2xsePhase")) {
+	if (var_present("v2xsePhase")) {
 		if (!nvm_load_var("v2xsePhase", &v2xsePhase,
 							sizeof(v2xsePhase))) {
 			if ((v2xsePhase == V2XSE_KEY_INJECTION_PHASE) ||
@@ -609,24 +609,24 @@ int nvm_init(void)
 	}
 
 	/* Verify rt key handle & curve directories exist, create if not */
-	if (var_present("rtKeyHandle")) {
+	if (!var_present("rtKeyHandle")) {
 		if (var_mkdir("rtKeyHandle")) {
 			return -1;
 		}
 	}
-	if (var_present("rtCurveId")) {
+	if (!var_present("rtCurveId")) {
 		if (var_mkdir("rtCurveId")) {
 			return -1;
 		}
 	}
 
 	/* Verify ba key handle & curve directories exist, create if not */
-	if (var_present("baKeyHandle")) {
+	if (!var_present("baKeyHandle")) {
 		if (var_mkdir("baKeyHandle")) {
 			return -1;
 		}
 	}
-	if (var_present("baCurveId")) {
+	if (!var_present("baCurveId")) {
 		if (var_mkdir("baCurveId")) {
 			return -1;
 		}
