@@ -712,6 +712,7 @@ int32_t v2xSe_deriveRtEccKeyPair
 		args.output = (uint8_t*)pPublicKeyPlain;
 		args.output_size = V2XSE_256_EC_PUB_KEY;
 	} else {
+		args.output = NULL;
 		args.output_size = 0;
 	}
 	args.key_type = keyType;
