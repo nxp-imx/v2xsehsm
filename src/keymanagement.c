@@ -203,30 +203,14 @@ int32_t v2xSe_generateRtEccKeyPair
 
 	if (!nvm_retrieve_rt_key_handle(rtKeyId, &keyHandle, &storedCurveId)) {
 		if (curveId != storedCurveId) {
-			op_manage_key_args_t del_args;
+			TypeSW_t tempHsmStatusCode;
 
-			del_args.key_identifier = &keyHandle;
-			del_args.input_size = 0;
-			del_args.flags = HSM_OP_MANAGE_KEY_FLAGS_DELETE;
-			del_args.key_type = convertCurveId(storedCurveId);
-			del_args.key_type_ext = 0;
-			del_args.key_info = 0;
-			del_args.input_key = NULL;
-			if (hsm_manage_key(hsmKeyMgmtHandle, &del_args)) {
-				*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
-				return V2XSE_FAILURE;
-			}
-			if (nvm_delete_array_data("rtCurveId", rtKeyId)) {
+			if (v2xSe_deleteRtEccPrivateKey(rtKeyId,
+							&tempHsmStatusCode)) {
 				rtKeyHandle[rtKeyId] = 0;
 				*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 				return V2XSE_FAILURE;
 			}
-			if (nvm_delete_array_data("rtKeyHandle", rtKeyId)) {
-				rtKeyHandle[rtKeyId] = 0;
-				*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
-				return V2XSE_FAILURE;
-			}
-			rtKeyHandle[rtKeyId] = 0;
 		}
 	}
 
@@ -445,30 +429,14 @@ int32_t v2xSe_generateBaEccKeyPair
 	if (!nvm_retrieve_ba_key_handle(baseKeyId, &keyHandle,
 							&storedCurveId)) {
 		if (curveId != storedCurveId) {
-			op_manage_key_args_t del_args;
+			TypeSW_t tempHsmStatusCode;
 
-			del_args.key_identifier = &keyHandle;
-			del_args.input_size = 0;
-			del_args.flags = HSM_OP_MANAGE_KEY_FLAGS_DELETE;
-			del_args.key_type = convertCurveId(storedCurveId);
-			del_args.key_type_ext = 0;
-			del_args.key_info = 0;
-			del_args.input_key = NULL;
-			if (hsm_manage_key(hsmKeyMgmtHandle, &del_args)) {
-				*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
-				return V2XSE_FAILURE;
-			}
-			if (nvm_delete_array_data("baCurveId", baseKeyId)) {
+			if (v2xSe_deleteBaEccPrivateKey(baseKeyId,
+							&tempHsmStatusCode)) {
 				baKeyHandle[baseKeyId] = 0;
 				*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 				return V2XSE_FAILURE;
 			}
-			if (nvm_delete_array_data("baKeyHandle", baseKeyId)) {
-				baKeyHandle[baseKeyId] = 0;
-				*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
-				return V2XSE_FAILURE;
-			}
-			baKeyHandle[baseKeyId] = 0;
 		}
 	}
 
@@ -718,30 +686,14 @@ int32_t v2xSe_deriveRtEccKeyPair
 	if (!nvm_retrieve_rt_key_handle(rtKeyId, &outputRtKeyHandle,
 							&storedRtCurveId)) {
 		if (storedRtCurveId != inputBaCurveId) {
-			op_manage_key_args_t del_args;
+			TypeSW_t tempHsmStatusCode;
 
-			del_args.key_identifier = &outputRtKeyHandle;
-			del_args.input_size = 0;
-			del_args.flags = HSM_OP_MANAGE_KEY_FLAGS_DELETE;
-			del_args.key_type = convertCurveId(storedRtCurveId);
-			del_args.key_type_ext = 0;
-			del_args.key_info = 0;
-			del_args.input_key = NULL;
-			if (hsm_manage_key(hsmKeyMgmtHandle, &del_args)) {
-				*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
-				return V2XSE_FAILURE;
-			}
-			if (nvm_delete_array_data("rtCurveId", rtKeyId)) {
+			if (v2xSe_deleteRtEccPrivateKey(rtKeyId,
+							&tempHsmStatusCode)) {
 				rtKeyHandle[rtKeyId] = 0;
 				*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 				return V2XSE_FAILURE;
 			}
-			if (nvm_delete_array_data("rtKeyHandle", rtKeyId)) {
-				rtKeyHandle[rtKeyId] = 0;
-				*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
-				return V2XSE_FAILURE;
-			}
-			rtKeyHandle[rtKeyId] = 0;
 		}
 	}
 
