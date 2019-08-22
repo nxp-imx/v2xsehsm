@@ -243,25 +243,9 @@ int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId,
  *
  * @brief Resets the connection to the emulated SXF1800
  *
- * This function resets the connection to the emulated SXF1800, which has no
- * functional difference in this system to deactivate, so the v2xSe_deactivate
- * function is directly called so avoid code duplication.
- *
- * @return V2XSE_SUCCESS if no error, non-zero on error
- *
- */
-int32_t v2xSe_reset(void)
-{
-	return v2xSe_deactivate();
-}
-
-/**
- *
- * @brief Deactivates the emulated SXF1800
- *
- * This function deactivates the emulated SXF1800.  This is performed by
- * closing the session to the HSM and setting the v2xseState to idle.  By
- * closing the HSM session, all previously opened HSM services are
+ * This function resets the emulated SXF1800.  This is performed by closing
+ * closing the session to the HSM if it is active and setting the v2xseState to
+ * idle.  By closing the HSM session, all previously opened HSM services are
  * automatically closed.  All variables required for activated state cannot
  * be accessed from init state, and will be initialized when activated state
  * is enabled again.
@@ -269,10 +253,8 @@ int32_t v2xSe_reset(void)
  * @return V2XSE_SUCCESS if no error, non-zero on error
  *
  */
-int32_t v2xSe_deactivate(void)
+int32_t v2xSe_reset(void)
 {
-	if (v2xseState == V2XSE_STATE_INIT)
-		return V2XSE_FAILURE_INIT;
 	if (v2xseState == V2XSE_STATE_ACTIVATED) {
 		if (hsm_close_session(hsmSessionHandle))
 			return V2XSE_FAILURE;
@@ -283,11 +265,30 @@ int32_t v2xSe_deactivate(void)
 
 /**
  *
+ * @brief Deactivates the emulated SXF1800
+ *
+ * This function deactivates the emulated SXF1800.  The only functional
+ * difference from v2xSe_reset is that it cannot be called from init state.
+ * To avoid code duplication, this function will simply check if the current
+ * state is not init, and if so call v2xSe_reset.
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
+int32_t v2xSe_deactivate(void)
+{
+	if (v2xseState == V2XSE_STATE_INIT)
+		return V2XSE_FAILURE_INIT;
+	return v2xSe_reset();
+}
+
+/**
+ *
  * @brief Disconnects the emulated SXF1800
  *
  * This function disconnects the emulated SXF1800, which has no
  * functional difference in this system to deactivate, so the v2xSe_deactivate
- * function is directly called so avoid code duplication.
+ * function is directly called to avoid code duplication.
  *
  * @return V2XSE_SUCCESS if no error, non-zero on error
  *
