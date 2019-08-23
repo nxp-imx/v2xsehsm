@@ -83,11 +83,11 @@ int32_t v2xSe_getData(TypeGsDataIndex_t index, TypeLen_t *pLength,
 	}
 	if (!pData || (!pLength) || (index > (NUM_STORAGE_SLOTS-1))) {
 		*pHsmStatusCode = V2XSE_WRONG_DATA;
-		return V2XSE_DEVICE_NOT_CONNECTED;
+		return V2XSE_FAILURE;
 	}
 	if (nvm_load_generic_data(index, pData, pLength) == -1) {
 		*pHsmStatusCode = V2XSE_WRONG_DATA;
-		return V2XSE_DEVICE_NOT_CONNECTED;
+		return V2XSE_FAILURE;
 	}
 	*pHsmStatusCode = V2XSE_NO_ERROR;
 	return V2XSE_SUCCESS;
