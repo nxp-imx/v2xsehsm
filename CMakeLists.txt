@@ -43,6 +43,8 @@ set_target_properties (v2xsehsm PROPERTIES
 	SOVERSION ${v2xsehsm_MAJOR}
 	)
 
+target_compile_options(v2xsehsm PRIVATE -Werror -Wall)
+
 configure_file(
 	${PROJECT_SOURCE_DIR}/Doxyfile.in
 	${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
