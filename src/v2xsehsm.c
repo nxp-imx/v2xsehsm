@@ -172,8 +172,15 @@ int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId,
 
 	if ((appletId == e_US_AND_GS) || (appletId == e_US)){
 		appletVarStoragePath = usVarStorage;
+#ifdef SINGLE_KEYSTORE
+		/* Workaround for single keystore support in current hsm */
+		/*  - both apps use EU keystore defines			 */
+		keystore_identifier = MAGIC_KEYSTORE_IDENTIFIER_EU;
+		key_store_nonce = MAGIC_KEYSTORE_NONCE_EU;
+#else
 		keystore_identifier = MAGIC_KEYSTORE_IDENTIFIER_US;
 		key_store_nonce = MAGIC_KEYSTORE_NONCE_US;
+#endif
 	} else if ((appletId == e_EU_AND_GS) || (appletId == e_EU)){
 		appletVarStoragePath = euVarStorage;
 		keystore_identifier = MAGIC_KEYSTORE_IDENTIFIER_EU;

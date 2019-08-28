@@ -16,8 +16,6 @@ configure_file (
 	${CMAKE_CURRENT_SOURCE_DIR}/include/version.h
 	)
 
-find_package(hsmstub REQUIRED)
-
 add_library (v2xsehsm SHARED
 	src/v2xsehsm.c
 	src/nvm.c
@@ -26,11 +24,14 @@ add_library (v2xsehsm SHARED
 	src/ecies.c
 	src/datastorage.c
 	src/utility.c
+	src/hsmMISSING.c
 	)
 
 target_link_libraries(v2xsehsm
-	hsmstub
+	${SECO_LIBS_DIR}/hsm_lib.a
 	)
+
+target_include_directories(v2xsehsm PRIVATE ${SECO_LIBS_DIR}/include/)
 
 target_include_directories (v2xsehsm PUBLIC
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

@@ -162,6 +162,7 @@ static int32_t getHsmPubKey(uint32_t *pKeyHandle, hsm_key_type_t keyType,
  */
 static int32_t deleteHsmKey(uint32_t keyHandle, hsm_key_type_t keyType)
 {
+#ifndef NO_KEY_DELETION
 	op_manage_key_args_t del_args;
 
 	memset(&del_args, 0, sizeof(del_args));
@@ -169,6 +170,9 @@ static int32_t deleteHsmKey(uint32_t keyHandle, hsm_key_type_t keyType)
 	del_args.flags = HSM_OP_MANAGE_KEY_FLAGS_DELETE;
 	del_args.key_type = keyType;
 	return hsm_manage_key(hsmKeyMgmtHandle, &del_args);
+#else
+	return V2XSE_SUCCESS;
+#endif
 }
 
 /**
@@ -839,7 +843,7 @@ int32_t v2xSe_deriveRtEccKeyPair
 	args.flags = HSM_OP_KEY_GENERATION_FLAGS_CREATE_TRANSIENT;
 	if (rtKeyHandle[rtKeyId])
 		args.flags |= HSM_OP_KEY_GENERATION_FLAGS_UPDATE;
-	args.dest_key_identifier = outputRtKeyHandle;
+	args.dest_key_identifier = &outputRtKeyHandle;
 	if (returnPubKey == V2XSE_RSP_WITH_PUBKEY) {
 		args.output = (uint8_t *)pPublicKeyPlain;
 		args.output_size = V2XSE_256_EC_PUB_KEY;

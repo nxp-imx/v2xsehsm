@@ -45,7 +45,8 @@
 #define V2XSEHSM_H
 
 #include "v2xseapi.h"
-#include "hsmstub.h"
+#include "hsm/hsm_api.h"
+#include "hsmMISSING.h"
 #include "version.h"
 
 /** Init state: not connected to SE */
