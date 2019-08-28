@@ -262,11 +262,25 @@ int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId,
  */
 int32_t v2xSe_reset(void)
 {
+	hsm_err_t error_seen = 0;
 	if (v2xseState == V2XSE_STATE_ACTIVATED) {
+		if (hsm_close_signature_generation_service(hsmSigGenHandle))
+			error_seen = 1;
+		if (hsm_close_cipher_service(hsmCipherHandle))
+			error_seen = 1;
+		if (hsm_close_key_management_service(hsmKeyMgmtHandle))
+			error_seen = 1;
+		if (hsm_close_key_store_service(hsmKeyStoreHandle))
+			error_seen = 1;
+		if (hsm_close_rng_service(hsmRngHandle))
+			error_seen = 1;
 		if (hsm_close_session(hsmSessionHandle))
-			return V2XSE_FAILURE;
+			error_seen = 1;
 	}
 	v2xseState = V2XSE_STATE_INIT;
+	if (error_seen)
+		return V2XSE_FAILURE;
+
 	return V2XSE_SUCCESS;
 }
 
