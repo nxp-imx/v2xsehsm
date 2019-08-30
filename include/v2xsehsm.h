@@ -135,4 +135,28 @@ int is256bitCurve(uint32_t keyType);
 	}							\
 } while (0)
 
+/**
+ * This structure describes the format that the hsm uses to encode
+ * public keys for 256 bit curves
+ */
+typedef struct
+{
+	/** X coordinate of public key */
+	uint8_t x[V2XSE_256_EC_PUB_KEY_XY_SIZE];
+	/** Y coordinate of public key */
+	uint8_t y[V2XSE_256_EC_PUB_KEY_XY_SIZE];
+} hsmPubKey256_t;
+
+/**
+ * This structure describes the format that the hsm uses to encode
+ * public keys for 384 bit curves
+ */
+typedef struct
+{
+	/** X coordinate of public key */
+	uint8_t x[V2XSE_384_EC_PUB_KEY_XY_SIZE];
+	/** Y coordinate of public key */
+	uint8_t y[V2XSE_384_EC_PUB_KEY_XY_SIZE];
+} hsmPubKey384_t;
+
 #endif

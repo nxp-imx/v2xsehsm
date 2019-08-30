@@ -17,6 +17,38 @@
 
 /**
  *
+ * @brief Convert public key from hsm to v2xse API format
+ *
+ * This function converts a public key from hsm_api to v2xse API format.
+ * The hsm API format is as follows:
+ *  - for 256 bit curve: x in bits 0 - 31, y in bits 32 - 63
+ *  - for 384 bit curve: x in bits 0 - 47, y in bits 48 - 95
+ * The v2xse API format is as follows for all curve sizes:
+ *  - x in bits 0 - 47, y in bits 48 - 95
+ *  - in case of 256 bit curves, upper bits of x and y unused
+ * Conversion is only required for 256 bit keys, which involves moving the
+ * contents of the y coordinate up 128 bits in memory.
+  *
+ * @param keyType The ECC curve used to generate the public key
+ * @param pPublicKeyPlain location of the generated public key
+ *
+ */
+static void convertPublicKeyToV2xseApi(uint32_t keyType,
+					TypePublicKey_t *pPublicKeyPlain)
+{
+	hsmPubKey256_t *hsmApiPtr = (hsmPubKey256_t*)pPublicKeyPlain;
+
+	if (is256bitCurve(keyType)) {
+		memmove(pPublicKeyPlain->y, hsmApiPtr->y,
+				sizeof(hsmApiPtr->y));
+		memset(&(pPublicKeyPlain->x[V2XSE_256_EC_PUB_KEY_XY_SIZE]), 0,
+			V2XSE_384_EC_PUB_KEY_XY_SIZE -
+						V2XSE_256_EC_PUB_KEY_XY_SIZE);
+	}
+}
+
+/**
+ *
  * @brief Generate Module Authentication ECC key pair
  *
  * This function instructs the system to randomly generate the Module
@@ -84,7 +116,7 @@ int32_t v2xSe_generateMaEccKeyPair
 		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 		return V2XSE_FAILURE;
 	}
-
+	convertPublicKeyToV2xseApi(keyType, pPublicKeyPlain);
 	maCurveId = curveId;
 	maKeyHandle = keyHandle;
 	*pHsmStatusCode = V2XSE_NO_ERROR;
@@ -146,7 +178,7 @@ int32_t v2xSe_getMaEccPublicKey
 		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 		return V2XSE_FAILURE;
 	}
-
+	convertPublicKeyToV2xseApi(keyType, pPublicKeyPlain);
 	*pCurveId = curveId;
 	*pHsmStatusCode = V2XSE_NO_ERROR;
 	return V2XSE_SUCCESS;
@@ -237,6 +269,7 @@ int32_t v2xSe_generateRtEccKeyPair
 		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 		return V2XSE_FAILURE;
 	}
+	convertPublicKeyToV2xseApi(keyType, pPublicKeyPlain);
 	rtKeyHandle[rtKeyId] = keyHandle;
 	rtCurveId[rtKeyId] = curveId;
 	*pHsmStatusCode = V2XSE_NO_ERROR;
@@ -371,7 +404,7 @@ int32_t v2xSe_getRtEccPublicKey
 		*pHsmStatusCode = V2XSE_WRONG_DATA;
 		return V2XSE_FAILURE;
 	}
-
+	convertPublicKeyToV2xseApi(keyType, pPublicKeyPlain);
 	*pCurveId = curveId;
 	*pHsmStatusCode = V2XSE_NO_ERROR;
 	return V2XSE_SUCCESS;
@@ -465,7 +498,7 @@ int32_t v2xSe_generateBaEccKeyPair
 		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 		return V2XSE_FAILURE;
 	}
-
+	convertPublicKeyToV2xseApi(keyType, pPublicKeyPlain);
 	baKeyHandle[baseKeyId] = keyHandle;
 	baCurveId[baseKeyId] = curveId;
 	*pHsmStatusCode = V2XSE_NO_ERROR;
@@ -600,7 +633,7 @@ int32_t v2xSe_getBaEccPublicKey
 		*pHsmStatusCode = V2XSE_WRONG_DATA;
 		return V2XSE_FAILURE;
 	}
-
+	convertPublicKeyToV2xseApi(keyType, pPublicKeyPlain);
 	*pCurveId = curveId;
 	*pHsmStatusCode = V2XSE_NO_ERROR;
 	return V2XSE_SUCCESS;
@@ -731,6 +764,7 @@ int32_t v2xSe_deriveRtEccKeyPair
 		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 		return V2XSE_FAILURE;
 	}
+	convertPublicKeyToV2xseApi(keyType, pPublicKeyPlain);
 	rtKeyHandle[rtKeyId] = outputRtKeyHandle;
 	rtCurveId[rtKeyId] = inputBaCurveId;
 	if (returnPubKey == V2XSE_RSP_WITH_PUBKEY)
