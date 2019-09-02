@@ -351,8 +351,9 @@ int32_t v2xSe_getSigLenFromHashLen(TypeHashLength_t hashLength)
 	switch(hashLength)
 	{
 		case V2XSE_256_EC_HASH_SIZE:
+			return V2XSE_256_EC_COMP_SIGN;
 		case V2XSE_384_EC_HASH_SIZE:
-			return hashLength*2;
+			return V2XSE_384_EC_COMP_SIGN;
 		default:
 			return V2XSE_FAILURE;
 	}
