@@ -11,8 +11,40 @@
  *
  */
 
+#include <string.h>
 #include "v2xsehsm.h"
 #include "nvm.h"
+
+/**
+ *
+ * @brief Convert public key from v2xse to hsm API format
+ *
+ * This function converts a public key from v2xse to hsm API format.
+ * The hsm API format is as follows:
+ *  - for 256 bit curve: x in bits 0 - 31, y in bits 32 - 63
+ *  - for 384 bit curve: x in bits 0 - 47, y in bits 48 - 95
+ * The v2xse API format is as follows for all curve sizes:
+ *  - x in bits 0 - 47, y in bits 48 - 95
+ *  - in case of 256 bit curves, bits 32 - 47 of x and y unused
+ * Conversion is only required for 256 bit keys.
+ *
+ * @param keyType The ECC curve used to generate the public key
+ * @param pPublicKeyPlain location of the generated public key
+ *
+ */
+static void convertPublicKeyToHsmApi(uint32_t keyType,
+					TypePublicKey_t *pPublicKeyPlain)
+{
+	hsmPubKey256_t *hsmApiPtr = (hsmPubKey256_t*)pPublicKeyPlain;
+
+	if (is256bitCurve(keyType)) {
+		memmove(hsmApiPtr->y, pPublicKeyPlain->y,
+				sizeof(hsmApiPtr->y));
+		memset(&hsmApiPtr->y[V2XSE_256_EC_PUB_KEY_XY_SIZE], 0,
+			sizeof(TypePublicKey_t) - sizeof(hsmPubKey256_t));
+	}
+}
+
 
 /**
  *
@@ -36,6 +68,7 @@ int32_t v2xSe_encryptUsingEcies (TypeEncryptEcies_t *pEciesData,
 					TypeVCTData_t *pVctData )
 {
 	hsm_op_ecies_enc_args_t args;
+	hsm_key_type_t keyType;
 
 	VERIFY_STATUS_CODE_PTR();
 	ENFORCE_STATE_ACTIVATED();
@@ -43,6 +76,9 @@ int32_t v2xSe_encryptUsingEcies (TypeEncryptEcies_t *pEciesData,
 	ENFORCE_POINTER_NOT_NULL(pEciesData);
 	ENFORCE_POINTER_NOT_NULL(pVctLen);
 	ENFORCE_POINTER_NOT_NULL(pVctData);
+
+	keyType = convertCurveId(pEciesData->curveId);
+	convertPublicKeyToHsmApi(keyType, pEciesData->pEccPublicKey);
 
 	memset(&args, 0, sizeof(args));
 	args.input = pEciesData->pMsgData->data;
@@ -60,7 +96,7 @@ int32_t v2xSe_encryptUsingEcies (TypeEncryptEcies_t *pEciesData,
 	args.pub_key_size = v2xSe_getKeyLenFromCurveID(pEciesData->curveId);
 	args.mac_size = pEciesData->macLen;
 	args.out_size = *pVctLen;
-	args.key_type = convertCurveId(pEciesData->curveId);
+	args.key_type = keyType;
 	if (hsm_ecies_encryption(hsmSessionHandle, &args)) {
 		*pHsmStatusCode = V2XSE_WRONG_DATA;
 		return V2XSE_FAILURE;
