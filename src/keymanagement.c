@@ -49,6 +49,88 @@ static void convertPublicKeyToV2xseApi(uint32_t keyType,
 
 /**
  *
+ * @brief Delete hsm ECC private key
+ *
+ * This function deletes a ECC private key from the hsm key store.
+ *
+ * @param keyHandle hsm handle for private key to delete
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
+static int32_t deleteHsmKey(uint32_t keyHandle, hsm_key_type_t keyType)
+{
+	op_manage_key_args_t del_args;
+
+	del_args.key_identifier = &keyHandle;
+	del_args.input_size = 0;
+	del_args.flags = HSM_OP_MANAGE_KEY_FLAGS_DELETE;
+	del_args.key_type = keyType;
+	del_args.key_type_ext = 0;
+	del_args.key_info = 0;
+	del_args.input_key = NULL;
+	return hsm_manage_key(hsmKeyMgmtHandle, &del_args);
+}
+
+/**
+ *
+ * @brief Delete runtime ECC key pair
+ *
+ * This function deletes the runtime ECC key pair from the specified slot.
+ * The corresponding private key is deleted from the HSM key store, the
+ * key handle is removed from memory and nvm, and the curveId is removed
+ * from nvm.
+ *
+ * @param rtKeyId slot number of the runtime key pair to delete
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
+static int32_t deleteRtKey(TypeRtKeyId_t rtKeyId)
+{
+	uint32_t keyHandle = rtKeyHandle[rtKeyId];
+
+	rtKeyHandle[rtKeyId] = 0;
+	if (deleteHsmKey(keyHandle, convertCurveId(rtCurveId[rtKeyId])))
+		return V2XSE_FAILURE;
+	if (nvm_delete_array_data("rtCurveId", rtKeyId))
+		return V2XSE_FAILURE;
+	if (nvm_delete_array_data("rtKeyHandle", rtKeyId))
+		return V2XSE_FAILURE;
+	return V2XSE_SUCCESS;
+}
+
+/**
+ *
+ * @brief Delete base ECC key pair
+ *
+ * This function deletes the base ECC key pair from the specified slot.
+ * The corresponding private key is deleted from the HSM key store, the
+ * key handle is removed from memory and nvm, and the curveId is removed
+ * from nvm.
+ *
+ * @param baKeyId slot number of the base key pair to delete
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
+
+static int32_t deleteBaKey(TypeBaseKeyId_t baKeyId)
+{
+	uint32_t keyHandle = baKeyHandle[baKeyId];
+
+	baKeyHandle[baKeyId] = 0;
+	if (deleteHsmKey(keyHandle, convertCurveId(baCurveId[baKeyId])))
+		return V2XSE_FAILURE;
+	if (nvm_delete_array_data("baCurveId", baKeyId))
+		return V2XSE_FAILURE;
+	if (nvm_delete_array_data("baKeyHandle", baKeyId))
+		return V2XSE_FAILURE;
+	return V2XSE_SUCCESS;
+}
+
+/**
+ *
  * @brief Generate Module Authentication ECC key pair
  *
  * This function instructs the system to randomly generate the Module
@@ -235,11 +317,7 @@ int32_t v2xSe_generateRtEccKeyPair
 
 	if (!nvm_retrieve_rt_key_handle(rtKeyId, &keyHandle, &storedCurveId)) {
 		if (curveId != storedCurveId) {
-			TypeSW_t tempHsmStatusCode;
-
-			if (v2xSe_deleteRtEccPrivateKey(rtKeyId,
-							&tempHsmStatusCode)) {
-				rtKeyHandle[rtKeyId] = 0;
+			if (deleteRtKey(rtKeyId)) {
 				*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 				return V2XSE_FAILURE;
 			}
@@ -299,7 +377,6 @@ int32_t v2xSe_deleteRtEccPrivateKey
 {
 	uint32_t keyHandle;
 	TypeCurveId_t storedCurveId;
-	op_manage_key_args_t del_args;
 
 	VERIFY_STATUS_CODE_PTR();
 	ENFORCE_STATE_ACTIVATED();
@@ -315,29 +392,11 @@ int32_t v2xSe_deleteRtEccPrivateKey
 		return V2XSE_FAILURE;
 	}
 
-	del_args.key_identifier = &keyHandle;
-	del_args.input_size = 0;
-	del_args.flags = HSM_OP_MANAGE_KEY_FLAGS_DELETE;
-	del_args.key_type = convertCurveId(storedCurveId);
-	del_args.key_type_ext = 0;
-	del_args.key_info = 0;
-	del_args.input_key = NULL;
-	if (hsm_manage_key(hsmKeyMgmtHandle, &del_args)) {
-		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
-		return V2XSE_FAILURE;
-	}
-	if (nvm_delete_array_data("rtCurveId", rtKeyId)) {
-		rtKeyHandle[rtKeyId] = 0;
-		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
-		return V2XSE_FAILURE;
-	}
-	if (nvm_delete_array_data("rtKeyHandle", rtKeyId)) {
-		rtKeyHandle[rtKeyId] = 0;
+	if (deleteRtKey(rtKeyId)) {
 		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 		return V2XSE_FAILURE;
 	}
 
-	rtKeyHandle[rtKeyId] = 0;
 	*pHsmStatusCode = V2XSE_NO_ERROR;
 	return V2XSE_SUCCESS;
 }
@@ -462,11 +521,7 @@ int32_t v2xSe_generateBaEccKeyPair
 	if (!nvm_retrieve_ba_key_handle(baseKeyId, &keyHandle,
 							&storedCurveId)) {
 		if (curveId != storedCurveId) {
-			TypeSW_t tempHsmStatusCode;
-
-			if (v2xSe_deleteBaEccPrivateKey(baseKeyId,
-							&tempHsmStatusCode)) {
-				baKeyHandle[baseKeyId] = 0;
+			if (deleteBaKey(baseKeyId)) {
 				*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 				return V2XSE_FAILURE;
 			}
@@ -528,7 +583,6 @@ int32_t v2xSe_deleteBaEccPrivateKey
 {
 	uint32_t keyHandle;
 	TypeCurveId_t storedCurveId;
-	op_manage_key_args_t del_args;
 
 	VERIFY_STATUS_CODE_PTR();
 	ENFORCE_STATE_ACTIVATED();
@@ -544,29 +598,11 @@ int32_t v2xSe_deleteBaEccPrivateKey
 		return V2XSE_FAILURE;
 	}
 
-	del_args.key_identifier = &keyHandle;
-	del_args.input_size = 0;
-	del_args.flags = HSM_OP_MANAGE_KEY_FLAGS_DELETE;
-	del_args.key_type = convertCurveId(storedCurveId);
-	del_args.key_type_ext = 0;
-	del_args.key_info = 0;
-	del_args.input_key = NULL;
-	if (hsm_manage_key(hsmKeyMgmtHandle, &del_args)) {
-		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
-		return V2XSE_FAILURE;
-	}
-	if (nvm_delete_array_data("baCurveId", baseKeyId)) {
-		baKeyHandle[baseKeyId] = 0;
-		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
-		return V2XSE_FAILURE;
-	}
-	if (nvm_delete_array_data("baKeyHandle", baseKeyId)) {
-		baKeyHandle[baseKeyId] = 0;
+	if (deleteBaKey(baseKeyId)) {
 		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 		return V2XSE_FAILURE;
 	}
 
-	baKeyHandle[baseKeyId] = 0;
 	*pHsmStatusCode = V2XSE_NO_ERROR;
 	return V2XSE_SUCCESS;
 }
@@ -719,11 +755,7 @@ int32_t v2xSe_deriveRtEccKeyPair
 	if (!nvm_retrieve_rt_key_handle(rtKeyId, &outputRtKeyHandle,
 							&storedRtCurveId)) {
 		if (storedRtCurveId != inputBaCurveId) {
-			TypeSW_t tempHsmStatusCode;
-
-			if (v2xSe_deleteRtEccPrivateKey(rtKeyId,
-							&tempHsmStatusCode)) {
-				rtKeyHandle[rtKeyId] = 0;
+			if (deleteRtKey(rtKeyId)) {
 				*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 				return V2XSE_FAILURE;
 			}
