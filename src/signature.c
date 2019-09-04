@@ -11,8 +11,46 @@
  *
  */
 
+#include <string.h>
 #include "v2xsehsm.h"
 #include "nvm.h"
+
+/**
+ *
+ * @brief Convert signature from hsm to v2xse API format
+ *
+ * This function converts a signature from hsm_api to v2xse API format.
+ * The hsm API format is as follows:
+ *  - for 256 bit curve: r in bits 0 - 31, s in bits 32 - 63, Ry in bit 64
+ *  - for 384 bit curve: r in bits 0 - 47, s in bits 48 - 95, Ry in bit 96
+ * The v2xse API format is as follows for all curve sizes:
+ *  - r in bits 0 - 47, Ry in bit 48, s in bits 49 - 96
+ *  - in case of 256 bit curves, upper bits of r and s unused
+ *
+ * @param is256bits true if the ECC curve for the signature is 256 bits
+ * @param pSignature location of the generatedsignature
+ *
+ */
+static void convertSignatureToV2xseApi(uint32_t is256bits,
+					TypeSignature_t *pSignature)
+{
+	uint8_t Ry;
+
+	if (is256bits) {
+		hsmSignature256_t *hsmApiPtr = (hsmSignature256_t*)pSignature;
+
+		Ry = hsmApiPtr->Ry;
+		memmove(pSignature->s, hsmApiPtr->s, sizeof(hsmApiPtr->s));
+		memset(&(pSignature->r[V2XSE_256_EC_R_SIGN]), 0,
+			V2XSE_384_EC_R_SIGN - V2XSE_256_EC_R_SIGN);
+	} else {
+		hsmSignature384_t *hsmApiPtr = (hsmSignature384_t*)pSignature;
+
+		Ry = hsmApiPtr->Ry;
+		memmove(pSignature->s, hsmApiPtr->s, sizeof(hsmApiPtr->s));
+	}
+	pSignature->Ry = Ry;
+}
 
 /**
  *
@@ -42,6 +80,7 @@ int32_t v2xSe_createMaSign
 	hsm_signature_scheme_id_t sig_scheme;
 	TypeHashLength_t expectedHashLength;
 	op_generate_sign_args_t args;
+	uint32_t is256bits;
 
 	VERIFY_STATUS_CODE_PTR();
 	ENFORCE_STATE_ACTIVATED();
@@ -59,7 +98,8 @@ int32_t v2xSe_createMaSign
 		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 		return V2XSE_FAILURE;
 	}
-	if (is256bitCurve(sig_scheme))
+	is256bits = is256bitCurve(sig_scheme);
+	if (is256bits)
 		expectedHashLength = V2XSE_256_EC_HASH_SIZE;
 	else
 		expectedHashLength = V2XSE_384_EC_HASH_SIZE;
@@ -79,6 +119,7 @@ int32_t v2xSe_createMaSign
 		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
 		return V2XSE_FAILURE;
 	}
+	convertSignatureToV2xseApi(is256bits, pSignature);
 
 	*pHsmStatusCode = V2XSE_NO_ERROR;
 	return V2XSE_SUCCESS;
@@ -190,11 +231,12 @@ int32_t v2xSe_createRtSignLowLatency
 	args.message_size = V2XSE_256_EC_HASH_SIZE;
 	args.signature_size =
 		v2xSe_getSigLenFromHashLen(V2XSE_256_EC_HASH_SIZE);
-	args.flags = HSM_OP_GENERATE_SIGN_FLAGS_INPUT_DIGEST;
+	args.flags = HSM_OP_FINALIZE_SIGN_INPUT_DIGEST;
 	if (hsm_finalize_signature(hsmSigGenHandle, &args)) {
 		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
 		return V2XSE_FAILURE;
 	}
+	convertSignatureToV2xseApi(1, pSignature);
 
 	*pFastIndicator = 1;
 	*pHsmStatusCode = V2XSE_NO_ERROR;
@@ -268,6 +310,7 @@ int32_t v2xSe_createRtSign
 		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
 		return V2XSE_FAILURE;
 	}
+	convertSignatureToV2xseApi(1, pSignature);
 
 	*pHsmStatusCode = V2XSE_NO_ERROR;
 	return V2XSE_SUCCESS;
@@ -303,6 +346,7 @@ int32_t v2xSe_createBaSign
 	hsm_signature_scheme_id_t sig_scheme;
 	TypeHashLength_t expectedHashLength;
 	op_generate_sign_args_t args;
+	uint32_t is256bits;
 
 	VERIFY_STATUS_CODE_PTR();
 	ENFORCE_STATE_ACTIVATED();
@@ -325,7 +369,8 @@ int32_t v2xSe_createBaSign
 		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 		return V2XSE_FAILURE;
 	}
-	if (is256bitCurve(sig_scheme))
+	is256bits = is256bitCurve(sig_scheme);
+	if (is256bits)
 		expectedHashLength = V2XSE_256_EC_HASH_SIZE;
 	else
 		expectedHashLength = V2XSE_384_EC_HASH_SIZE;
@@ -345,6 +390,7 @@ int32_t v2xSe_createBaSign
 		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
 		return V2XSE_FAILURE;
 	}
+	convertSignatureToV2xseApi(is256bits, pSignature);
 
 	*pHsmStatusCode = V2XSE_NO_ERROR;
 	return V2XSE_SUCCESS;

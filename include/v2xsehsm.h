@@ -159,4 +159,32 @@ typedef struct
 	uint8_t y[V2XSE_384_EC_PUB_KEY_XY_SIZE];
 } hsmPubKey384_t;
 
+/**
+ * This structure describes the format that the hsm uses to encode
+ * signatures for 256 bit curves
+ */
+typedef struct
+{
+	/** R component of signature */
+	uint8_t r[V2XSE_256_EC_R_SIGN];
+	/** S component of signature */
+	uint8_t s[V2XSE_256_EC_S_SIGN];
+	/** Ry[0] point of signature */
+	uint8_t Ry;
+} hsmSignature256_t;
+
+/**
+ * This structure describes the format that the hsm uses to encode
+ * signatures for 384 bit curves
+ */
+typedef struct
+{
+	/** R component of signature */
+	uint8_t r[V2XSE_384_EC_R_SIGN];
+	/** S component of signature */
+	uint8_t s[V2XSE_384_EC_S_SIGN];
+	/** Ry[0] point of signature */
+	uint8_t Ry;
+} hsmSignature384_t;
+
 #endif
