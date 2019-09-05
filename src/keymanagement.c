@@ -62,13 +62,10 @@ static int32_t deleteHsmKey(uint32_t keyHandle, hsm_key_type_t keyType)
 {
 	op_manage_key_args_t del_args;
 
+	memset(&del_args, 0, sizeof(del_args));
 	del_args.key_identifier = &keyHandle;
-	del_args.input_size = 0;
 	del_args.flags = HSM_OP_MANAGE_KEY_FLAGS_DELETE;
 	del_args.key_type = keyType;
-	del_args.key_type_ext = 0;
-	del_args.key_info = 0;
-	del_args.input_key = NULL;
 	return hsm_manage_key(hsmKeyMgmtHandle, &del_args);
 }
 
@@ -176,11 +173,11 @@ int32_t v2xSe_generateMaEccKeyPair
 		return V2XSE_FAILURE;
 	}
 
+	memset(&args, 0, sizeof(args));
 	args.key_identifier = &keyHandle;
 	args.out_size = v2xSe_getKeyLenFromCurveID(curveId);
 	args.flags = HSM_OP_KEY_GENERATION_FLAGS_CREATE_PERSISTENT;
 	args.key_type = keyType;
-	args.key_type_ext = 0;
 	args.key_info = HSM_KEY_INFO_PERMANENT;
 	args.out_key = (uint8_t*)pPublicKeyPlain;
 	if (hsm_generate_key(hsmKeyMgmtHandle, &args)) {
@@ -250,11 +247,10 @@ int32_t v2xSe_getMaEccPublicKey
 		return V2XSE_FAILURE;
 	}
 
+	memset(&args, 0, sizeof(args));
 	args.key_identifier = &keyHandle;
 	args.out_size = v2xSe_getKeyLenFromCurveID(curveId);
-	args.flags = 0;
 	args.key_type = keyType;
-	args.key_type_ext = 0;
 	args.output_key = (uint8_t*)pPublicKeyPlain;
 	if (hsm_calculate_public_key(hsmKeyMgmtHandle, &args)) {
 		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
@@ -324,14 +320,13 @@ int32_t v2xSe_generateRtEccKeyPair
 		}
 	}
 
+	memset(&args, 0, sizeof(args));
 	args.key_identifier = &keyHandle;
 	args.out_size = v2xSe_getKeyLenFromCurveID(curveId);
 	args.flags = HSM_OP_KEY_GENERATION_FLAGS_CREATE_PERSISTENT;
 	if (rtKeyHandle[rtKeyId])
 		args.flags |= HSM_OP_KEY_GENERATION_FLAGS_UPDATE;
 	args.key_type = keyType;
-	args.key_type_ext = 0;
-	args.key_info = 0;
 	args.out_key = (uint8_t*)pPublicKeyPlain;
 	if (hsm_generate_key(hsmKeyMgmtHandle, &args)) {
 		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
@@ -453,11 +448,10 @@ int32_t v2xSe_getRtEccPublicKey
 		return V2XSE_FAILURE;
 	}
 
+	memset(&args, 0, sizeof(args));
 	args.key_identifier = &keyHandle;
 	args.out_size = v2xSe_getKeyLenFromCurveID(curveId);
-	args.flags = 0;
 	args.key_type = keyType;
-	args.key_type_ext = 0;
 	args.output_key = (uint8_t*)pPublicKeyPlain;
 	if (hsm_calculate_public_key(hsmKeyMgmtHandle, &args)) {
 		*pHsmStatusCode = V2XSE_WRONG_DATA;
@@ -528,14 +522,13 @@ int32_t v2xSe_generateBaEccKeyPair
 		}
 	}
 
+	memset(&args, 0, sizeof(args));
 	args.key_identifier = &keyHandle;
 	args.out_size = v2xSe_getKeyLenFromCurveID(curveId);
 	args.flags = HSM_OP_KEY_GENERATION_FLAGS_CREATE_PERSISTENT;
 	if (baKeyHandle[baseKeyId])
 		args.flags |= HSM_OP_KEY_GENERATION_FLAGS_UPDATE;
 	args.key_type = keyType;
-	args.key_type_ext = 0;
-	args.key_info = 0;
 	args.out_key = (uint8_t*)pPublicKeyPlain;
 	if (hsm_generate_key(hsmKeyMgmtHandle, &args)) {
 		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
@@ -659,11 +652,10 @@ int32_t v2xSe_getBaEccPublicKey
 		return V2XSE_FAILURE;
 	}
 
+	memset(&args, 0, sizeof(args));
 	args.key_identifier = &keyHandle;
 	args.out_size = v2xSe_getKeyLenFromCurveID(curveId);
-	args.flags = 0;
 	args.key_type = keyType;
-	args.key_type_ext = 0;
 	args.output_key = (uint8_t*)pPublicKeyPlain;
 	if (hsm_calculate_public_key(hsmKeyMgmtHandle, &args)) {
 		*pHsmStatusCode = V2XSE_WRONG_DATA;
@@ -762,6 +754,7 @@ int32_t v2xSe_deriveRtEccKeyPair
 		}
 	}
 
+	memset(&args, 0, sizeof(args));
 	args.key_identifier = inputBaKeyHandle;
 	args.data1 = pFvSign->data;
 	args.data2 = pHvij->data;
@@ -776,12 +769,8 @@ int32_t v2xSe_deriveRtEccKeyPair
 	if (returnPubKey == V2XSE_RSP_WITH_PUBKEY) {
 		args.output = (uint8_t*)pPublicKeyPlain;
 		args.output_size = V2XSE_256_EC_PUB_KEY;
-	} else {
-		args.output = NULL;
-		args.output_size = 0;
 	}
 	args.key_type = keyType;
-
 	if (hsm_butterfly_key_expansion(hsmKeyMgmtHandle, &args)) {
 		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 		return V2XSE_FAILURE;

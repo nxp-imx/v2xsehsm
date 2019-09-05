@@ -11,6 +11,7 @@
  *
  */
 
+#include <string.h>
 #include "v2xsehsm.h"
 #include "nvm.h"
 
@@ -162,13 +163,15 @@ int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId,
 		return V2XSE_FAILURE;
 	}
 
+	memset(&session_args, 0, sizeof(session_args));
 	session_args.session_priority = HSM_SESSION_PRIORITY;
 	session_args.operating_mode = HSM_OPERATING_MODE;
 	if (hsm_open_session(&session_args, &hsmSessionHandle)) {
 		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
 		return V2XSE_FAILURE;
 	}
-	rng_open_args.flags = 0;
+
+	memset(&rng_open_args, 0, sizeof(rng_open_args));
 	if (hsm_open_rng_service(hsmSessionHandle, &rng_open_args,
 							&hsmRngHandle)) {
 		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
@@ -185,6 +188,8 @@ int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId,
 				return V2XSE_FAILURE;
 			}
 		}
+
+		memset(&key_store_args, 0, sizeof(key_store_args));
 		key_store_args.key_store_identifier = keystore_identifier;
 		key_store_args.authentication_nonce = key_store_nonce;
 		key_store_args.max_updates_number = MAX_KEYSTORE_UPDATES;
@@ -212,7 +217,7 @@ int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId,
 		}
 	}
 
-	key_mgmt_args.flags = 0;
+	memset(&key_mgmt_args, 0, sizeof(key_mgmt_args));
 	if (hsm_open_key_management_service(hsmKeyStoreHandle, &key_mgmt_args,
 							&hsmKeyMgmtHandle)) {
 		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
@@ -220,18 +225,20 @@ int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId,
 	}
 	preparedKeyHandle = 0; /* Keys just opened, so no prepared key yet */
 
-	cipher_args.flags = 0;
+	memset(&cipher_args, 0, sizeof(cipher_args));
 	if (hsm_open_cipher_service(hsmKeyStoreHandle, &cipher_args,
 							&hsmCipherHandle)) {
 		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
 		return V2XSE_FAILURE;
 	}
-	sig_gen_args.flags = 0;
+
+	memset(&sig_gen_args, 0, sizeof(sig_gen_args));
 	if (hsm_open_signature_generation_service(hsmKeyStoreHandle,
 					&sig_gen_args, &hsmSigGenHandle)) {
 		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
 		return V2XSE_FAILURE;
 	}
+
 	v2xseState = V2XSE_STATE_ACTIVATED;
 	v2xseAppletId = appletId;
 	v2xseSecurityLevel = securityLevel;

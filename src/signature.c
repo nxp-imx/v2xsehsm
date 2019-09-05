@@ -108,6 +108,7 @@ int32_t v2xSe_createMaSign
 		return V2XSE_FAILURE;
 	}
 
+	memset(&args, 0, sizeof(args));
 	args.key_identifier = keyHandle;
 	args.message = pHashValue->data;
 	args.signature = (uint8_t*)pSignature;
@@ -171,9 +172,8 @@ int32_t v2xSe_activateRtKeyForSigning
 		return V2XSE_FAILURE;
 	}
 	preparedKeyHandle = keyHandle;
-	//?? args does not have a field for key handle!?
+	memset(&args, 0, sizeof(args));
 	args.scheme_id = sig_scheme;
-	args.flags = 0;
 	if (hsm_prepare_signature(hsmSigGenHandle, &args)) {
 		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
 		return V2XSE_FAILURE;
@@ -225,6 +225,7 @@ int32_t v2xSe_createRtSignLowLatency
 		return V2XSE_FAILURE;
 	}
 
+	memset(&args, 0, sizeof(args));
 	args.key_identifier = preparedKeyHandle;
 	args.message = pHashValue->data;
 	args.signature = (uint8_t*)pSignature;
@@ -298,6 +299,7 @@ int32_t v2xSe_createRtSign
 		return V2XSE_FAILURE;
 	}
 
+	memset(&args, 0, sizeof(args));
 	args.key_identifier = keyHandle;
 	args.message = pHashValue->data;
 	args.signature = (uint8_t*)pSignature;
@@ -379,6 +381,7 @@ int32_t v2xSe_createBaSign
 		return V2XSE_FAILURE;
 	}
 
+	memset(&args, 0, sizeof(args));
 	args.key_identifier = keyHandle;
 	args.message = pHashValue->data;
 	args.signature = (uint8_t*)pSignature;

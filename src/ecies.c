@@ -44,19 +44,23 @@ int32_t v2xSe_encryptUsingEcies (TypeEncryptEcies_t *pEciesData,
 	ENFORCE_POINTER_NOT_NULL(pVctLen);
 	ENFORCE_POINTER_NOT_NULL(pVctData);
 
+	memset(&args, 0, sizeof(args));
 	args.input = pEciesData->pMsgData->data;
 	args.pub_key = (uint8_t*)(pEciesData->pEccPublicKey);
-	args.p1 = pEciesData->kdfParamP1;
-	args.p2 = pEciesData->macParamP2;
+	if (pEciesData->kdfParamP1Len) {
+		args.p1 = pEciesData->kdfParamP1;
+		args.p1_size = pEciesData->kdfParamP1Len;
+	}
+	if (pEciesData->macParamP2Len) {
+		args.p2 = pEciesData->macParamP2;
+		args.p2_size = pEciesData->macParamP2Len;
+	}
 	args.output = pVctData->data;
 	args.input_size = pEciesData->msgLen;
-	args.p1_size = pEciesData->kdfParamP1Len;
-	args.p2_size = pEciesData->macParamP2Len;
 	args.pub_key_size = v2xSe_getKeyLenFromCurveID(pEciesData->curveId);
 	args.mac_size = pEciesData->macLen;
 	args.out_size = *pVctLen;
 	args.key_type = convertCurveId(pEciesData->curveId);
-	args.flags = 0;
 	if (hsm_ecies_encryption(hsmSessionHandle, &args)) {
 		*pHsmStatusCode = V2XSE_WRONG_DATA;
 		return V2XSE_FAILURE;
@@ -109,19 +113,22 @@ int32_t v2xSe_decryptUsingRtEcies (TypeRtKeyId_t rtKeyId,
 		return V2XSE_FAILURE;
 	}
 
+	memset(&args, 0, sizeof(args));
 	args.key_identifier = keyHandle;
 	args.input = pEciesData->pVctData->data;
-	args.p1 = pEciesData->kdfParamP1;
-	args.p2 = pEciesData->macParamP2;
+	if (pEciesData->kdfParamP1Len) {
+		args.p1 = pEciesData->kdfParamP1;
+		args.p1_size = pEciesData->kdfParamP1Len;
+	}
+	if (pEciesData->macParamP2) {
+		args.p2 = pEciesData->macParamP2;
+		args.p2_size = pEciesData->macParamP2Len;
+	}
 	args.output = pMsgData->data;
 	args.input_size = pEciesData->vctLen;
 	args.output_size = *pMsgLen;
-	args.p1_size = pEciesData->kdfParamP1Len;
-	args.p2_size = pEciesData->macParamP2Len;
 	args.mac_size = pEciesData->macLen;
 	args.key_type = convertCurveId(curveId);
-	args.flags = 0;
-
 	if (hsm_ecies_decryption(hsmCipherHandle, &args)) {
 		*pHsmStatusCode = V2XSE_WRONG_DATA;
 		return V2XSE_FAILURE;
@@ -171,19 +178,22 @@ int32_t v2xSe_decryptUsingMaEcies
 		return V2XSE_FAILURE;
 	}
 
+	memset(&args, 0, sizeof(args));
 	args.key_identifier = keyHandle;
 	args.input = pEciesData->pVctData->data;
-	args.p1 = pEciesData->kdfParamP1;
-	args.p2 = pEciesData->macParamP2;
+	if (pEciesData->kdfParamP1Len) {
+		args.p1 = pEciesData->kdfParamP1;
+		args.p1_size = pEciesData->kdfParamP1Len;
+	}
+	if (pEciesData->macParamP2) {
+		args.p2 = pEciesData->macParamP2;
+		args.p2_size = pEciesData->macParamP2Len;
+	}
 	args.output = pMsgData->data;
 	args.input_size = pEciesData->vctLen;
 	args.output_size = *pMsgLen;
-	args.p1_size = pEciesData->kdfParamP1Len;
-	args.p2_size = pEciesData->macParamP2Len;
 	args.mac_size = pEciesData->macLen;
 	args.key_type = convertCurveId(curveId);
-	args.flags = 0;
-
 	if (hsm_ecies_decryption(hsmCipherHandle, &args)) {
 		*pHsmStatusCode = V2XSE_WRONG_DATA;
 		return V2XSE_FAILURE;
@@ -239,19 +249,22 @@ int32_t v2xSe_decryptUsingBaEcies
 		return V2XSE_FAILURE;
 	}
 
+	memset(&args, 0, sizeof(args));
 	args.key_identifier = keyHandle;
 	args.input = pEciesData->pVctData->data;
-	args.p1 = pEciesData->kdfParamP1;
-	args.p2 = pEciesData->macParamP2;
+	if (pEciesData->kdfParamP1Len) {
+		args.p1 = pEciesData->kdfParamP1;
+		args.p1_size = pEciesData->kdfParamP1Len;
+	}
+	if (pEciesData->macParamP2) {
+		args.p2 = pEciesData->macParamP2;
+		args.p2_size = pEciesData->macParamP2Len;
+	}
 	args.output = pMsgData->data;
 	args.input_size = pEciesData->vctLen;
 	args.output_size = *pMsgLen;
-	args.p1_size = pEciesData->kdfParamP1Len;
-	args.p2_size = pEciesData->macParamP2Len;
 	args.mac_size = pEciesData->macLen;
 	args.key_type = convertCurveId(curveId);
-	args.flags = 0;
-
 	if (hsm_ecies_decryption(hsmCipherHandle, &args)) {
 		*pHsmStatusCode = V2XSE_WRONG_DATA;
 		return V2XSE_FAILURE;
