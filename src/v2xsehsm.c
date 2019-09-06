@@ -55,8 +55,6 @@ hsm_hdl_t hsmSigGenHandle;
 /* NVM vars, initialized from filesystem on activate */
 /** Phase of emulated SXF1800, can be key injection or normal phase */
 uint8_t	v2xsePhase;
-/** Nonce value needed to access HSM key store */
-uint32_t key_store_nonce;
 
 /* NVM Key handles, initialized as zero, read from fs when first used */
 /** Module authentication key handle */
@@ -132,12 +130,12 @@ int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId,
 {
 	open_session_args_t session_args;
 	open_svc_rng_args_t rng_open_args;
-	op_get_random_args_t rng_get_args;
 	open_svc_key_store_args_t key_store_args;
 	open_svc_key_management_args_t key_mgmt_args;
 	open_svc_cipher_args_t cipher_args;
 	open_svc_sign_gen_args_t sig_gen_args;
 	uint32_t keystore_identifier;
+	uint32_t key_store_nonce;
 
 	VERIFY_STATUS_CODE_PTR();
 	ENFORCE_STATE_INIT();
@@ -145,9 +143,11 @@ int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId,
 	if ((appletId == e_US_AND_GS) || (appletId == e_US)){
 		appletVarStoragePath = usVarStorage;
 		keystore_identifier = MAGIC_KEYSTORE_IDENTIFIER_US;
+		key_store_nonce = MAGIC_KEYSTORE_NONCE_US;
 	} else if ((appletId == e_EU_AND_GS) || (appletId == e_EU)){
 		appletVarStoragePath = euVarStorage;
 		keystore_identifier = MAGIC_KEYSTORE_IDENTIFIER_EU;
+		key_store_nonce = MAGIC_KEYSTORE_NONCE_EU;
 	} else {
 		*pHsmStatusCode = V2XSE_APP_MISSING;
 		return V2XSE_FAILURE;
@@ -177,39 +177,24 @@ int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId,
 		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
 		return V2XSE_FAILURE;
 	}
-	if (key_store_nonce == 0) {
-		/* value doesn't exist, create key store */
-		rng_get_args.output = (uint8_t*)&key_store_nonce;
-		rng_get_args.random_size = sizeof(key_store_nonce);
-		while (key_store_nonce == 0) {
-			/* Get non-zero random number (0 = initialized) */
-			if (hsm_get_random(hsmRngHandle, &rng_get_args)) {
-				*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
-				return V2XSE_FAILURE;
-			}
-		}
 
+	/* Assume keystore exists, try to open */
+	memset(&key_store_args, 0, sizeof(key_store_args));
+	key_store_args.key_store_identifier = keystore_identifier;
+	key_store_args.authentication_nonce = key_store_nonce;
+	key_store_args.flags = HSM_SVC_KEY_STORE_FLAGS_UPDATE;
+	if (hsm_open_key_store_service(hsmSessionHandle,
+				&key_store_args, &hsmKeyStoreHandle)) {
+		/*
+		 * Failure to open, try to create
+		 *  - re-initialize argument structure in case it was
+		 *    modified by hsm_open_key_store_service above
+		 */
 		memset(&key_store_args, 0, sizeof(key_store_args));
 		key_store_args.key_store_identifier = keystore_identifier;
 		key_store_args.authentication_nonce = key_store_nonce;
 		key_store_args.max_updates_number = MAX_KEYSTORE_UPDATES;
 		key_store_args.flags = HSM_SVC_KEY_STORE_FLAGS_CREATE;
-		if (hsm_open_key_store_service(hsmSessionHandle,
-					&key_store_args, &hsmKeyStoreHandle)) {
-			*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
-			return V2XSE_FAILURE;
-		}
-		if (nvm_update_var("key_store_nonce",
-						(uint8_t*)&key_store_nonce,
-						sizeof(key_store_nonce))) {
-			*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
-			return V2XSE_FAILURE;
-		}
-	} else {
-		key_store_args.key_store_identifier = keystore_identifier;
-		key_store_args.authentication_nonce = key_store_nonce;
-		key_store_args.max_updates_number = EXPECTED_MAX_UPDATES;
-		key_store_args.flags = HSM_SVC_KEY_STORE_FLAGS_UPDATE;
 		if (hsm_open_key_store_service(hsmSessionHandle,
 					&key_store_args, &hsmKeyStoreHandle)) {
 			*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;

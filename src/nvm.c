@@ -632,11 +632,6 @@ int nvm_init(void)
 		}
 	}
 
-	/* Load key_store_nonce - set to 0 if it does not exist */
-	if (nvm_load_var("key_store_nonce", (uint8_t*)&key_store_nonce,
-						sizeof(key_store_nonce)))
-		key_store_nonce = 0;
-
 	/*
 	 * Key handles: initialize all to zero, will try to load from
 	 * filesystem on first use

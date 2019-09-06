@@ -52,7 +52,6 @@ extern hsm_hdl_t hsmSigGenHandle;
 
 extern uint8_t	v2xsePhase;
 extern const char* appletVarStoragePath;
-extern uint32_t key_store_nonce;
 extern uint32_t maKeyHandle;
 extern TypeCurveId_t maCurveId;
 extern uint32_t rtKeyHandle[NUM_STORAGE_SLOTS];
@@ -67,10 +66,14 @@ extern uint32_t preparedKeyHandle;
 
 extern const uint8_t serialNumber[V2XSE_SERIAL_NUMBER];
 
-/** Keystore nonce for US applet keystore */
+/** Keystore identifier for US applet keystore */
 #define MAGIC_KEYSTORE_IDENTIFIER_US	0x13196687
-/** Keystore nonce for EU applet keystore */
+/** Keystore nonce for US applet keystore */
+#define MAGIC_KEYSTORE_NONCE_US	0xFA32D21E
+/** Keystore identifier for EU applet keystore */
 #define MAGIC_KEYSTORE_IDENTIFIER_EU	0x87131966
+/** Keystore nonce for EU applet keystore */
+#define MAGIC_KEYSTORE_NONCE_EU	0x75A8CC6D
 /** Number of expected keystore updates in product lifetime */
 #define MAX_KEYSTORE_UPDATES		0xffff
 
