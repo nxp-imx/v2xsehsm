@@ -57,7 +57,7 @@
  * @return keyType in HSM API format, or 0 if ERROR
  *
  */
-uint16_t convertCurveId(TypeCurveId_t curveId)
+hsm_key_type_t convertCurveId(TypeCurveId_t curveId)
 {
 	switch(curveId) {
 		case V2XSE_CURVE_NISTP256:
@@ -90,7 +90,7 @@ uint16_t convertCurveId(TypeCurveId_t curveId)
  * @return 1 if ECC curve is 256 bits, 0 if invalid or not 256 bits
  *
  */
-int is256bitCurve(uint32_t keyType)
+int is256bitCurve(hsm_key_type_t keyType)
 {
 	switch (keyType) {
 		case HSM_KEY_TYPE_ECDSA_NIST_P256:

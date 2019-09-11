@@ -63,7 +63,7 @@
  * @param pPublicKeyPlain location of the generated public key
  *
  */
-static void convertPublicKeyToV2xseApi(uint32_t keyType,
+static void convertPublicKeyToV2xseApi(hsm_key_type_t keyType,
 					TypePublicKey_t *pPublicKeyPlain)
 {
 	hsmPubKey256_t *hsmApiPtr = (hsmPubKey256_t*)pPublicKeyPlain;
@@ -75,6 +75,74 @@ static void convertPublicKeyToV2xseApi(uint32_t keyType,
 			V2XSE_384_EC_PUB_KEY_XY_SIZE -
 						V2XSE_256_EC_PUB_KEY_XY_SIZE);
 	}
+}
+
+/**
+ *
+ * @brief Generate hsm ECC key pair
+ *
+ * This function generates an ECC key pair in the hsm key store.  It may
+ * either create a new key, or update an existing key, depending on the
+ * flags parameter.  The key may be permanent or not depending on key_info.
+ *
+ * @param pKeyHandle pointer to key handle location
+ * @param keyType type of key for hsm to create
+ * @param pubKeySize size of public key to generate
+ * @param pPubKey location to write public key
+ * @param create true to create a new key, false to overwrite an existing one
+ * @param permanent true to create a permanent key (cannot be changed)
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
+static int32_t genHsmKey(uint32_t *pKeyHandle, hsm_key_type_t keyType,
+		uint16_t pubKeySize, uint8_t *pPubKey, int create,
+		int permanent)
+{
+	op_generate_key_args_t args;
+
+	memset(&args, 0, sizeof(args));
+	args.key_identifier = pKeyHandle;
+	args.out_size = pubKeySize;
+	args.flags = HSM_OP_KEY_GENERATION_FLAGS_CREATE_PERSISTENT;
+	if (!create)
+		args.flags |= HSM_OP_KEY_GENERATION_FLAGS_UPDATE;
+	args.key_type = keyType;
+	if (permanent)
+		args.key_info = HSM_KEY_INFO_PERMANENT;
+	args.out_key = pPubKey;
+	return hsm_generate_key(hsmKeyMgmtHandle, &args);
+}
+
+/**
+ *
+ * @brief Calculate ECC public key in hsm
+ *
+ * This function requests the hsm to generate the ECC public key corresponding
+ * to the referenced private key.
+
+ *
+ * @param pKeyHandle pointer to key handle location
+ * @param keyType type of key for hsm to create
+ * @param pubKeySize size of public key to generate
+ * @param pPubKey location to write public key
+ * @param create true to create a new key, false to overwrite an existing one
+ * @param permanent true to create a permanent key (cannot be changed)
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
+static int32_t getHsmPubKey(uint32_t *pKeyHandle, hsm_key_type_t keyType,
+		uint16_t pubKeySize, uint8_t *pPubKey)
+{
+	op_calc_pubkey_args_t args;
+
+	memset(&args, 0, sizeof(args));
+	args.key_identifier = pKeyHandle;
+	args.out_size = pubKeySize;
+	args.key_type = keyType;
+	args.output_key = pPubKey;
+	return hsm_calculate_public_key(hsmKeyMgmtHandle, &args);
 }
 
 /**
@@ -181,8 +249,7 @@ int32_t v2xSe_generateMaEccKeyPair
     TypePublicKey_t *pPublicKeyPlain
 )
 {
-	op_generate_key_args_t args;
-	uint16_t keyType;
+	hsm_key_type_t keyType;
 	uint32_t keyHandle;
 	TypeCurveId_t savedCurveId;
 
@@ -203,24 +270,18 @@ int32_t v2xSe_generateMaEccKeyPair
 		return V2XSE_FAILURE;
 	}
 
-	memset(&args, 0, sizeof(args));
-	args.key_identifier = &keyHandle;
-	args.out_size = v2xSe_getKeyLenFromCurveID(curveId);
-	args.flags = HSM_OP_KEY_GENERATION_FLAGS_CREATE_PERSISTENT;
-	args.key_type = keyType;
-	args.key_info = HSM_KEY_INFO_PERMANENT;
-	args.out_key = (uint8_t*)pPublicKeyPlain;
-	if (hsm_generate_key(hsmKeyMgmtHandle, &args)) {
+	if (genHsmKey(&keyHandle, keyType, v2xSe_getKeyLenFromCurveID(curveId),
+				(uint8_t *)pPublicKeyPlain, 1, 1)) {
 		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 		return V2XSE_FAILURE;
 	}
 
-	if (nvm_update_var("maCurveId", (uint8_t*)&curveId,
+	if (nvm_update_var("maCurveId", (uint8_t *)&curveId,
 							sizeof(curveId))) {
 		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 		return V2XSE_FAILURE;
 	}
-	if (nvm_update_var("maKeyHandle", (uint8_t*)&keyHandle,
+	if (nvm_update_var("maKeyHandle", (uint8_t *)&keyHandle,
 							sizeof(keyHandle))) {
 		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 		return V2XSE_FAILURE;
@@ -258,8 +319,7 @@ int32_t v2xSe_getMaEccPublicKey
 {
 	uint32_t keyHandle;
 	TypeCurveId_t curveId;
-	uint16_t keyType;
-	op_calc_pubkey_args_t args;
+	hsm_key_type_t keyType;
 
 	VERIFY_STATUS_CODE_PTR();
 	ENFORCE_STATE_ACTIVATED();
@@ -277,12 +337,9 @@ int32_t v2xSe_getMaEccPublicKey
 		return V2XSE_FAILURE;
 	}
 
-	memset(&args, 0, sizeof(args));
-	args.key_identifier = &keyHandle;
-	args.out_size = v2xSe_getKeyLenFromCurveID(curveId);
-	args.key_type = keyType;
-	args.output_key = (uint8_t*)pPublicKeyPlain;
-	if (hsm_calculate_public_key(hsmKeyMgmtHandle, &args)) {
+	if (getHsmPubKey(&keyHandle, keyType,
+			v2xSe_getKeyLenFromCurveID(curveId),
+			(uint8_t *)pPublicKeyPlain)) {
 		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 		return V2XSE_FAILURE;
 	}
@@ -320,8 +377,7 @@ int32_t v2xSe_generateRtEccKeyPair
     TypePublicKey_t *pPublicKeyPlain
 )
 {
-	op_generate_key_args_t args;
-	uint16_t keyType;
+	hsm_key_type_t keyType;
 	uint32_t keyHandle;
 	TypeCurveId_t storedCurveId;
 
@@ -350,25 +406,20 @@ int32_t v2xSe_generateRtEccKeyPair
 		}
 	}
 
-	memset(&args, 0, sizeof(args));
-	args.key_identifier = &keyHandle;
-	args.out_size = v2xSe_getKeyLenFromCurveID(curveId);
-	args.flags = HSM_OP_KEY_GENERATION_FLAGS_CREATE_PERSISTENT;
-	if (rtKeyHandle[rtKeyId])
-		args.flags |= HSM_OP_KEY_GENERATION_FLAGS_UPDATE;
-	args.key_type = keyType;
-	args.out_key = (uint8_t*)pPublicKeyPlain;
-	if (hsm_generate_key(hsmKeyMgmtHandle, &args)) {
+	if (genHsmKey(&keyHandle, keyType, v2xSe_getKeyLenFromCurveID(curveId),
+				(uint8_t *)pPublicKeyPlain,
+				(rtKeyHandle[rtKeyId] == 0), 0)) {
 		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 		return V2XSE_FAILURE;
 	}
-	if (nvm_update_array_data("rtCurveId", rtKeyId,	(uint8_t*)&curveId,
+
+	if (nvm_update_array_data("rtCurveId", rtKeyId,	(uint8_t *)&curveId,
 							sizeof(curveId))) {
 		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 		return V2XSE_FAILURE;
 	}
-	if (nvm_update_array_data("rtKeyHandle", rtKeyId, (uint8_t*)&keyHandle,
-							sizeof(keyHandle))) {
+	if (nvm_update_array_data("rtKeyHandle", rtKeyId,
+				(uint8_t *)&keyHandle, sizeof(keyHandle))) {
 		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 		return V2XSE_FAILURE;
 	}
@@ -454,8 +505,7 @@ int32_t v2xSe_getRtEccPublicKey
 {
 	uint32_t keyHandle;
 	TypeCurveId_t curveId;
-	uint16_t keyType;
-	op_calc_pubkey_args_t args;
+	hsm_key_type_t keyType;
 
 	VERIFY_STATUS_CODE_PTR();
 	ENFORCE_STATE_ACTIVATED();
@@ -478,12 +528,9 @@ int32_t v2xSe_getRtEccPublicKey
 		return V2XSE_FAILURE;
 	}
 
-	memset(&args, 0, sizeof(args));
-	args.key_identifier = &keyHandle;
-	args.out_size = v2xSe_getKeyLenFromCurveID(curveId);
-	args.key_type = keyType;
-	args.output_key = (uint8_t*)pPublicKeyPlain;
-	if (hsm_calculate_public_key(hsmKeyMgmtHandle, &args)) {
+	if (getHsmPubKey(&keyHandle, keyType,
+			v2xSe_getKeyLenFromCurveID(curveId),
+			(uint8_t *)pPublicKeyPlain)) {
 		*pHsmStatusCode = V2XSE_WRONG_DATA;
 		return V2XSE_FAILURE;
 	}
@@ -521,8 +568,7 @@ int32_t v2xSe_generateBaEccKeyPair
     TypePublicKey_t *pPublicKeyPlain
 )
 {
-	op_generate_key_args_t args;
-	uint16_t keyType;
+	hsm_key_type_t keyType;
 	uint32_t keyHandle;
 	TypeCurveId_t storedCurveId;
 
@@ -552,26 +598,21 @@ int32_t v2xSe_generateBaEccKeyPair
 		}
 	}
 
-	memset(&args, 0, sizeof(args));
-	args.key_identifier = &keyHandle;
-	args.out_size = v2xSe_getKeyLenFromCurveID(curveId);
-	args.flags = HSM_OP_KEY_GENERATION_FLAGS_CREATE_PERSISTENT;
-	if (baKeyHandle[baseKeyId])
-		args.flags |= HSM_OP_KEY_GENERATION_FLAGS_UPDATE;
-	args.key_type = keyType;
-	args.out_key = (uint8_t*)pPublicKeyPlain;
-	if (hsm_generate_key(hsmKeyMgmtHandle, &args)) {
+	if (genHsmKey(&keyHandle, keyType, v2xSe_getKeyLenFromCurveID(curveId),
+				(uint8_t *)pPublicKeyPlain,
+				(baKeyHandle[baseKeyId] == 0), 0)) {
 		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 		return V2XSE_FAILURE;
 	}
+
 	if (nvm_update_array_data("baCurveId", baseKeyId,
-					(uint8_t*)&curveId,
+					(uint8_t *)&curveId,
 					sizeof(curveId))) {
 		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 		return V2XSE_FAILURE;
 	}
 	if (nvm_update_array_data("baKeyHandle", baseKeyId,
-					(uint8_t*)&keyHandle,
+					(uint8_t *)&keyHandle,
 					sizeof(keyHandle))) {
 		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 		return V2XSE_FAILURE;
@@ -658,8 +699,7 @@ int32_t v2xSe_getBaEccPublicKey
 {
 	uint32_t keyHandle;
 	TypeCurveId_t curveId;
-	uint16_t keyType;
-	op_calc_pubkey_args_t args;
+	hsm_key_type_t keyType;
 
 	VERIFY_STATUS_CODE_PTR();
 	ENFORCE_STATE_ACTIVATED();
@@ -682,12 +722,9 @@ int32_t v2xSe_getBaEccPublicKey
 		return V2XSE_FAILURE;
 	}
 
-	memset(&args, 0, sizeof(args));
-	args.key_identifier = &keyHandle;
-	args.out_size = v2xSe_getKeyLenFromCurveID(curveId);
-	args.key_type = keyType;
-	args.output_key = (uint8_t*)pPublicKeyPlain;
-	if (hsm_calculate_public_key(hsmKeyMgmtHandle, &args)) {
+	if (getHsmPubKey(&keyHandle, keyType,
+			v2xSe_getKeyLenFromCurveID(curveId),
+			(uint8_t *)pPublicKeyPlain)) {
 		*pHsmStatusCode = V2XSE_WRONG_DATA;
 		return V2XSE_FAILURE;
 	}
@@ -735,7 +772,7 @@ int32_t v2xSe_deriveRtEccKeyPair
 	TypeCurveId_t inputBaCurveId;
 	uint32_t outputRtKeyHandle;
 	TypeCurveId_t storedRtCurveId;
-	uint16_t keyType;
+	hsm_key_type_t keyType;
 	op_butt_key_exp_args_t args;
 
 	VERIFY_STATUS_CODE_PTR();
@@ -797,7 +834,7 @@ int32_t v2xSe_deriveRtEccKeyPair
 		args.flags |= HSM_OP_KEY_GENERATION_FLAGS_UPDATE;
 	args.dest_key_identifier = outputRtKeyHandle;
 	if (returnPubKey == V2XSE_RSP_WITH_PUBKEY) {
-		args.output = (uint8_t*)pPublicKeyPlain;
+		args.output = (uint8_t *)pPublicKeyPlain;
 		args.output_size = V2XSE_256_EC_PUB_KEY;
 	}
 	args.key_type = keyType;
@@ -806,12 +843,12 @@ int32_t v2xSe_deriveRtEccKeyPair
 		return V2XSE_FAILURE;
 	}
 	if (nvm_update_array_data("rtCurveId", rtKeyId,
-			(uint8_t*)&inputBaCurveId, sizeof(inputBaCurveId))) {
+			(uint8_t *)&inputBaCurveId, sizeof(inputBaCurveId))) {
 		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 		return V2XSE_FAILURE;
 	}
 	if (nvm_update_array_data("rtKeyHandle", rtKeyId,
-		(uint8_t*)&outputRtKeyHandle, sizeof(outputRtKeyHandle))) {
+		(uint8_t *)&outputRtKeyHandle, sizeof(outputRtKeyHandle))) {
 		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 		return V2XSE_FAILURE;
 	}

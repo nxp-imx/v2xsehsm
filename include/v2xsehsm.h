@@ -112,8 +112,8 @@ extern const uint8_t serialNumber[V2XSE_SERIAL_NUMBER];
 /** Operating mode for session opened with HSM */
 #define HSM_OPERATING_MODE	0
 
-uint16_t convertCurveId(TypeCurveId_t curveId);
-int is256bitCurve(uint32_t keyType);
+hsm_key_type_t convertCurveId(TypeCurveId_t curveId);
+int is256bitCurve(hsm_key_type_t keyType);
 
 /** Abort function (return) if pHsmStatusCode is NULL */
 #define VERIFY_STATUS_CODE_PTR() do {				\

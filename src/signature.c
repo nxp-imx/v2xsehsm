@@ -84,6 +84,44 @@ static void convertSignatureToV2xseApi(uint32_t is256bits,
 
 /**
  *
+ * @brief Generate signature using hsm
+ *
+ * This function generates a signature using the hsm.  It takes parameters
+ * in v2xSe format, converts them to hsm_api format and launches the
+ * signature generation.
+ *
+ * @param keyHandle handle of key to use for signature
+ * @param sig_scheme singature scheme to use
+ * @param pHashValue pointer to hash value to sign
+ * @param hashLength length of hash to sign
+ * @param pSignature location to write signature
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
+static hsm_err_t genHsmSignature(uint32_t keyHandle,
+			hsm_signature_scheme_id_t sig_scheme,
+			TypeHash_t *pHashValue,
+			TypeHashLength_t hashLength,
+			TypeSignature_t *pSignature)
+{
+	op_generate_sign_args_t args;
+
+	memset(&args, 0, sizeof(args));
+	args.key_identifier = keyHandle;
+	args.message = pHashValue->data;
+	args.signature = (uint8_t *)pSignature;
+	args.message_size = hashLength;
+	args.signature_size = v2xSe_getSigLenFromHashLen(hashLength);
+	args.scheme_id = sig_scheme;
+	args.flags = HSM_OP_GENERATE_SIGN_FLAGS_INPUT_DIGEST;
+	return hsm_generate_signature(hsmSigGenHandle, &args);
+}
+
+
+
+/**
+ *
  * @brief Generate signature using MA private key
  *
  * This function calculates the signature of the given hash using the MA
@@ -109,7 +147,6 @@ int32_t v2xSe_createMaSign
 	TypeCurveId_t curveId;
 	hsm_signature_scheme_id_t sig_scheme;
 	TypeHashLength_t expectedHashLength;
-	op_generate_sign_args_t args;
 	uint32_t is256bits;
 
 	VERIFY_STATUS_CODE_PTR();
@@ -138,15 +175,8 @@ int32_t v2xSe_createMaSign
 		return V2XSE_FAILURE;
 	}
 
-	memset(&args, 0, sizeof(args));
-	args.key_identifier = keyHandle;
-	args.message = pHashValue->data;
-	args.signature = (uint8_t*)pSignature;
-	args.message_size = hashLength;
-	args.signature_size = v2xSe_getSigLenFromHashLen(hashLength);
-	args.scheme_id = sig_scheme;
-	args.flags = HSM_OP_GENERATE_SIGN_FLAGS_INPUT_DIGEST;
-	if (hsm_generate_signature(hsmSigGenHandle, &args)) {
+	if (genHsmSignature(keyHandle, sig_scheme, pHashValue, hashLength,
+							pSignature)) {
 		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
 		return V2XSE_FAILURE;
 	}
@@ -258,7 +288,7 @@ int32_t v2xSe_createRtSignLowLatency
 	memset(&args, 0, sizeof(args));
 	args.key_identifier = preparedKeyHandle;
 	args.message = pHashValue->data;
-	args.signature = (uint8_t*)pSignature;
+	args.signature = (uint8_t *)pSignature;
 	args.message_size = V2XSE_256_EC_HASH_SIZE;
 	args.signature_size =
 		v2xSe_getSigLenFromHashLen(V2XSE_256_EC_HASH_SIZE);
@@ -301,7 +331,6 @@ int32_t v2xSe_createRtSign
 	uint32_t keyHandle;
 	TypeCurveId_t curveId;
 	hsm_signature_scheme_id_t sig_scheme;
-	op_generate_sign_args_t args;
 
 	VERIFY_STATUS_CODE_PTR();
 	ENFORCE_STATE_ACTIVATED();
@@ -329,16 +358,8 @@ int32_t v2xSe_createRtSign
 		return V2XSE_FAILURE;
 	}
 
-	memset(&args, 0, sizeof(args));
-	args.key_identifier = keyHandle;
-	args.message = pHashValue->data;
-	args.signature = (uint8_t*)pSignature;
-	args.message_size = V2XSE_256_EC_HASH_SIZE;
-	args.signature_size =
-		v2xSe_getSigLenFromHashLen(V2XSE_256_EC_HASH_SIZE);
-	args.scheme_id = sig_scheme;
-	args.flags = HSM_OP_GENERATE_SIGN_FLAGS_INPUT_DIGEST;
-	if (hsm_generate_signature(hsmSigGenHandle, &args)) {
+	if (genHsmSignature(keyHandle, sig_scheme, pHashValue,
+				V2XSE_256_EC_HASH_SIZE,	pSignature)) {
 		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
 		return V2XSE_FAILURE;
 	}
@@ -377,7 +398,6 @@ int32_t v2xSe_createBaSign
 	TypeCurveId_t curveId;
 	hsm_signature_scheme_id_t sig_scheme;
 	TypeHashLength_t expectedHashLength;
-	op_generate_sign_args_t args;
 	uint32_t is256bits;
 
 	VERIFY_STATUS_CODE_PTR();
@@ -411,15 +431,8 @@ int32_t v2xSe_createBaSign
 		return V2XSE_FAILURE;
 	}
 
-	memset(&args, 0, sizeof(args));
-	args.key_identifier = keyHandle;
-	args.message = pHashValue->data;
-	args.signature = (uint8_t*)pSignature;
-	args.message_size = hashLength;
-	args.signature_size = v2xSe_getSigLenFromHashLen(hashLength);
-	args.scheme_id = sig_scheme;
-	args.flags = HSM_OP_GENERATE_SIGN_FLAGS_INPUT_DIGEST;
-	if (hsm_generate_signature(hsmSigGenHandle, &args)) {
+	if (genHsmSignature(keyHandle, sig_scheme, pHashValue, hashLength,
+							pSignature)) {
 		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
 		return V2XSE_FAILURE;
 	}

@@ -62,7 +62,7 @@
  * @param pPublicKeyPlain location of the generated public key
  *
  */
-static void convertPublicKeyToHsmApi(uint32_t keyType,
+static void convertPublicKeyToHsmApi(hsm_key_type_t keyType,
 					TypePublicKey_t *pPublicKeyPlain)
 {
 	hsmPubKey256_t *hsmApiPtr = (hsmPubKey256_t*)pPublicKeyPlain;
@@ -75,6 +75,51 @@ static void convertPublicKeyToHsmApi(uint32_t keyType,
 	}
 }
 
+/**
+ *
+ * @brief Perform ECIES decryption using hsm
+ *
+ * This function performs ECIES decryption using the hsm.  It takes parameters
+ * in v2xSe format, converts them to hsm_api format and launches the
+ * decrpytion.
+ *
+ * @param keyHandle handle of key to use for decryption
+ * @param keyType type of key for hsm to create
+ * @param pEciesData pointer to decrpytion parameters in v2xSe format
+ * @param pMsgLen pointer to size of msg buffer on input, msg size on output
+ * @param pMsgData location to write decrpyted message
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
+static hsm_err_t doHsmDecryption(uint32_t keyHandle, hsm_key_type_t keyType,
+			TypeDecryptEcies_t *pEciesData,
+			TypeLen_t *pMsgLen, TypePlainText_t *pMsgData)
+{
+	hsm_op_ecies_dec_args_t args;
+	hsm_err_t retVal;
+
+	memset(&args, 0, sizeof(args));
+	args.key_identifier = keyHandle;
+	args.input = pEciesData->pVctData->data;
+	if (pEciesData->kdfParamP1Len) {
+		args.p1 = pEciesData->kdfParamP1;
+		args.p1_size = pEciesData->kdfParamP1Len;
+	}
+	if (pEciesData->macParamP2) {
+		args.p2 = pEciesData->macParamP2;
+		args.p2_size = pEciesData->macParamP2Len;
+	}
+	args.output = pMsgData->data;
+	args.input_size = pEciesData->vctLen;
+	args.output_size = *pMsgLen;
+	args.mac_size = pEciesData->macLen;
+	args.key_type = keyType;
+	retVal = hsm_ecies_decryption(hsmCipherHandle, &args);
+	if (!retVal)
+		*pMsgLen = args.output_size;
+	return retVal;
+}
 
 /**
  *
@@ -161,7 +206,6 @@ int32_t v2xSe_decryptUsingRtEcies (TypeRtKeyId_t rtKeyId,
 {
 	uint32_t keyHandle;
 	TypeCurveId_t curveId;
-	hsm_op_ecies_dec_args_t args;
 
 	VERIFY_STATUS_CODE_PTR();
 	ENFORCE_STATE_ACTIVATED();
@@ -179,27 +223,11 @@ int32_t v2xSe_decryptUsingRtEcies (TypeRtKeyId_t rtKeyId,
 		return V2XSE_FAILURE;
 	}
 
-	memset(&args, 0, sizeof(args));
-	args.key_identifier = keyHandle;
-	args.input = pEciesData->pVctData->data;
-	if (pEciesData->kdfParamP1Len) {
-		args.p1 = pEciesData->kdfParamP1;
-		args.p1_size = pEciesData->kdfParamP1Len;
-	}
-	if (pEciesData->macParamP2) {
-		args.p2 = pEciesData->macParamP2;
-		args.p2_size = pEciesData->macParamP2Len;
-	}
-	args.output = pMsgData->data;
-	args.input_size = pEciesData->vctLen;
-	args.output_size = *pMsgLen;
-	args.mac_size = pEciesData->macLen;
-	args.key_type = convertCurveId(curveId);
-	if (hsm_ecies_decryption(hsmCipherHandle, &args)) {
+	if (doHsmDecryption(keyHandle, convertCurveId(curveId), pEciesData,
+						pMsgLen, pMsgData)) {
 		*pHsmStatusCode = V2XSE_WRONG_DATA;
 		return V2XSE_FAILURE;
 	}
-	*pMsgLen = args.output_size;
 	*pHsmStatusCode = V2XSE_NO_ERROR;
 	return V2XSE_SUCCESS;
 }
@@ -230,7 +258,6 @@ int32_t v2xSe_decryptUsingMaEcies
 {
 	uint32_t keyHandle;
 	TypeCurveId_t curveId;
-	hsm_op_ecies_dec_args_t args;
 
 	VERIFY_STATUS_CODE_PTR();
 	ENFORCE_STATE_ACTIVATED();
@@ -244,27 +271,11 @@ int32_t v2xSe_decryptUsingMaEcies
 		return V2XSE_FAILURE;
 	}
 
-	memset(&args, 0, sizeof(args));
-	args.key_identifier = keyHandle;
-	args.input = pEciesData->pVctData->data;
-	if (pEciesData->kdfParamP1Len) {
-		args.p1 = pEciesData->kdfParamP1;
-		args.p1_size = pEciesData->kdfParamP1Len;
-	}
-	if (pEciesData->macParamP2) {
-		args.p2 = pEciesData->macParamP2;
-		args.p2_size = pEciesData->macParamP2Len;
-	}
-	args.output = pMsgData->data;
-	args.input_size = pEciesData->vctLen;
-	args.output_size = *pMsgLen;
-	args.mac_size = pEciesData->macLen;
-	args.key_type = convertCurveId(curveId);
-	if (hsm_ecies_decryption(hsmCipherHandle, &args)) {
+	if (doHsmDecryption(keyHandle, convertCurveId(curveId), pEciesData,
+						pMsgLen, pMsgData)) {
 		*pHsmStatusCode = V2XSE_WRONG_DATA;
 		return V2XSE_FAILURE;
 	}
-	*pMsgLen = args.output_size;
 	*pHsmStatusCode = V2XSE_NO_ERROR;
 	return V2XSE_SUCCESS;
 }
@@ -297,7 +308,6 @@ int32_t v2xSe_decryptUsingBaEcies
 {
 	uint32_t keyHandle;
 	TypeCurveId_t curveId;
-	hsm_op_ecies_dec_args_t args;
 
 	VERIFY_STATUS_CODE_PTR();
 	ENFORCE_STATE_ACTIVATED();
@@ -315,27 +325,11 @@ int32_t v2xSe_decryptUsingBaEcies
 		return V2XSE_FAILURE;
 	}
 
-	memset(&args, 0, sizeof(args));
-	args.key_identifier = keyHandle;
-	args.input = pEciesData->pVctData->data;
-	if (pEciesData->kdfParamP1Len) {
-		args.p1 = pEciesData->kdfParamP1;
-		args.p1_size = pEciesData->kdfParamP1Len;
-	}
-	if (pEciesData->macParamP2) {
-		args.p2 = pEciesData->macParamP2;
-		args.p2_size = pEciesData->macParamP2Len;
-	}
-	args.output = pMsgData->data;
-	args.input_size = pEciesData->vctLen;
-	args.output_size = *pMsgLen;
-	args.mac_size = pEciesData->macLen;
-	args.key_type = convertCurveId(curveId);
-	if (hsm_ecies_decryption(hsmCipherHandle, &args)) {
+	if (doHsmDecryption(keyHandle, convertCurveId(curveId), pEciesData,
+						pMsgLen, pMsgData)) {
 		*pHsmStatusCode = V2XSE_WRONG_DATA;
 		return V2XSE_FAILURE;
 	}
-	*pMsgLen = args.output_size;
 	*pHsmStatusCode = V2XSE_NO_ERROR;
 	return V2XSE_SUCCESS;
 }
