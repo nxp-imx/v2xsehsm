@@ -1,9 +1,5 @@
 
 /*
- * Copyright 2019 NXP
- */
-
-/*
  * SPDX-License-Identifier: BSD-3-Clause
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,36 +28,3 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS  SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-
-/**
- *
- * @file version.h
- *
- * @brief Header file containing version information for the various elements
- *
- * This is a header file containing version information for the different
- * elements in the adaptation layer.
- *
- * DO NOT DIRECTLY EDIT version.h, IT IS GENERATED FROM version.h.in BY cmake
- *
- */
-
-/** HSM based SE implementation is generation 3 - do not change */
-#define VERSION_GENERATION	3
-/** Major version number of adaptation libary - taken from cmake */
-#define VERSION_MAJOR		@v2xsehsm_MAJOR@
-/** Minor version number of adaptation libary - taken from cmake */
-#define VERSION_MINOR		@v2xsehsm_MINOR@
-
-/**
- * String prividing info about platform the system is running on
- * Length V2XSE_PLATFORM_IDENTITY = 16 bytes
- */
-#define PLATFORMINFO_STRING "HSM0IMX800000001"
-
-/**
- * String providing simulated chip serial number
- * Length V2XSE_SERIAL_NUMBER = 24 bytes
- */
-#define SERIALNUM_BYTES 	\
-	{0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1,2,3}
