@@ -220,4 +220,15 @@ typedef struct
 	uint8_t Ry;
 } hsmSignature384_t;
 
+typedef enum {
+	GEN_TRANSIENT_KEY,
+	GEN_PERSISTENT_KEY,
+	GEN_PERMANENT_KEY
+} genKeyAttr_t;
+
+typedef enum {
+	CREATE_KEY,
+	UPDATE_KEY
+} genKeyAction_t;
+
 #endif
