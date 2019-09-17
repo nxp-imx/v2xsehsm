@@ -44,7 +44,7 @@
 #ifndef V2XSEHSM_H
 #define V2XSEHSM_H
 
-#include "v2xseapi.h"
+#include "v2xSe.h"
 #include "hsm/hsm_api.h"
 #include "hsmMISSING.h"
 #include "version.h"

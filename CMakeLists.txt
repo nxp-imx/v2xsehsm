@@ -39,7 +39,7 @@ target_include_directories (v2xsehsm PUBLIC
 	)
 
 set_target_properties (v2xsehsm PROPERTIES
-	PUBLIC_HEADER "include/v2xseapi.h"
+	PUBLIC_HEADER "include/v2xSe.h"
 	VERSION ${v2xsehsm_VERSION}
 	SOVERSION ${v2xsehsm_MAJOR}
 	)

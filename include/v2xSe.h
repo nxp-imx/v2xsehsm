@@ -35,14 +35,14 @@
 
 /**
  *
- * @file v2xseapi.h
+ * @file v2xSe.h
  *
  * @brief Header file for V2X SE public API
  *
  */
 
-#ifndef V2XSEAPI_H
-#define V2XSEAPI_H
+#ifndef V2XSE_H
+#define V2XSE_H
 
 #include <stdint.h>
 
