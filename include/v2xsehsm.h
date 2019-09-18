@@ -230,10 +230,10 @@ typedef struct
  *  - PERMANENT corresponds to module authentication key in the v2xSe API
  */
 typedef enum {
-	GEN_TRANSIENT_KEY,
-	GEN_PERSISTENT_KEY,
-	GEN_PERMANENT_KEY
-} genKeyAttr_t;
+	TRANSIENT_KEY,
+	PERSISTENT_KEY,
+	PERMANENT_KEY
+} keyAttr_t;
 
 /**
  * This structure describes the two options possible when generating a
