@@ -24,7 +24,6 @@ add_library (v2xsehsm SHARED
 	src/ecies.c
 	src/datastorage.c
 	src/utility.c
-	src/hsmMISSING.c
 	)
 
 target_link_libraries(v2xsehsm

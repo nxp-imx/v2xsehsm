@@ -44,8 +44,6 @@
 #ifndef HSMMISSING_H
 #define HSMMISSING_H
 
-/** Flag to indicate prepare/finalize for fast signature not supported */
-#define STUB_PREPARE_FINALIZE
 /** Flag single keystore supported, EU & US use same id/nonce */
 #define SINGLE_KEYSTORE
 /** Flag to indicate BrainpoolT1 not yet supported - code uses R1 instead */
@@ -55,43 +53,5 @@
  *  - will cause buildup of keystore keys over time
  */
 #define NO_KEY_DELETION
-
-
-#ifdef STUB_PREPARE_FINALIZE
-/** Replace failing hsm call with stub function */
-#define hsm_prepare_signature STUB_prepare_signature
-/** Replace failing hsm call with stub function */
-#define hsm_finalize_signature STUB_finalize_signature
-/**
- *
- * @brief Simulate fast signature preparation
- *
- * This function does nothing, waiting for true fast signature
- * preparation to be available in the hsm
- *
- * @param signature_gen_hdl handle for signature generation service
- * @param args structure containing parameters for operation
- *
- * @return HSM_NO_ERROR if no error
- *
- */
-hsm_err_t STUB_prepare_signature(hsm_hdl_t signature_gen_hdl,
-	op_prepare_sign_args_t *args);
-/**
- *
- * @brief Simulate fast signature finalization
- *
- * This function does nothing, waiting for true fast signature
- * finalization to be available in the hsm
- *
- * @param signature_gen_hdl handle for signature generation service
- * @param args structure containing parameters for operation
- *
- * @return HSM_NO_ERROR if no error
- *
- */
-hsm_err_t STUB_finalize_signature(hsm_hdl_t signature_gen_hdl,
-	op_finalize_sign_args_t *args);
-#endif
 
 #endif

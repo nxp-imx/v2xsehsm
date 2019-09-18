@@ -190,10 +190,23 @@ int32_t v2xSe_createMaSign
  *
  * @brief Activate specified run time key for low latency signing
  *
- * This function prepares for low latency signing by performing
+ * This function is meant to prepare for low latency signing by performing
  * the initial signature calculations that do not rely on the data to sign.
  * A later call to v2xSe_createRtSignLowLatency will provide the data to
- * sign and finalize the signature calcualtion.
+ * sign and finalize the signature calculation.
+ * The v2xSe API states that a single activate call can be made, followed
+ * by multiple low latency signatures if they all use the same key.  This
+ * is achieved on the SXF1800 by a background processing creating a pool of
+ * pre-prepared data sets during idle time, with each low latency signature
+ * consuming one entry.
+ * The hsm prepare/finalize signature calls need to be paired 1:1.  There
+ * is no background process that can know when the CAAM is idle to create
+ * a pool of prepared data.  For this reason, we cannot use the hsm prepare/
+ * finalize calls, and always perform normal latency signatures (which at
+ * ~1ms are fairly low latency anyway).
+ * This function stores the handle/sigScheme of the provided key, so that a
+ * normal signature call can be made with the activated key when the low
+ * latency signature is requested.
  *
  * @param rtKeyId runtime key to use for initial calculations
  * @param pHsmStatusCode pointer to location to write extended result code
@@ -209,8 +222,11 @@ int32_t v2xSe_activateRtKeyForSigning
 {
 	uint32_t keyHandle;
 	TypeCurveId_t curveId;
-	hsm_signature_scheme_id_t sig_scheme;
-	op_prepare_sign_args_t args;
+	hsm_signature_scheme_id_t sigScheme;
+
+	/* Clear previous data */
+	activatedKeyHandle = 0;
+	activatedSigScheme = 0;
 
 	VERIFY_STATUS_CODE_PTR();
 	ENFORCE_STATE_ACTIVATED();
@@ -226,19 +242,13 @@ int32_t v2xSe_activateRtKeyForSigning
 		return V2XSE_FAILURE;
 	}
 
-	sig_scheme = convertCurveId(curveId);
-	if (!sig_scheme) {
+	sigScheme = convertCurveId(curveId);
+	if (!sigScheme) {
 		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 		return V2XSE_FAILURE;
 	}
-	preparedKeyHandle = keyHandle;
-	memset(&args, 0, sizeof(args));
-	args.scheme_id = sig_scheme;
-	if (hsm_prepare_signature(hsmSigGenHandle, &args)) {
-		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
-		return V2XSE_FAILURE;
-	}
-
+	activatedKeyHandle = keyHandle;
+	activatedSigScheme = sigScheme;
 	*pHsmStatusCode = V2XSE_NO_ERROR;
 	return V2XSE_SUCCESS;
 }
@@ -249,11 +259,22 @@ int32_t v2xSe_activateRtKeyForSigning
  *
  * This function finalizes the signature calculation of the given hash.
  * The key to use must already have been specified using the function
- * v2xSe_activateRtKeyForSigning, which performs the initial signature
- * calculations that do not rely on the data to sign.  A fast indicator
- * is provided to indicate whether the signature was generated via a low
- * latency calculation, this is always true for this implementation unless
- * an error has occurred.
+ * v2xSe_activateRtKeyForSigning.
+ * The v2xSe API states that a single activate call can be made, followed
+ * by multiple low latency signatures if they all use the same key.  This
+ * is achieved on the SXF1800 by a background processing creating a pool of
+ * pre-prepared data sets during idle time, with each low latency signature
+ * consuming one entry.
+ * The hsm prepare/finalize signature calls need to be paired 1:1.  There
+ * is no background process that can know when the CAAM is idle to create
+ * a pool of prepared data.  For this reason, we cannot use the hsm prepare/
+ * finalize calls, and always perform normal latency signatures (which at
+ * ~1ms are fairly low latency anyway).
+ * This function performs a normal signature, using the key handle and
+ * signature scheme stored during the call to v2xSe_activateRtKeyForSigning.
+ * A fast indicator is provided to indicate whether the signature was
+ * generated via a low latency calculation. This is always false for this
+ * implementation.
  *
  * @param pHashValue pointer to the hash data to sign
  * @param pHsmStatusCode pointer to location to write extended result code
@@ -271,8 +292,6 @@ int32_t v2xSe_createRtSignLowLatency
     TypeLowlatencyIndicator_t *pFastIndicator
 )
 {
-	op_finalize_sign_args_t args;
-
 	VERIFY_STATUS_CODE_PTR();
 	ENFORCE_STATE_ACTIVATED();
 	ENFORCE_NORMAL_OPERATING_PHASE();
@@ -280,26 +299,19 @@ int32_t v2xSe_createRtSignLowLatency
 	ENFORCE_POINTER_NOT_NULL(pSignature);
 	ENFORCE_POINTER_NOT_NULL(pFastIndicator);
 
-	if (!preparedKeyHandle) {
+	if (!activatedKeyHandle) {
 		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 		return V2XSE_FAILURE;
 	}
 
-	memset(&args, 0, sizeof(args));
-	args.key_identifier = preparedKeyHandle;
-	args.message = pHashValue->data;
-	args.signature = (uint8_t *)pSignature;
-	args.message_size = V2XSE_256_EC_HASH_SIZE;
-	args.signature_size =
-		v2xSe_getSigLenFromHashLen(V2XSE_256_EC_HASH_SIZE);
-	args.flags = HSM_OP_FINALIZE_SIGN_INPUT_DIGEST;
-	if (hsm_finalize_signature(hsmSigGenHandle, &args)) {
+	if (genHsmSignature(activatedKeyHandle, activatedSigScheme, pHashValue,
+					V2XSE_256_EC_HASH_SIZE, pSignature)) {
 		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
 		return V2XSE_FAILURE;
 	}
 	convertSignatureToV2xseApi(1, pSignature);
 
-	*pFastIndicator = 1;
+	*pFastIndicator = 0;
 	*pHsmStatusCode = V2XSE_NO_ERROR;
 	return V2XSE_SUCCESS;
 }

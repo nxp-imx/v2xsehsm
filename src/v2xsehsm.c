@@ -61,8 +61,10 @@ const char usVarStorage[] = US_NVM_VAR_PATH;
 /** Fixed path to NVM storage for EU applet */
 const char euVarStorage[] = EU_NVM_VAR_PATH;
 
-/** Handle of key pre-loaded for low latency certificate generation */
-uint32_t preparedKeyHandle = 0;
+/** Handle of key pre-loaded for low latency signature generation */
+uint32_t activatedKeyHandle;
+/** Signature scheme for key pre-loaded for low latency signing */
+hsm_signature_scheme_id_t activatedSigScheme;
 
 /** Emulated serial number for device - currently fixed for all devices */
 const uint8_t serialNumber[V2XSE_SERIAL_NUMBER] = SERIALNUM_BYTES;
@@ -245,7 +247,9 @@ int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId,
 		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
 		return V2XSE_FAILURE;
 	}
-	preparedKeyHandle = 0; /* Keys just opened, so no prepared key yet */
+	/* Keys just opened, so no activated key/sigScheme yet */
+	activatedKeyHandle = 0;
+	activatedSigScheme = 0;
 
 	memset(&cipher_args, 0, sizeof(cipher_args));
 	if (hsm_open_cipher_service(hsmKeyStoreHandle, &cipher_args,

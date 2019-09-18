@@ -94,7 +94,8 @@ extern TypeCurveId_t baCurveId[NUM_STORAGE_SLOTS];
 extern const char usVarStorage[];
 extern const char euVarStorage[];
 
-extern uint32_t preparedKeyHandle;
+extern uint32_t activatedKeyHandle;
+extern hsm_signature_scheme_id_t activatedSigScheme;
 
 extern const uint8_t serialNumber[V2XSE_SERIAL_NUMBER];
 
