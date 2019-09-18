@@ -124,29 +124,26 @@ static int32_t genHsmKey(uint32_t *pKeyHandle, hsm_key_type_t keyType,
  *
  * This function requests the hsm to generate the ECC public key corresponding
  * to the referenced private key.
-
  *
- * @param pKeyHandle pointer to key handle location
+ * @param keyHandle handle of key to generate pub key for
  * @param keyType type of key for hsm to create
  * @param pubKeySize size of public key to generate
  * @param pPubKey location to write public key
- * @param create true to create a new key, false to overwrite an existing one
- * @param permanent true to create a permanent key (cannot be changed)
  *
  * @return V2XSE_SUCCESS if no error, non-zero on error
  *
  */
-static int32_t getHsmPubKey(uint32_t *pKeyHandle, hsm_key_type_t keyType,
+static int32_t getHsmPubKey(uint32_t keyHandle, hsm_key_type_t keyType,
 		uint16_t pubKeySize, uint8_t *pPubKey)
 {
-	op_calc_pubkey_args_t args;
+	hsm_op_pub_key_recovery_args_t args;
 
 	memset(&args, 0, sizeof(args));
-	args.key_identifier = pKeyHandle;
-	args.out_size = pubKeySize;
+	args.key_identifier = keyHandle;
+	args.out_key = pPubKey;
+	args.out_key_size = pubKeySize;
 	args.key_type = keyType;
-	args.output_key = pPubKey;
-	return hsm_calculate_public_key(hsmKeyMgmtHandle, &args);
+	return hsm_pub_key_recovery(hsmKeyStoreHandle, &args);
 }
 
 /**
@@ -346,7 +343,7 @@ int32_t v2xSe_getMaEccPublicKey
 		return V2XSE_FAILURE;
 	}
 
-	if (getHsmPubKey(&keyHandle, keyType,
+	if (getHsmPubKey(keyHandle, keyType,
 			v2xSe_getKeyLenFromCurveID(curveId),
 			(uint8_t *)pPublicKeyPlain)) {
 		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
@@ -538,7 +535,7 @@ int32_t v2xSe_getRtEccPublicKey
 		return V2XSE_FAILURE;
 	}
 
-	if (getHsmPubKey(&keyHandle, keyType,
+	if (getHsmPubKey(keyHandle, keyType,
 			v2xSe_getKeyLenFromCurveID(curveId),
 			(uint8_t *)pPublicKeyPlain)) {
 		*pHsmStatusCode = V2XSE_WRONG_DATA;
@@ -733,7 +730,7 @@ int32_t v2xSe_getBaEccPublicKey
 		return V2XSE_FAILURE;
 	}
 
-	if (getHsmPubKey(&keyHandle, keyType,
+	if (getHsmPubKey(keyHandle, keyType,
 			v2xSe_getKeyLenFromCurveID(curveId),
 			(uint8_t *)pPublicKeyPlain)) {
 		*pHsmStatusCode = V2XSE_WRONG_DATA;
@@ -834,15 +831,20 @@ int32_t v2xSe_deriveRtEccKeyPair
 
 	memset(&args, 0, sizeof(args));
 	args.key_identifier = inputBaKeyHandle;
-	args.data1 = pFvSign->data;
-	args.data2 = pHvij->data;
-	args.data3 = pRvij->data;
-	args.data1_size = V2XSE_INT256_SIZE;
-	args.data2_size = V2XSE_INT256_SIZE;
-	args.data3_size = V2XSE_INT256_SIZE;
-	args.flags = HSM_OP_KEY_GENERATION_FLAGS_CREATE_TRANSIENT;
+	args.expansion_function_value = pFvSign->data;
+	args.hash_value = pHvij->data;
+	args.pr_reconstruction_value = pRvij->data;
+	args.expansion_function_value_size = V2XSE_INT256_SIZE;
+	args.hash_value_size = V2XSE_INT256_SIZE;
+	args.pr_reconstruction_value_size = V2XSE_INT256_SIZE;
 	if (rtKeyHandle[rtKeyId])
-		args.flags |= HSM_OP_KEY_GENERATION_FLAGS_UPDATE;
+		/* Butterfly update flag not defined in hsm_api.h */
+		args.flags = 1;		/* Bit 0 = update key */
+	else
+		/* Butterfly create flag not defined in hsm_api.h */
+		args.flags = 2;		/* Bit 1 = create key */
+	/* Params provided to this API correspond to implicit certificate */
+	args.flags |= HSM_OP_BUTTERFLY_KEY_FLAGS_IMPLICIT_CERTIF;
 	args.dest_key_identifier = &outputRtKeyHandle;
 	if (returnPubKey == V2XSE_RSP_WITH_PUBKEY) {
 		args.output = (uint8_t *)pPublicKeyPlain;

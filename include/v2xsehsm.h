@@ -77,6 +77,7 @@ extern uint8_t	v2xseState;
 extern appletSelection_t v2xseAppletId;
 
 extern hsm_hdl_t hsmSessionHandle;
+extern hsm_hdl_t hsmKeyStoreHandle;
 extern hsm_hdl_t hsmKeyMgmtHandle;
 extern hsm_hdl_t hsmCipherHandle;
 extern hsm_hdl_t hsmSigGenHandle;
@@ -221,12 +222,25 @@ typedef struct
 	uint8_t Ry;
 } hsmSignature384_t;
 
+/**
+ * This structure described the possible types of keys that can be
+ * generated in the hsm:
+ *  - TRANSIENT corresponds to run time key in the v2xSe API
+ *  - PERSISTENT corresponds to base key in the v2xSe API
+ *  - PERMANENT corresponds to module authentication key in the v2xSe API
+ */
 typedef enum {
 	GEN_TRANSIENT_KEY,
 	GEN_PERSISTENT_KEY,
 	GEN_PERMANENT_KEY
 } genKeyAttr_t;
 
+/**
+ * This structure describes the two options possible when generating a
+ * new key:
+ *  - CREATE_KEY generates a new key in the key store
+ *  - UPDATE_KEY updates an existing key in the key store
+ */
 typedef enum {
 	CREATE_KEY,
 	UPDATE_KEY

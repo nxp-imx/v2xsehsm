@@ -44,61 +44,6 @@
 #include <string.h>
 #include "v2xsehsm.h"
 
-#ifdef STUB_CALC_PUBKEY
-hsm_err_t hsm_calculate_public_key(hsm_hdl_t key_management_hdl,
-						op_calc_pubkey_args_t *args)
-{
-	return HSM_NO_ERROR;
-}
-#endif
-
-#ifdef STUB_RNG
-hsm_err_t STUB_open_rng_service(hsm_hdl_t session_hdl,
-				open_svc_rng_args_t *args, hsm_hdl_t *rng_hdl)
-{
-	if (!rng_hdl)
-		return HSM_GENERAL_ERROR;
-	*rng_hdl = 0x2626;
-	return HSM_NO_ERROR;
-}
-
-hsm_err_t STUB_close_rng_service(hsm_hdl_t rng_hdl)
-{
-	if (rng_hdl != 0x2626)
-		return HSM_GENERAL_ERROR;
-	return HSM_NO_ERROR;
-}
-
-hsm_err_t STUB_get_random(hsm_hdl_t rng_hdl, op_get_random_args_t *args)
-{
-	static uint8_t notVeryRandNum = 2;
-
-	if (rng_hdl != 0x2626)
-		return HSM_GENERAL_ERROR;
-	if (!args)
-		return HSM_GENERAL_ERROR;
-	*(args->output) = notVeryRandNum++;
-	return HSM_NO_ERROR;
-}
-#endif
-
-#ifdef STUB_BUTTERFLY
-hsm_err_t STUB_butterfly_key_expansion(hsm_hdl_t key_management_hdl,
-						op_butt_key_exp_args_t *args)
-{
-
-	op_generate_key_args_t gen_args;
-
-	memset(&gen_args, 0, sizeof(gen_args));
-	gen_args.key_identifier = args->dest_key_identifier;
-	gen_args.out_size = args->output_size;
-	gen_args.flags = args->flags;
-	gen_args.key_type = args->key_type;
-	gen_args.out_key = args->output;
-	return hsm_generate_key(hsmKeyMgmtHandle, &gen_args);
-}
-#endif
-
 #ifdef STUB_PREPARE_FINALIZE
 hsm_err_t STUB_prepare_signature(hsm_hdl_t signature_gen_hdl,
 	op_prepare_sign_args_t *args)
