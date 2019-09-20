@@ -74,6 +74,9 @@ static void convertPublicKeyToV2xseApi(hsm_key_type_t keyType,
 		memset(&(pPublicKeyPlain->x[V2XSE_256_EC_PUB_KEY_XY_SIZE]), 0,
 			V2XSE_384_EC_PUB_KEY_XY_SIZE -
 						V2XSE_256_EC_PUB_KEY_XY_SIZE);
+		memset(&(pPublicKeyPlain->y[V2XSE_256_EC_PUB_KEY_XY_SIZE]), 0,
+			V2XSE_384_EC_PUB_KEY_XY_SIZE -
+						V2XSE_256_EC_PUB_KEY_XY_SIZE);
 	}
 }
 
