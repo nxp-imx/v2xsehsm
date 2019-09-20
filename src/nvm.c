@@ -43,6 +43,7 @@
 
 #include <unistd.h>
 #include <sys/stat.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -89,21 +90,17 @@ static int nvm_clear(void)
 static int nvm_raw_load(char* name, uint8_t* data, TypeLen_t size)
 {
 	int fd;
-	int numread;
+	int numread = -1;
 	struct stat fileInfo;
-
-	/* Check length as expected before use */
-	if (stat(name, &fileInfo) == -1)
-		return 0;
-	if (fileInfo.st_size > size)
-		return 0;
-
 	fd = open(name, O_RDONLY);
-	if (fd == -1)
-		return 0;
-
-	numread = read(fd, data, size);
-	close(fd);
+	if (fd != -1) {
+		/* Check length is as expected before use */
+		if (fstat(fd, &fileInfo) != -1) {
+			if (fileInfo.st_size <= size)
+				numread = read(fd, data, size);
+		}
+		close(fd);
+	}
 	return numread;
 }
 
@@ -149,9 +146,6 @@ static int nvm_raw_update(char* name, uint8_t* data, TypeLen_t size)
  */
 static int nvm_raw_delete(char* name)
 {
-	if (access(name, F_OK))
-		return -1;
-
 	return remove(name);
 }
 
@@ -328,7 +322,7 @@ int nvm_load_generic_data(int index, uint8_t* data, TypeLen_t* size)
 
 	snprintf(filename, MAX_FILENAME_SIZE, GENERIC_STORAGE_PATH"%d", index);
 	sizeread = nvm_raw_load(filename, data, V2XSE_MAX_DATA_SIZE_GSA);
-	if (sizeread < V2XSE_MIN_DATA_SIZE_GSA)
+	if (sizeread < (int)V2XSE_MIN_DATA_SIZE_GSA)
 		return -1;
 
 	*size = sizeread;
@@ -534,30 +528,6 @@ int nvm_retrieve_ba_key_handle(int index, uint32_t* handle, TypeCurveId_t* id)
 
 /**
  *
- * @brief Check if the given variable is present in NVM storage
- *
- * This function checks if the given variable is present in NVM storage for
- * the current applet.  The variable name is appended to the storage path
- * given by the global variable appletVarStoragePath to know the path to the
- * current applet's data in the filesystem.
- *
- * @param varname Name of variable to check
- *
- * @return 0 if present, non-zero otherwise
- *
- */
-static int var_present(char* varname)
-{
-	char filename[MAX_FILENAME_SIZE];
-
-	snprintf(filename, MAX_FILENAME_SIZE, "%s%s", appletVarStoragePath,
-								varname);
-	return !access(filename, F_OK);
-
-}
-
-/**
- *
  * @brief Create storage for the given array in NVM storage
  *
  * This function creates a directory in the current applet's NVM storage
@@ -568,16 +538,22 @@ static int var_present(char* varname)
  *
  * @param arrayname Name of the array to create a directory for
  *
- * @return 0 if created OK, non-zero otherwise
+ * @return 0 if created or already exists, non-zero otherwise
  *
  */
 static int var_mkdir(char* arrayname)
 {
 	char filename[MAX_FILENAME_SIZE];
+	int retval;
 
 	snprintf(filename, MAX_FILENAME_SIZE, "%s%s", appletVarStoragePath,
 								arrayname);
-	return mkdir(filename, 0700);
+	retval = mkdir(filename, 0700);
+	/* Ignore error if already exists */
+	if ((retval == -1) && (errno == EEXIST))
+		retval = 0;
+
+	return retval;
 
 }
 
@@ -592,35 +568,31 @@ static int var_mkdir(char* arrayname)
  * for the applet is cleared.  All key handles are set to 0, so that they
  * will be loaded from NVM on the next use.
  *
- * @return 0 if created OK, non-zero otherwise
+ * @return 0 if initialized OK, non-zero otherwise
  *
  */
 int nvm_init(void)
 {
 	int phaseValid;
 
-	/* Verify top level storage directory exists, create if not */
-	if (access(COMMON_STORAGE_PATH, F_OK)) {
-		if (mkdir(COMMON_STORAGE_PATH, 0700)) {
+	/* Make sure top level storage directory exists */
+	if (mkdir(COMMON_STORAGE_PATH, 0700)) {
+		if (errno != EEXIST)
 			return -1;
-		}
 	}
 
-	/* Verify applet specific storage directory exists, create if not */
-	if (access(appletVarStoragePath, F_OK)) {
-		if (mkdir(appletVarStoragePath, 0700)) {
+	/* Make sure applet specific storage directory exists */
+	if (mkdir(appletVarStoragePath, 0700)) {
+		if (errno != EEXIST)
 			return -1;
-		}
 	}
+
 	/* Verify phase variable is valid, create if not and clear all data */
 	phaseValid = 0;
-	if (var_present("v2xsePhase")) {
-		if (!nvm_load_var("v2xsePhase", &v2xsePhase,
-							sizeof(v2xsePhase))) {
-			if ((v2xsePhase == V2XSE_KEY_INJECTION_PHASE) ||
+	if (!nvm_load_var("v2xsePhase", &v2xsePhase, sizeof(v2xsePhase))) {
+		if ((v2xsePhase == V2XSE_KEY_INJECTION_PHASE) ||
 				(v2xsePhase == V2XSE_NORMAL_OPERATING_PHASE)) {
-					phaseValid = 1;
-			}
+			phaseValid = 1;
 		}
 	}
 	if (!phaseValid) {
@@ -632,36 +604,23 @@ int nvm_init(void)
 			return -1;
 	}
 
-	/* Verify generic storage directory exists, create if not */
-	if (access(GENERIC_STORAGE_PATH, F_OK)) {
-		if (mkdir(GENERIC_STORAGE_PATH, 0700)) {
+	/* Make sure generic storage directory exists */
+	if (mkdir(GENERIC_STORAGE_PATH, 0700)) {
+		if (errno != EEXIST)
 			return -1;
-		}
 	}
 
-	/* Verify rt key handle & curve directories exist, create if not */
-	if (!var_present("rtKeyHandle")) {
-		if (var_mkdir("rtKeyHandle")) {
-			return -1;
-		}
-	}
-	if (!var_present("rtCurveId")) {
-		if (var_mkdir("rtCurveId")) {
-			return -1;
-		}
-	}
+	/* Make sure rt key handle & curve directories exist */
+	if (var_mkdir("rtKeyHandle"))
+		return -1;
+	if (var_mkdir("rtCurveId"))
+		return -1;
 
-	/* Verify ba key handle & curve directories exist, create if not */
-	if (!var_present("baKeyHandle")) {
-		if (var_mkdir("baKeyHandle")) {
-			return -1;
-		}
-	}
-	if (!var_present("baCurveId")) {
-		if (var_mkdir("baCurveId")) {
-			return -1;
-		}
-	}
+	/* Make sure ba key handle & curve directories exist */
+	if (var_mkdir("baKeyHandle"))
+		return -1;
+	if (var_mkdir("baCurveId"))
+		return -1;
 
 	/*
 	 * Key handles: initialize all to zero, will try to load from
