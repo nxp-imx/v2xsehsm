@@ -107,7 +107,7 @@ static hsm_err_t doHsmDecryption(uint32_t keyHandle, hsm_key_type_t keyType,
 		args.p1 = pEciesData->kdfParamP1;
 		args.p1_size = pEciesData->kdfParamP1Len;
 	}
-	if (pEciesData->macParamP2) {
+	if (pEciesData->macParamP2Len) {
 		args.p2 = pEciesData->macParamP2;
 		args.p2_size = pEciesData->macParamP2Len;
 	}
