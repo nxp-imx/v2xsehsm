@@ -124,14 +124,15 @@ static int nvm_raw_load(char* name, uint8_t* data, TypeLen_t size)
 static int nvm_raw_update(char* name, uint8_t* data, TypeLen_t size)
 {
 	int fd;
+	int retval = -1;
 
 	fd = open(name, O_CREAT|O_WRONLY|O_TRUNC, S_IRUSR|S_IWUSR);
-	if (fd == -1)
-		return -1;
-	if (write(fd, data, size) == -1)
-		return -1;
-	close(fd);
-	return 0;
+	if (fd != -1) {
+		if (write(fd, data, size) == size)
+			retval = 0;
+		close(fd);
+	}
+	return retval;
 }
 
 /**
