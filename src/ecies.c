@@ -66,11 +66,12 @@ static void convertPublicKeyToHsmApi(hsm_key_type_t keyType,
 					TypePublicKey_t *pPublicKeyPlain)
 {
 	hsmPubKey256_t *hsmApiPtr = (hsmPubKey256_t*)pPublicKeyPlain;
+	uint8_t *bytePtr = (uint8_t *)pPublicKeyPlain;
 
 	if (is256bitCurve(keyType)) {
 		memmove(hsmApiPtr->y, pPublicKeyPlain->y,
 				sizeof(hsmApiPtr->y));
-		memset(&hsmApiPtr->y[V2XSE_256_EC_PUB_KEY_XY_SIZE], 0,
+		memset(bytePtr + sizeof(hsmPubKey256_t), 0,
 			sizeof(TypePublicKey_t) - sizeof(hsmPubKey256_t));
 	}
 }
