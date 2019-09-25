@@ -87,7 +87,7 @@ static void convertPublicKeyToHsmApi(hsm_key_type_t keyType,
  * @param keyHandle handle of key to use for decryption
  * @param keyType type of key for hsm to create
  * @param pEciesData pointer to decrpytion parameters in v2xSe format
- * @param pMsgLen pointer to size of msg buffer on input, msg size on output
+ * @param pMsgLen msg size on output
  * @param pMsgData location to write decrpyted message
  *
  * @return V2XSE_SUCCESS if no error, non-zero on error
@@ -113,7 +113,7 @@ static hsm_err_t doHsmDecryption(uint32_t keyHandle, hsm_key_type_t keyType,
 	}
 	args.output = pMsgData->data;
 	args.input_size = pEciesData->vctLen;
-	args.output_size = *pMsgLen;
+	args.output_size = HSM_ECIES_MESSAGE_SIZE;
 	args.mac_size = pEciesData->macLen;
 	args.key_type = keyType;
 	retVal = hsm_ecies_decryption(hsmCipherHandle, &args);
@@ -132,7 +132,7 @@ static hsm_err_t doHsmDecryption(uint32_t keyHandle, hsm_key_type_t keyType,
  *
  * @param pEciesData pointer to structure with data and encryption parameters
  * @param pHsmStatusCode pointer to location to write extended result code
- * @param pVctLen data buffer size on input, length of encrypted data on output
+ * @param pVctLen length of encrypted data on output
  * @param pVctData pointer to location to write the encrypted data
  *
  * @return V2XSE_SUCCESS if no error, non-zero on error
@@ -171,7 +171,7 @@ int32_t v2xSe_encryptUsingEcies (TypeEncryptEcies_t *pEciesData,
 	args.input_size = pEciesData->msgLen;
 	args.pub_key_size = v2xSe_getKeyLenFromCurveID(pEciesData->curveId);
 	args.mac_size = pEciesData->macLen;
-	args.out_size = *pVctLen;
+	args.out_size = HSM_ECIES_VECTOR_SIZE;
 	args.key_type = keyType;
 	if (hsm_ecies_encryption(hsmSessionHandle, &args)) {
 		*pHsmStatusCode = V2XSE_WRONG_DATA;

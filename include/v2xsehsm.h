@@ -115,6 +115,11 @@ extern const uint8_t serialNumber[V2XSE_SERIAL_NUMBER];
 /** Operating mode for session opened with HSM */
 #define HSM_OPERATING_MODE	0
 
+/** Required size for ECIES message for hsm */
+#define HSM_ECIES_MESSAGE_SIZE	16
+/** Required size for ECIES vector for hsm */
+#define HSM_ECIES_VECTOR_SIZE	96
+
 hsm_key_type_t convertCurveId(TypeCurveId_t curveId);
 int is256bitCurve(hsm_key_type_t keyType);
 
