@@ -58,28 +58,73 @@
 /** Command not supported in activated state */
 #define V2XSE_FAILURE_ACTIVATED		-4
 /** Command not supported in init state */
-#define V2XSE_FAILURE_INIT  -5
-
+#define V2XSE_FAILURE_INIT		-5
+/** Unused in adaptation layer - added for legacy compilation */
+#define V2XSE_FAILURE_RMAC		-6
+/** Unused in adaptation layer - added for legacy compilation */
+#define V2XSE_FAILURE_KEY_FILE		-7
 
 /* Extended return codes (passed in pHsmStatusCode) */
-/** Command completed successfully */
-#define V2XSE_NO_ERROR				0x9000u
-/** Invalid parameter provided to command */
-#define V2XSE_WRONG_DATA			0x6A80u
-/** Nvm memory full */
-#define V2XSE_FILE_FULL				0x6A84u
-/** Internal error, NVM unchanged */
-#define V2XSE_NVRAM_UNCHANGED			0x6400u
-/** Security level not sufficient for command */
-#define V2XSE_SECURITY_STATUS_NOT_SATISFIED	0x6982u
 /** No specific error information */
 #define V2XSE_UNDEFINED_ERROR			0x0000u
+/** Command completed successfully */
+#define V2XSE_NO_ERROR				0x9000u
+/** Unused in adaptation layer - added for legacy compilation */
+#define V2XSE_AUTHENTICATION_FAILED		0x6300u
+/** Unused in adaptation layer - added for legacy compilation */
+#define V2XSE_PROCESS_COMP_WITH_WARNING		0x6310u
+/** Internal error, NVM unchanged */
+#define V2XSE_NVRAM_UNCHANGED			0x6400u
+/** Unused in adaptation layer - added for legacy compilation */
+#define V2XSE_MEMORY_FAILURE			0x6581u
+/** Unused in adaptation layer - added for legacy compilation */
+#define V2XSE_RESTRICTED_MODE			0x66A5u
+/** Unused in adaptation layer - added for legacy compilation */
+#define V2XSE_WRONG_LENGTH			0x6700u
+/** Logical channel to required applet not active */
+#define V2XSE_INACTIVE_CHANNEL			0x6881u
+/** Unused in adaptation layer - added for legacy compilation */
+#define V2XSE_SECMSG_NOT_SUPPORTED		0x6882u
+/** Security level not sufficient for command */
+#define V2XSE_SECURITY_STATUS_NOT_SATISFIED	0x6982u
+/** Unused in adaptation layer - added for legacy compilation */
+#define V2XSE_CONDITIONS_NOT_SATISFIED		0x6985u
+/** Unused in adaptation layer - added for legacy compilation */
+#define V2XSE_SSD_LOCKED			0x6999u
+/** Invalid parameter provided to command */
+#define V2XSE_WRONG_DATA			0x6A80u
 /** Function not supported in current state */
 #define V2XSE_FUNC_NOT_SUPPORTED		0x6A81u
 /** Requested applet not found */
 #define V2XSE_APP_MISSING			0x6A82u
-/** Logical channel to required applet not active */
-#define V2XSE_INACTIVE_CHANNEL			0x6881u
+/** Nvm memory full */
+#define V2XSE_FILE_FULL				0x6A84u
+/** Unused in adaptation layer - added for legacy compilation */
+#define V2XSE_INCORRECT_P1P2			0x6A86u
+/** Unused in adaptation layer - added for legacy compilation */
+#define V2XSE_REF_DATA_NOT_FOUND		0x6A88u
+/** Unused in adaptation layer - added for legacy compilation */
+#define V2XSE_INS_NOT_SUPPORTED			0x6D00u
+/** Unused in adaptation layer - added for legacy compilation */
+#define V2XSE_CLA_NOT_SUPPORTED			0x6E00u
+/** Unused in adaptation layer - added for legacy compilation */
+#define V2XSE_NO_PRECISE_DIAGNOSIS		0x6F00u
+/** Unused in adaptation layer - added for legacy compilation */
+#define V2XSE_KEY_AGREEMENT_ERROR		0x6F01u
+/** Unused in adaptation layer - added for legacy compilation */
+#define V2XSE_TAG_CHECK_ERROR			0x6F02u
+/** Unused in adaptation layer - added for legacy compilation */
+#define V2XSE_SCP03_KEYFILE_ERROR		0x6F03u
+/** Unused in adaptation layer - added for legacy compilation */
+#define V2XSE_SCP03_SESSIONKEY_ERROR		0x6F04u
+/** Unused in adaptation layer - added for legacy compilation */
+#define V2XSE_SCP03_CARDCRYPTO_ERROR		0x6F05u
+/** Unused in adaptation layer - added for legacy compilation */
+#define V2XSE_SCP03_HOSTCRYPTO_ERROR		0x6F06u
+ /** Unused in adaptation layer - added for legacy compilation */
+#define V2XSE_AUTH_CTR_ERROR			0x6F07u
+/** Unused in adaptation layer - added for legacy compilation */
+#define V2XSE_MAX_AUTH_COUNTER_VALUE		0x00FFF000
 
 /** NIST P256 ECC */
 #define V2XSE_CURVE_NISTP256	0u
@@ -139,7 +184,6 @@
 #define V2XSE_384_EC_COMP_SIGN		97u
 /** Size in bytes of 384 bit HASH */
 #define V2XSE_384_EC_HASH_SIZE		48u
-//#define V2XSE_384_EC_COMP_SIGN 97u//in bytes
 
 /** Size in bytes of version information */
 #define V2XSE_VERSION_SIZE		3u
@@ -162,6 +206,8 @@
 #define V2XSE_MAX_KDF_PARAMP1_SIZE	32u
 /** Maximum MAC P2 parameter size in bytes for ECIES */
 #define V2XSE_MAX_MAC_PARAMP2_SIZE	32u
+/** Maximum MAC size in bytes for ECIES */
+#define V2XSE_MAX_MAC_SIZE		32u
 
 /** Maximum size of generic data */
 #define V2XSE_MAX_DATA_SIZE_GSA 239u
@@ -172,6 +218,9 @@
 #define V2XSE_KEY_INJECTION_PHASE	0u
 /** Normal operating phase */
 #define V2XSE_NORMAL_OPERATING_PHASE	1u
+
+/** Unused in adaptation layer - added for legacy compilation */
+#define V2XSE_MAX_TX_RX_SIZE		261
 
 /******************************************************************************
  * TYPE DEFINITIONS
