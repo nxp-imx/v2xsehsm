@@ -372,10 +372,15 @@ int32_t v2xSe_getRandomNumber
 	ENFORCE_STATE_ACTIVATED();
 	ENFORCE_POINTER_NOT_NULL(pRandomNumber);
 
-	args.output = (uint8_t*)pRandomNumber;
+	if (!length || length > V2XSE_MAX_RND_NUM_SIZE) {
+		*pHsmStatusCode = V2XSE_WRONG_DATA;
+		return V2XSE_FAILURE;
+	}
+
+	args.output = pRandomNumber->data;
 	args.random_size = length;
 	if (hsm_get_random(hsmRngHandle, &args)) {
-		*pHsmStatusCode = V2XSE_WRONG_DATA;
+		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
 		return V2XSE_FAILURE;
 	}
 
