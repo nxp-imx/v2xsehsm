@@ -175,34 +175,38 @@ int32_t v2xSe_getSeInfo
 	ENFORCE_STATE_ACTIVATED();
 	ENFORCE_POINTER_NOT_NULL(pInfo);
 
-	/* TODO: Figure out real values */
+	/* Maximum Runtime keys supported by applet */
+	pInfo->maxRtKeysAllowed = NUM_STORAGE_SLOTS;
 
-	/*Maximum Runtime keys supported by applet*/
-        pInfo->maxRtKeysAllowed = NUM_STORAGE_SLOTS;
+	/* Maximum Base keys supported by applet */
+	pInfo->maxBaKeysAllowed = NUM_STORAGE_SLOTS;
 
-        /*Maximum Base keys supported by applet*/
-        pInfo->maxBaKeysAllowed = NUM_STORAGE_SLOTS;
+	/* Maximum number of prepared values supported */
+	pInfo->numPreparedVal = 0;
 
-        /*Maximum number of prepared values supported */
-        pInfo->numPreparedVal = 1;
+	/* FIPS approved mode indicator */
+	pInfo->fipsModeIndicator = 0;
 
-        /*FIPS approved mode indicator */
-        pInfo->fipsModeIndicator = 0;
+	/* Proof of possession support indicator */
+	pInfo->proofOfPossession = 0;
 
-        /*Proof of possession support indicator */
-        pInfo->proofOfPossession = 0;
+	/* Rollback protection status indicator */
+	pInfo->rollBackProtection = 1;
 
-        /*Rollback protection status indicator */
-        pInfo->rollBackProtection = 0;
+	/* Key derivation support indicator */
+	if ((v2xseAppletId == e_US_AND_GS) || (v2xseAppletId == e_US))
+		pInfo->rtKeyDerivation = 1;
+	else
+		pInfo->rtKeyDerivation = 0;
 
-        /*Key derivation support indicator */
-        pInfo->rtKeyDerivation = 1;
+	/* ECIES support indicator */
+	pInfo->eciesSupport = 1;
 
-        /*Active Applet Instance indicator */
-        pInfo->eciesSupport = 1;
-
-        /*Maximum number of data slots supported by Generic storage applet */
-        pInfo->maxDataSlots = NUM_STORAGE_SLOTS;
+	/* Maximum number of data slots supported by Generic storage applet */
+	if ((v2xseAppletId == e_EU_AND_GS) || (v2xseAppletId == e_US_AND_GS))
+		pInfo->maxDataSlots = NUM_STORAGE_SLOTS;
+	else
+		pInfo->maxDataSlots = 0;
 
 	*pHsmStatusCode = V2XSE_NO_ERROR;
 	return V2XSE_SUCCESS;
