@@ -103,7 +103,7 @@
 #define V2XSE_INCORRECT_P1P2			0x6A86u
 /** Unused in adaptation layer - added for legacy compilation */
 #define V2XSE_REF_DATA_NOT_FOUND		0x6A88u
-/** Unused in adaptation layer - added for legacy compilation */
+/** Instruction not supported */
 #define V2XSE_INS_NOT_SUPPORTED			0x6D00u
 /** Unused in adaptation layer - added for legacy compilation */
 #define V2XSE_CLA_NOT_SUPPORTED			0x6E00u

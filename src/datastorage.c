@@ -69,7 +69,7 @@ int32_t v2xSe_storeData(TypeGsDataIndex_t index, TypeLen_t length,
 
 	if ((v2xseAppletId != e_EU_AND_GS) &&
 		(v2xseAppletId != e_US_AND_GS)) {
-		*pHsmStatusCode = V2XSE_INACTIVE_CHANNEL;
+		*pHsmStatusCode = V2XSE_INS_NOT_SUPPORTED;
 		return V2XSE_FAILURE;
 	}
 	if (!pData || (length < V2XSE_MIN_DATA_SIZE_GSA) ||
@@ -108,7 +108,7 @@ int32_t v2xSe_getData(TypeGsDataIndex_t index, TypeLen_t *pLength,
 
 	if ((v2xseAppletId != e_EU_AND_GS) &&
 		(v2xseAppletId != e_US_AND_GS)) {
-		*pHsmStatusCode = V2XSE_INACTIVE_CHANNEL;
+		*pHsmStatusCode = V2XSE_INS_NOT_SUPPORTED;
 		return V2XSE_FAILURE;
 	}
 	if (!pData || (!pLength) || (index > (NUM_STORAGE_SLOTS-1))) {
@@ -142,7 +142,7 @@ int32_t v2xSe_deleteData(TypeGsDataIndex_t index, TypeSW_t *pHsmStatusCode)
 
 	if ((v2xseAppletId != e_EU_AND_GS) &&
 		(v2xseAppletId != e_US_AND_GS)) {
-		*pHsmStatusCode = V2XSE_INACTIVE_CHANNEL;
+		*pHsmStatusCode = V2XSE_INS_NOT_SUPPORTED;
 		return V2XSE_FAILURE;
 	}
 	if (index > (NUM_STORAGE_SLOTS-1)) {

@@ -141,8 +141,8 @@ int32_t v2xSe_getAppletVersion
 	}
 	if (appletType == e_GS) {
 		if ((v2xseAppletId != e_EU_AND_GS) &&
-			(v2xseAppletId != e_US_AND_GS)) {
-			*pHsmStatusCode = V2XSE_INACTIVE_CHANNEL;
+					(v2xseAppletId != e_US_AND_GS)) {
+			*pHsmStatusCode = V2XSE_INS_NOT_SUPPORTED;
 			return V2XSE_FAILURE;
 		}
 	}
