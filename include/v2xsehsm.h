@@ -150,12 +150,17 @@ int is256bitCurve(hsm_key_type_t keyType);
 } while (0)
 
 /** Abort function (return) if not in activated state */
-#define ENFORCE_STATE_ACTIVATED() do {				\
-	if (v2xseState != V2XSE_STATE_ACTIVATED) {		\
-		if (pHsmStatusCode)				\
-			*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;\
-		return V2XSE_DEVICE_NOT_CONNECTED;		\
-	}							\
+#define ENFORCE_STATE_ACTIVATED() do {					\
+	if (v2xseState != V2XSE_STATE_ACTIVATED) {			\
+		if (v2xseState == V2XSE_STATE_CONNECTED) {		\
+			if (pHsmStatusCode)				\
+				*pHsmStatusCode = V2XSE_INACTIVE_CHANNEL;\
+			return V2XSE_FAILURE;				\
+		}							\
+		if (pHsmStatusCode)					\
+			*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;	\
+		return V2XSE_DEVICE_NOT_CONNECTED;			\
+	}								\
 } while (0)
 
 /** Abort function (return) if ptr is NULL */
