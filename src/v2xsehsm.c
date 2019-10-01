@@ -169,7 +169,7 @@ int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId,
 	uint32_t keystore_identifier;
 	uint32_t key_store_nonce;
 
-	VERIFY_STATUS_CODE_PTR();
+	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
 	ENFORCE_STATE_INIT();
 
 	if ((appletId == e_US_AND_GS) || (appletId == e_US)){
@@ -197,25 +197,19 @@ int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId,
 		return V2XSE_FAILURE;
 	}
 
-	if (nvm_init()) {
-		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
+	if (nvm_init())
 		return V2XSE_FAILURE;
-	}
 
 	memset(&session_args, 0, sizeof(session_args));
 	session_args.session_priority = HSM_SESSION_PRIORITY;
 	session_args.operating_mode = HSM_OPERATING_MODE;
-	if (hsm_open_session(&session_args, &hsmSessionHandle)) {
-		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
+	if (hsm_open_session(&session_args, &hsmSessionHandle))
 		return V2XSE_FAILURE;
-	}
 
 	memset(&rng_open_args, 0, sizeof(rng_open_args));
 	if (hsm_open_rng_service(hsmSessionHandle, &rng_open_args,
-							&hsmRngHandle)) {
-		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
+								&hsmRngHandle))
 		return V2XSE_FAILURE;
-	}
 
 	/* Assume keystore exists, try to open */
 	memset(&key_store_args, 0, sizeof(key_store_args));
@@ -235,35 +229,28 @@ int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId,
 		key_store_args.max_updates_number = MAX_KEYSTORE_UPDATES;
 		key_store_args.flags = HSM_SVC_KEY_STORE_FLAGS_CREATE;
 		if (hsm_open_key_store_service(hsmSessionHandle,
-					&key_store_args, &hsmKeyStoreHandle)) {
-			*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
+					&key_store_args, &hsmKeyStoreHandle))
 			return V2XSE_FAILURE;
-		}
 	}
 
 	memset(&key_mgmt_args, 0, sizeof(key_mgmt_args));
 	if (hsm_open_key_management_service(hsmKeyStoreHandle, &key_mgmt_args,
-							&hsmKeyMgmtHandle)) {
-		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
+							&hsmKeyMgmtHandle))
 		return V2XSE_FAILURE;
-	}
+
 	/* Keys just opened, so no activated key/sigScheme yet */
 	activatedKeyHandle = 0;
 	activatedSigScheme = 0;
 
 	memset(&cipher_args, 0, sizeof(cipher_args));
 	if (hsm_open_cipher_service(hsmKeyStoreHandle, &cipher_args,
-							&hsmCipherHandle)) {
-		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
+							&hsmCipherHandle))
 		return V2XSE_FAILURE;
-	}
 
 	memset(&sig_gen_args, 0, sizeof(sig_gen_args));
 	if (hsm_open_signature_generation_service(hsmKeyStoreHandle,
-					&sig_gen_args, &hsmSigGenHandle)) {
-		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
+					&sig_gen_args, &hsmSigGenHandle))
 		return V2XSE_FAILURE;
-	}
 
 	v2xseState = V2XSE_STATE_ACTIVATED;
 	v2xseAppletId = appletId;
@@ -372,7 +359,7 @@ int32_t v2xSe_getRandomNumber
 	uint32_t hsm_rng_len;
 #endif
 
-	VERIFY_STATUS_CODE_PTR();
+	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
 	ENFORCE_STATE_ACTIVATED();
 	ENFORCE_POINTER_NOT_NULL(pRandomNumber);
 
@@ -391,10 +378,8 @@ int32_t v2xSe_getRandomNumber
 			hsm_rng_len = length;
 		args.output = hsm_rng_ptr;
 		args.random_size = hsm_rng_len;
-		if (hsm_get_random(hsmRngHandle, &args)) {
-			*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
+		if (hsm_get_random(hsmRngHandle, &args))
 			return V2XSE_FAILURE;
-		}
 		/* Prepare for next request */
 		length -= hsm_rng_len;
 		hsm_rng_ptr += hsm_rng_len;
@@ -402,10 +387,8 @@ int32_t v2xSe_getRandomNumber
 #else
 	args.output = pRandomNumber->data;
 	args.random_size = length;
-	if (hsm_get_random(hsmRngHandle, &args)) {
-		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
+	if (hsm_get_random(hsmRngHandle, &args))
 		return V2XSE_FAILURE;
-	}
 #endif
 
 	*pHsmStatusCode = V2XSE_NO_ERROR;
@@ -431,7 +414,7 @@ int32_t v2xSe_getRandomNumber
 int32_t v2xSe_sendReceive(uint8_t *pTxBuf, uint16_t txLen,  uint16_t *pRxLen,
 				uint8_t *pRxBuf,TypeSW_t *pHsmStatusCode)
 {
-	VERIFY_STATUS_CODE_PTR();
+	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
 
 	*pHsmStatusCode = V2XSE_FUNC_NOT_SUPPORTED;
 	return V2XSE_FAILURE;
@@ -454,7 +437,7 @@ int32_t v2xSe_sendReceive(uint8_t *pTxBuf, uint16_t txLen,  uint16_t *pRxLen,
  */
 int32_t v2xSe_endKeyInjection (TypeSW_t *pHsmStatusCode)
 {
-	VERIFY_STATUS_CODE_PTR();
+	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
 	ENFORCE_STATE_ACTIVATED();
 
 	if (v2xsePhase != V2XSE_KEY_INJECTION_PHASE) {
@@ -492,7 +475,7 @@ int32_t v2xSe_endKeyInjection (TypeSW_t *pHsmStatusCode)
  */
 int32_t v2xSe_getSePhase (uint8_t *pPhaseInfo, TypeSW_t *pHsmStatusCode)
 {
-	VERIFY_STATUS_CODE_PTR();
+	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
 	ENFORCE_STATE_ACTIVATED();
 	ENFORCE_POINTER_NOT_NULL(pPhaseInfo);
 

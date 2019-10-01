@@ -269,7 +269,7 @@ int32_t v2xSe_generateMaEccKeyPair
 	uint32_t keyHandle;
 	TypeCurveId_t savedCurveId;
 
-	VERIFY_STATUS_CODE_PTR();
+	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
 	ENFORCE_STATE_ACTIVATED();
 	ENFORCE_NORMAL_OPERATING_PHASE();
 	ENFORCE_POINTER_NOT_NULL(pPublicKeyPlain);
@@ -338,7 +338,7 @@ int32_t v2xSe_getMaEccPublicKey
 	TypeCurveId_t curveId;
 	hsm_key_type_t keyType;
 
-	VERIFY_STATUS_CODE_PTR();
+	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
 	ENFORCE_STATE_ACTIVATED();
 	ENFORCE_POINTER_NOT_NULL(pCurveId);
 	ENFORCE_POINTER_NOT_NULL(pPublicKeyPlain);
@@ -398,7 +398,7 @@ int32_t v2xSe_generateRtEccKeyPair
 	uint32_t keyHandle;
 	TypeCurveId_t storedCurveId;
 
-	VERIFY_STATUS_CODE_PTR();
+	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
 	ENFORCE_STATE_ACTIVATED();
 	ENFORCE_NORMAL_OPERATING_PHASE();
 	ENFORCE_POINTER_NOT_NULL(pPublicKeyPlain);
@@ -472,7 +472,7 @@ int32_t v2xSe_deleteRtEccPrivateKey
 	uint32_t keyHandle;
 	TypeCurveId_t storedCurveId;
 
-	VERIFY_STATUS_CODE_PTR();
+	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
 	ENFORCE_STATE_ACTIVATED();
 	ENFORCE_NORMAL_OPERATING_PHASE();
 
@@ -525,7 +525,7 @@ int32_t v2xSe_getRtEccPublicKey
 	TypeCurveId_t curveId;
 	hsm_key_type_t keyType;
 
-	VERIFY_STATUS_CODE_PTR();
+	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
 	ENFORCE_STATE_ACTIVATED();
 	ENFORCE_POINTER_NOT_NULL(pCurveId);
 	ENFORCE_POINTER_NOT_NULL(pPublicKeyPlain);
@@ -590,7 +590,7 @@ int32_t v2xSe_generateBaEccKeyPair
 	uint32_t keyHandle;
 	TypeCurveId_t storedCurveId;
 
-	VERIFY_STATUS_CODE_PTR();
+	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
 	ENFORCE_STATE_ACTIVATED();
 	ENFORCE_NORMAL_OPERATING_PHASE();
 	ENFORCE_POINTER_NOT_NULL(pPublicKeyPlain);
@@ -667,7 +667,7 @@ int32_t v2xSe_deleteBaEccPrivateKey
 	uint32_t keyHandle;
 	TypeCurveId_t storedCurveId;
 
-	VERIFY_STATUS_CODE_PTR();
+	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
 	ENFORCE_STATE_ACTIVATED();
 	ENFORCE_NORMAL_OPERATING_PHASE();
 
@@ -720,7 +720,7 @@ int32_t v2xSe_getBaEccPublicKey
 	TypeCurveId_t curveId;
 	hsm_key_type_t keyType;
 
-	VERIFY_STATUS_CODE_PTR();
+	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
 	ENFORCE_STATE_ACTIVATED();
 	ENFORCE_POINTER_NOT_NULL(pCurveId);
 	ENFORCE_POINTER_NOT_NULL(pPublicKeyPlain);
@@ -794,7 +794,7 @@ int32_t v2xSe_deriveRtEccKeyPair
 	hsm_key_type_t keyType;
 	op_butt_key_exp_args_t args;
 
-	VERIFY_STATUS_CODE_PTR();
+	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
 	ENFORCE_STATE_ACTIVATED();
 	ENFORCE_NORMAL_OPERATING_PHASE();
 	ENFORCE_POINTER_NOT_NULL(pFvSign);

@@ -64,7 +64,7 @@
 int32_t v2xSe_storeData(TypeGsDataIndex_t index, TypeLen_t length,
 				uint8_t  *pData,TypeSW_t *pHsmStatusCode)
 {
-	VERIFY_STATUS_CODE_PTR();
+	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
 	ENFORCE_STATE_ACTIVATED();
 
 	if ((v2xseAppletId != e_EU_AND_GS) &&
@@ -103,7 +103,7 @@ int32_t v2xSe_storeData(TypeGsDataIndex_t index, TypeLen_t length,
 int32_t v2xSe_getData(TypeGsDataIndex_t index, TypeLen_t *pLength,
 				uint8_t *pData,TypeSW_t *pHsmStatusCode)
 {
-	VERIFY_STATUS_CODE_PTR();
+	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
 	ENFORCE_STATE_ACTIVATED();
 
 	if ((v2xseAppletId != e_EU_AND_GS) &&
@@ -137,7 +137,7 @@ int32_t v2xSe_getData(TypeGsDataIndex_t index, TypeLen_t *pLength,
  */
 int32_t v2xSe_deleteData(TypeGsDataIndex_t index, TypeSW_t *pHsmStatusCode)
 {
-	VERIFY_STATUS_CODE_PTR();
+	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
 	ENFORCE_STATE_ACTIVATED();
 
 	if ((v2xseAppletId != e_EU_AND_GS) &&
@@ -174,7 +174,7 @@ int32_t v2xSe_deleteData(TypeGsDataIndex_t index, TypeSW_t *pHsmStatusCode)
  */
 int32_t v2xSe_getRemainingNvm (uint32_t *pSize, TypeSW_t *pHsmStatusCode)
 {
-	VERIFY_STATUS_CODE_PTR();
+	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
 	ENFORCE_STATE_NOT_INIT();
 	ENFORCE_POINTER_NOT_NULL(pSize);
 

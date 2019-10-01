@@ -146,7 +146,7 @@ int32_t v2xSe_encryptUsingEcies (TypeEncryptEcies_t *pEciesData,
 	hsm_op_ecies_enc_args_t args;
 	hsm_key_type_t keyType;
 
-	VERIFY_STATUS_CODE_PTR();
+	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
 	ENFORCE_STATE_ACTIVATED();
 	ENFORCE_NORMAL_OPERATING_PHASE();
 	ENFORCE_POINTER_NOT_NULL(pEciesData);
@@ -208,7 +208,7 @@ int32_t v2xSe_decryptUsingRtEcies (TypeRtKeyId_t rtKeyId,
 	uint32_t keyHandle;
 	TypeCurveId_t curveId;
 
-	VERIFY_STATUS_CODE_PTR();
+	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
 	ENFORCE_STATE_ACTIVATED();
 	ENFORCE_NORMAL_OPERATING_PHASE();
 	ENFORCE_POINTER_NOT_NULL(pEciesData);
@@ -260,7 +260,7 @@ int32_t v2xSe_decryptUsingMaEcies
 	uint32_t keyHandle;
 	TypeCurveId_t curveId;
 
-	VERIFY_STATUS_CODE_PTR();
+	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
 	ENFORCE_STATE_ACTIVATED();
 	ENFORCE_NORMAL_OPERATING_PHASE();
 	ENFORCE_POINTER_NOT_NULL(pEciesData);
@@ -310,7 +310,7 @@ int32_t v2xSe_decryptUsingBaEcies
 	uint32_t keyHandle;
 	TypeCurveId_t curveId;
 
-	VERIFY_STATUS_CODE_PTR();
+	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
 	ENFORCE_STATE_ACTIVATED();
 	ENFORCE_NORMAL_OPERATING_PHASE();
 	ENFORCE_POINTER_NOT_NULL(pEciesData);

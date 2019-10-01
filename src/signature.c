@@ -149,7 +149,7 @@ int32_t v2xSe_createMaSign
 	TypeHashLength_t expectedHashLength;
 	uint32_t is256bits;
 
-	VERIFY_STATUS_CODE_PTR();
+	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
 	ENFORCE_STATE_ACTIVATED();
 	ENFORCE_NORMAL_OPERATING_PHASE();
 	ENFORCE_POINTER_NOT_NULL(pHashValue);
@@ -170,16 +170,12 @@ int32_t v2xSe_createMaSign
 		expectedHashLength = V2XSE_256_EC_HASH_SIZE;
 	else
 		expectedHashLength = V2XSE_384_EC_HASH_SIZE;
-	if (hashLength != expectedHashLength) {
-		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
+	if (hashLength != expectedHashLength)
 		return V2XSE_FAILURE;
-	}
 
 	if (genHsmSignature(keyHandle, sig_scheme, pHashValue, hashLength,
-							pSignature)) {
-		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
+							pSignature))
 		return V2XSE_FAILURE;
-	}
 	convertSignatureToV2xseApi(is256bits, pSignature);
 
 	*pHsmStatusCode = V2XSE_NO_ERROR;
@@ -228,7 +224,7 @@ int32_t v2xSe_activateRtKeyForSigning
 	activatedKeyHandle = 0;
 	activatedSigScheme = 0;
 
-	VERIFY_STATUS_CODE_PTR();
+	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
 	ENFORCE_STATE_ACTIVATED();
 	ENFORCE_NORMAL_OPERATING_PHASE();
 
@@ -292,7 +288,7 @@ int32_t v2xSe_createRtSignLowLatency
     TypeLowlatencyIndicator_t *pFastIndicator
 )
 {
-	VERIFY_STATUS_CODE_PTR();
+	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
 	ENFORCE_STATE_ACTIVATED();
 	ENFORCE_NORMAL_OPERATING_PHASE();
 	ENFORCE_POINTER_NOT_NULL(pHashValue);
@@ -305,10 +301,8 @@ int32_t v2xSe_createRtSignLowLatency
 	}
 
 	if (genHsmSignature(activatedKeyHandle, activatedSigScheme, pHashValue,
-					V2XSE_256_EC_HASH_SIZE, pSignature)) {
-		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
+					V2XSE_256_EC_HASH_SIZE, pSignature))
 		return V2XSE_FAILURE;
-	}
 	convertSignatureToV2xseApi(1, pSignature);
 
 	*pFastIndicator = 0;
@@ -344,7 +338,7 @@ int32_t v2xSe_createRtSign
 	TypeCurveId_t curveId;
 	hsm_signature_scheme_id_t sig_scheme;
 
-	VERIFY_STATUS_CODE_PTR();
+	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
 	ENFORCE_STATE_ACTIVATED();
 	ENFORCE_NORMAL_OPERATING_PHASE();
 	ENFORCE_POINTER_NOT_NULL(pHashValue);
@@ -371,10 +365,8 @@ int32_t v2xSe_createRtSign
 	}
 
 	if (genHsmSignature(keyHandle, sig_scheme, pHashValue,
-				V2XSE_256_EC_HASH_SIZE,	pSignature)) {
-		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
+				V2XSE_256_EC_HASH_SIZE,	pSignature))
 		return V2XSE_FAILURE;
-	}
 	convertSignatureToV2xseApi(1, pSignature);
 
 	*pHsmStatusCode = V2XSE_NO_ERROR;
@@ -412,7 +404,7 @@ int32_t v2xSe_createBaSign
 	TypeHashLength_t expectedHashLength;
 	uint32_t is256bits;
 
-	VERIFY_STATUS_CODE_PTR();
+	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
 	ENFORCE_STATE_ACTIVATED();
 	ENFORCE_NORMAL_OPERATING_PHASE();
 	ENFORCE_POINTER_NOT_NULL(pHashValue);
@@ -438,16 +430,12 @@ int32_t v2xSe_createBaSign
 		expectedHashLength = V2XSE_256_EC_HASH_SIZE;
 	else
 		expectedHashLength = V2XSE_384_EC_HASH_SIZE;
-	if (hashLength != expectedHashLength) {
-		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
+	if (hashLength != expectedHashLength)
 		return V2XSE_FAILURE;
-	}
 
 	if (genHsmSignature(keyHandle, sig_scheme, pHashValue, hashLength,
-							pSignature)) {
-		*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;
+							pSignature))
 		return V2XSE_FAILURE;
-	}
 	convertSignatureToV2xseApi(is256bits, pSignature);
 
 	*pHsmStatusCode = V2XSE_NO_ERROR;

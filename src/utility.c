@@ -131,7 +131,7 @@ int32_t v2xSe_getAppletVersion
     TypeVersion_t *pVersion
 )
 {
-	VERIFY_STATUS_CODE_PTR();
+	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
 	ENFORCE_STATE_ACTIVATED();
 	ENFORCE_POINTER_NOT_NULL(pVersion);
 
@@ -171,7 +171,7 @@ int32_t v2xSe_getSeInfo
     TypeInformation_t *pInfo
 )
 {
-	VERIFY_STATUS_CODE_PTR();
+	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
 	ENFORCE_STATE_ACTIVATED();
 	ENFORCE_POINTER_NOT_NULL(pInfo);
 
@@ -253,7 +253,7 @@ int32_t v2xSe_getCryptoLibVersion
 int32_t v2xSe_getPlatformInfo(TypeSW_t *pHsmStatusCode,
 			TypePlatformIdentity_t *pPlatformIdentifier)
 {
-	VERIFY_STATUS_CODE_PTR();
+	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
 	ENFORCE_STATE_NOT_INIT();
 	ENFORCE_POINTER_NOT_NULL(pPlatformIdentifier);
 
@@ -280,7 +280,7 @@ int32_t v2xSe_getPlatformInfo(TypeSW_t *pHsmStatusCode,
 int32_t v2xSe_getPlatformConfig(TypeSW_t *pHsmStatusCode,
 			TypePlatformConfiguration_t *pPlatformConfig)
 {
-	VERIFY_STATUS_CODE_PTR();
+	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
 	ENFORCE_STATE_NOT_INIT();
 	ENFORCE_POINTER_NOT_NULL(pPlatformConfig);
 
@@ -309,7 +309,7 @@ int32_t v2xSe_getPlatformConfig(TypeSW_t *pHsmStatusCode,
 int32_t v2xSe_getChipInfo(TypeSW_t *pHsmStatusCode,
 					TypeChipInformation_t *pChipInfo)
 {
-	VERIFY_STATUS_CODE_PTR();
+	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
 	ENFORCE_STATE_NOT_INIT();
 	ENFORCE_POINTER_NOT_NULL(pChipInfo);
 
@@ -335,7 +335,7 @@ int32_t v2xSe_getChipInfo(TypeSW_t *pHsmStatusCode,
 int32_t v2xSe_getAttackLog(TypeSW_t *pHsmStatusCode,
 					TypeAttackLog_t *pAttackLog)
 {
-	VERIFY_STATUS_CODE_PTR();
+	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
 	ENFORCE_STATE_NOT_INIT();
 	ENFORCE_POINTER_NOT_NULL(pAttackLog);
 
@@ -415,7 +415,7 @@ int32_t v2xSe_getSigLenFromHashLen(TypeHashLength_t hashLength)
  */
 int32_t v2xSe_invokeGarbageCollector(TypeSW_t *pHsmStatusCode)
 {
-	VERIFY_STATUS_CODE_PTR();
+	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
 	ENFORCE_STATE_ACTIVATED();
 	ENFORCE_NORMAL_OPERATING_PHASE();
 

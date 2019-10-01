@@ -124,9 +124,10 @@ hsm_key_type_t convertCurveId(TypeCurveId_t curveId);
 int is256bitCurve(hsm_key_type_t keyType);
 
 /** Abort function (return) if pHsmStatusCode is NULL */
-#define VERIFY_STATUS_CODE_PTR() do {				\
+#define VERIFY_STATUS_PTR_AND_SET_DEFAULT() do {		\
 	if (!pHsmStatusCode)					\
 		return V2XSE_FAILURE;				\
+	*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;		\
 } while (0)
 
 /** Abort function (return) if not in init state */
@@ -142,11 +143,8 @@ int is256bitCurve(hsm_key_type_t keyType);
 
 /** Abort function (return) if currently in init state */
 #define ENFORCE_STATE_NOT_INIT() do {				\
-	if (v2xseState == V2XSE_STATE_INIT) {			\
-		if (pHsmStatusCode)				\
-			*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;\
+	if (v2xseState == V2XSE_STATE_INIT)			\
 		return V2XSE_DEVICE_NOT_CONNECTED;		\
-	}							\
 } while (0)
 
 /** Abort function (return) if not in activated state */
@@ -157,28 +155,20 @@ int is256bitCurve(hsm_key_type_t keyType);
 				*pHsmStatusCode = V2XSE_INACTIVE_CHANNEL;\
 			return V2XSE_FAILURE;				\
 		}							\
-		if (pHsmStatusCode)					\
-			*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;	\
 		return V2XSE_DEVICE_NOT_CONNECTED;			\
 	}								\
 } while (0)
 
 /** Abort function (return) if ptr is NULL */
 #define ENFORCE_POINTER_NOT_NULL(ptr) do {			\
-	if (!ptr) {						\
-		if (pHsmStatusCode)				\
-			*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;\
+	if (!ptr)						\
 		return V2XSE_FAILURE;				\
-	}							\
 } while (0)
 
 /** Abort function (return) if not in normal operating phase */
 #define ENFORCE_NORMAL_OPERATING_PHASE() do {			\
-	if (v2xsePhase != V2XSE_NORMAL_OPERATING_PHASE) {	\
-		if (pHsmStatusCode)				\
-			*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;\
+	if (v2xsePhase != V2XSE_NORMAL_OPERATING_PHASE)		\
 		return V2XSE_FAILURE;				\
-	}							\
 } while (0)
 
 /**
