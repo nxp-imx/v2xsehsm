@@ -41,6 +41,7 @@
  *
  */
 
+#include <dirent.h>
 #include <unistd.h>
 #include <sys/stat.h>
 #include <errno.h>
@@ -50,26 +51,6 @@
 #include <string.h>
 #include "v2xsehsm.h"
 #include "nvm.h"
-
-/**
- *
- * @brief Clear nvm entries in filesystem for the current applet
- *
- * This function clears the current applet's non-volatile entries.  The
- * global variable appletVarStoragePath is used to know the path to the
- * current applet's data in the filesystem.
- *
- * @return 0 if OK, non-zero if ERROR
- *
- */
-static int nvm_clear(void)
-{
-	char clearCmd[MAX_FILENAME_SIZE];
-
-	/* Clear all NVM data for appropriate applet */
-	snprintf(clearCmd, MAX_FILENAME_SIZE, "rm -rf %s*", appletVarStoragePath);
-	return system(clearCmd);
-}
 
 /**
  *
@@ -301,6 +282,58 @@ int nvm_delete_array_data(char* name, int index)
 
 /**
  *
+ * @brief Empty an nvm directory from the filesystem
+ *
+ * This function deletes all entries in an nvm directory.  It goes through
+ * the directory and deletes all regular files.  If the name passed is
+ * empty, all entries in the nvm root for the current applet are removed.
+ * If a name is supplied, all entries for the specified array are removed.
+ *
+ * @param name subdirectory name, may be empty string
+ *
+ * @return 0 if OK, -1 in case of ERROR
+ *
+ */
+static int nvm_empty_dir(char *name)
+{
+	DIR *arrayDir;
+	struct dirent *arrayEntry;
+	int retval = 0;
+	char dirName[MAX_FILENAME_SIZE];
+	char fileName[MAX_FILENAME_SIZE];
+
+	if (snprintf(dirName, MAX_FILENAME_SIZE, "%s%s", appletVarStoragePath,
+								name) < 0)
+		goto err_exit;
+
+	arrayDir = opendir(dirName);
+	if (!arrayDir)
+		goto err_exit;
+
+	/* Clear errno to tell difference between end of list and error */
+	errno = 0;
+	while ((arrayEntry = readdir(arrayDir)) != NULL) {
+		if (arrayEntry->d_type == DT_REG) {
+			if (snprintf(fileName, MAX_FILENAME_SIZE, "%s/%s",
+					dirName, arrayEntry->d_name) < 0) {
+				retval = -1;
+			} else {
+				if (remove(fileName))
+					retval = -1;
+			}
+		}
+	}
+	if (!errno)
+		goto exit;
+
+err_exit:
+	retval = -1;
+exit:
+	return retval;
+}
+
+/**
+ *
  * @brief Read data for a generic data item from the filesystem
  *
  * This function reads a generic data item from the filesystem. An error is
@@ -404,10 +437,10 @@ int nvm_retrieve_ma_key_handle(uint32_t* handle, TypeCurveId_t* id)
 	}
 
 	/* Key not in memory, check if in NVM and load if it is */
-	if (nvm_load_var("maKeyHandle", (uint8_t*)handle, sizeof(*handle)))
+	if (nvm_load_var(MA_KEYHANDLE_NAME, (uint8_t *)handle, sizeof(*handle)))
 		return -1;
 
-	if (nvm_load_var("maCurveId", id, sizeof(*id)))
+	if (nvm_load_var(MA_CURVEID_NAME, id, sizeof(*id)))
 		return -1;
 
 	/*
@@ -453,11 +486,11 @@ int nvm_retrieve_rt_key_handle(int index, uint32_t* handle, TypeCurveId_t* id)
 	}
 
 	/* Key not in memory, check if in NVM and load if it is */
-	if (nvm_load_array_data("rtKeyHandle", index, (uint8_t*)handle,
+	if (nvm_load_array_data(RT_KEYHANDLE_NAME, index, (uint8_t *)handle,
 							sizeof(*handle)))
 		return -1;
 
-	if (nvm_load_array_data("rtCurveId", index, id, sizeof(*id)))
+	if (nvm_load_array_data(RT_CURVEID_NAME, index, id, sizeof(*id)))
 		return -1;
 
 	/*
@@ -503,11 +536,11 @@ int nvm_retrieve_ba_key_handle(int index, uint32_t* handle, TypeCurveId_t* id)
 	}
 
 	/* Key not in memory, check if in NVM and load if it is */
-	if (nvm_load_array_data("baKeyHandle", index, (uint8_t*)handle,
+	if (nvm_load_array_data(BA_KEYHANDLE_NAME, index, (uint8_t *)handle,
 							sizeof(*handle)))
 		return -1;
 
-	if (nvm_load_array_data("baCurveId", index, id, sizeof(*id)))
+	if (nvm_load_array_data(BA_CURVEID_NAME, index, id, sizeof(*id)))
 		return -1;
 
 	/*
@@ -559,6 +592,36 @@ static int var_mkdir(char* arrayname)
 
 /**
  *
+ * @brief Clear nvm entries in filesystem for the current applet
+ *
+ * This function clears the current applet's non-volatile entries.  The
+ * global variable appletVarStoragePath is used to know the path to the
+ * current applet's data in the filesystem.  The variables stored
+ * in that directory and known subdirectories are deleted.
+ *
+ * @return 0 if OK, non-zero if ERROR
+ *
+ */
+static int nvm_clear(void)
+{
+	int retval = 0;
+
+	if (nvm_empty_dir(ROOT_LEVEL_NAME))
+		retval = -1;
+	if (nvm_empty_dir(BA_CURVEID_NAME))
+		retval = -1;
+	if (nvm_empty_dir(BA_KEYHANDLE_NAME))
+		retval = -1;
+	if (nvm_empty_dir(RT_CURVEID_NAME))
+		retval = -1;
+	if (nvm_empty_dir(RT_KEYHANDLE_NAME))
+		retval = -1;
+
+	return retval;
+}
+
+/**
+ *
  * @brief Initialize NVM storage for applet use
  *
  * This function initializes NVM storage, and readies the variables that
@@ -574,22 +637,41 @@ static int var_mkdir(char* arrayname)
 int nvm_init(void)
 {
 	int phaseValid;
+	int retval = 0;
 
 	/* Make sure top level storage directory exists */
 	if (mkdir(COMMON_STORAGE_PATH, 0700)) {
 		if (errno != EEXIST)
-			return -1;
+			goto err_exit;
 	}
 
 	/* Make sure applet specific storage directory exists */
 	if (mkdir(appletVarStoragePath, 0700)) {
 		if (errno != EEXIST)
-			return -1;
+			goto err_exit;
 	}
+
+	/* Make sure generic storage directory exists */
+	if (mkdir(GENERIC_STORAGE_PATH, 0700)) {
+		if (errno != EEXIST)
+			goto err_exit;
+	}
+
+	/* Make sure rt key handle & curve directories exist */
+	if (var_mkdir(RT_KEYHANDLE_NAME))
+		goto err_exit;
+	if (var_mkdir(RT_CURVEID_NAME))
+		goto err_exit;
+
+	/* Make sure ba key handle & curve directories exist */
+	if (var_mkdir(BA_KEYHANDLE_NAME))
+		goto err_exit;
+	if (var_mkdir(BA_CURVEID_NAME))
+		goto err_exit;
 
 	/* Verify phase variable is valid, create if not and clear all data */
 	phaseValid = 0;
-	if (!nvm_load_var("v2xsePhase", &v2xsePhase, sizeof(v2xsePhase))) {
+	if (!nvm_load_var(V2XSE_PHASE_NAME, &v2xsePhase, sizeof(v2xsePhase))) {
 		if ((v2xsePhase == V2XSE_KEY_INJECTION_PHASE) ||
 				(v2xsePhase == V2XSE_NORMAL_OPERATING_PHASE)) {
 			phaseValid = 1;
@@ -597,30 +679,12 @@ int nvm_init(void)
 	}
 	if (!phaseValid) {
 		if (nvm_clear())
-			return -1;
+			goto err_exit;
 		v2xsePhase = V2XSE_KEY_INJECTION_PHASE;
-		if (nvm_update_var("v2xsePhase", &v2xsePhase,
+		if (nvm_update_var(V2XSE_PHASE_NAME, &v2xsePhase,
 							sizeof(v2xsePhase)))
-			return -1;
+			goto err_exit;
 	}
-
-	/* Make sure generic storage directory exists */
-	if (mkdir(GENERIC_STORAGE_PATH, 0700)) {
-		if (errno != EEXIST)
-			return -1;
-	}
-
-	/* Make sure rt key handle & curve directories exist */
-	if (var_mkdir("rtKeyHandle"))
-		return -1;
-	if (var_mkdir("rtCurveId"))
-		return -1;
-
-	/* Make sure ba key handle & curve directories exist */
-	if (var_mkdir("baKeyHandle"))
-		return -1;
-	if (var_mkdir("baCurveId"))
-		return -1;
 
 	/*
 	 * Key handles: initialize all to zero, will try to load from
@@ -629,6 +693,10 @@ int nvm_init(void)
 	maKeyHandle = 0;
 	memset(rtKeyHandle, 0, sizeof(rtKeyHandle));
 	memset(baKeyHandle, 0, sizeof(baKeyHandle));
+	goto exit;
 
-	return 0;
+err_exit:
+	retval = -1;
+exit:
+	return retval;
 }

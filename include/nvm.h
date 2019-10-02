@@ -47,6 +47,23 @@
 /** Max absolute patch name expected for filesystem access */
 #define MAX_FILENAME_SIZE	128
 
+/** NVM fs name for phase variable */
+#define V2XSE_PHASE_NAME	"v2xsePhase"
+/** NVM fs name for MA curve ID */
+#define MA_CURVEID_NAME		"maCurveId"
+/** NVM fs name for MA key handle */
+#define MA_KEYHANDLE_NAME	"maKeyHandle"
+/** NVM fs name for BA curve ID */
+#define BA_CURVEID_NAME		"baCurveId"
+/** NVM fs name for BA key handle */
+#define BA_KEYHANDLE_NAME	"baKeyHandle"
+/** NVM fs name for RT curve ID */
+#define RT_CURVEID_NAME		"rtCurveId"
+/** NVM fs name for RT key handle */
+#define RT_KEYHANDLE_NAME	"rtKeyHandle"
+/** Used to delete nvm variables at applet root level */
+#define ROOT_LEVEL_NAME		""
+
 int nvm_init(void);
 int nvm_update_array_data(char* name, int index, uint8_t* data, TypeLen_t size);
 int nvm_delete_array_data(char* name, int index);

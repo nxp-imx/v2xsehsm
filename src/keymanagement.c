@@ -204,9 +204,9 @@ static int32_t deleteRtKey(TypeRtKeyId_t rtKeyId)
 	rtKeyHandle[rtKeyId] = 0;
 	if (deleteHsmKey(keyHandle, convertCurveId(rtCurveId[rtKeyId])))
 		return V2XSE_FAILURE;
-	if (nvm_delete_array_data("rtCurveId", rtKeyId))
+	if (nvm_delete_array_data(RT_CURVEID_NAME, rtKeyId))
 		return V2XSE_FAILURE;
-	if (nvm_delete_array_data("rtKeyHandle", rtKeyId))
+	if (nvm_delete_array_data(RT_KEYHANDLE_NAME, rtKeyId))
 		return V2XSE_FAILURE;
 	return V2XSE_SUCCESS;
 }
@@ -233,9 +233,9 @@ static int32_t deleteBaKey(TypeBaseKeyId_t baKeyId)
 	baKeyHandle[baKeyId] = 0;
 	if (deleteHsmKey(keyHandle, convertCurveId(baCurveId[baKeyId])))
 		return V2XSE_FAILURE;
-	if (nvm_delete_array_data("baCurveId", baKeyId))
+	if (nvm_delete_array_data(BA_CURVEID_NAME, baKeyId))
 		return V2XSE_FAILURE;
-	if (nvm_delete_array_data("baKeyHandle", baKeyId))
+	if (nvm_delete_array_data(BA_KEYHANDLE_NAME, baKeyId))
 		return V2XSE_FAILURE;
 	return V2XSE_SUCCESS;
 }
@@ -293,12 +293,12 @@ int32_t v2xSe_generateMaEccKeyPair
 		return V2XSE_FAILURE;
 	}
 
-	if (nvm_update_var("maCurveId", (uint8_t *)&curveId,
+	if (nvm_update_var(MA_CURVEID_NAME, (uint8_t *)&curveId,
 							sizeof(curveId))) {
 		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 		return V2XSE_FAILURE;
 	}
-	if (nvm_update_var("maKeyHandle", (uint8_t *)&keyHandle,
+	if (nvm_update_var(MA_KEYHANDLE_NAME, (uint8_t *)&keyHandle,
 							sizeof(keyHandle))) {
 		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 		return V2XSE_FAILURE;
@@ -431,12 +431,12 @@ int32_t v2xSe_generateRtEccKeyPair
 		return V2XSE_FAILURE;
 	}
 
-	if (nvm_update_array_data("rtCurveId", rtKeyId,	(uint8_t *)&curveId,
+	if (nvm_update_array_data(RT_CURVEID_NAME, rtKeyId, (uint8_t *)&curveId,
 							sizeof(curveId))) {
 		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 		return V2XSE_FAILURE;
 	}
-	if (nvm_update_array_data("rtKeyHandle", rtKeyId,
+	if (nvm_update_array_data(RT_KEYHANDLE_NAME, rtKeyId,
 				(uint8_t *)&keyHandle, sizeof(keyHandle))) {
 		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 		return V2XSE_FAILURE;
@@ -624,13 +624,13 @@ int32_t v2xSe_generateBaEccKeyPair
 		return V2XSE_FAILURE;
 	}
 
-	if (nvm_update_array_data("baCurveId", baseKeyId,
+	if (nvm_update_array_data(BA_CURVEID_NAME, baseKeyId,
 					(uint8_t *)&curveId,
 					sizeof(curveId))) {
 		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 		return V2XSE_FAILURE;
 	}
-	if (nvm_update_array_data("baKeyHandle", baseKeyId,
+	if (nvm_update_array_data(BA_KEYHANDLE_NAME, baseKeyId,
 					(uint8_t *)&keyHandle,
 					sizeof(keyHandle))) {
 		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
@@ -866,12 +866,12 @@ int32_t v2xSe_deriveRtEccKeyPair
 		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 		return V2XSE_FAILURE;
 	}
-	if (nvm_update_array_data("rtCurveId", rtKeyId,
+	if (nvm_update_array_data(RT_CURVEID_NAME, rtKeyId,
 			(uint8_t *)&inputBaCurveId, sizeof(inputBaCurveId))) {
 		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 		return V2XSE_FAILURE;
 	}
-	if (nvm_update_array_data("rtKeyHandle", rtKeyId,
+	if (nvm_update_array_data(RT_KEYHANDLE_NAME, rtKeyId,
 		(uint8_t *)&outputRtKeyHandle, sizeof(outputRtKeyHandle))) {
 		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 		return V2XSE_FAILURE;

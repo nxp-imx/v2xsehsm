@@ -449,7 +449,7 @@ int32_t v2xSe_endKeyInjection (TypeSW_t *pHsmStatusCode)
 		return V2XSE_FAILURE;
 	}
 	v2xsePhase = V2XSE_NORMAL_OPERATING_PHASE;
-	if (nvm_update_var("v2xsePhase", &v2xsePhase,
+	if (nvm_update_var(V2XSE_PHASE_NAME, &v2xsePhase,
 							sizeof(v2xsePhase))) {
 		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 		return V2XSE_FAILURE;
