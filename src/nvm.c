@@ -127,7 +127,12 @@ static int nvm_raw_update(char* name, uint8_t* data, TypeLen_t size)
  */
 static int nvm_raw_delete(char* name)
 {
-	return remove(name);
+	int retval = 0;
+
+	if (remove(name))
+		retval = -1;
+
+	return retval;
 }
 
 /**
@@ -149,13 +154,18 @@ static int nvm_raw_delete(char* name)
  */
 static int nvm_load_var(char* name, uint8_t* data, TypeLen_t size)
 {
+	int retval = 0;
 	char filename[MAX_FILENAME_SIZE];
 
-	snprintf(filename, MAX_FILENAME_SIZE, "%s%s", appletVarStoragePath,
-									name);
-	if (nvm_raw_load(filename, data, size) != size)
-		return -1;
-	return 0;
+	if (snprintf(filename, MAX_FILENAME_SIZE, "%s%s", appletVarStoragePath,
+								name) < 0) {
+		retval = -1;
+	} else {
+		if (nvm_raw_load(filename, data, size) != size)
+			retval = -1;
+	}
+
+	return retval;
 }
 
 /**
@@ -177,11 +187,16 @@ static int nvm_load_var(char* name, uint8_t* data, TypeLen_t size)
  */
 int nvm_update_var(char* name, uint8_t* data, TypeLen_t size)
 {
+	int retval;
 	char filename[MAX_FILENAME_SIZE];
 
-	snprintf(filename, MAX_FILENAME_SIZE, "%s%s", appletVarStoragePath,
-									name);
-	return nvm_raw_update(filename, data, size);
+	if (snprintf(filename, MAX_FILENAME_SIZE, "%s%s", appletVarStoragePath,
+						name) < 0)
+		retval = -1;
+	else
+		retval = nvm_raw_update(filename, data, size);
+
+	return retval;
 }
 
 /**
@@ -200,11 +215,16 @@ int nvm_update_var(char* name, uint8_t* data, TypeLen_t size)
  */
 static int nvm_delete_var(char* name)
 {
+	int retval;
 	char filename[MAX_FILENAME_SIZE];
 
-	snprintf(filename, MAX_FILENAME_SIZE, "%s%s", appletVarStoragePath,
-									name);
-	return nvm_raw_delete(filename);
+	if (snprintf(filename, MAX_FILENAME_SIZE, "%s%s", appletVarStoragePath,
+								name) < 0)
+		retval = -1;
+	else
+		retval = nvm_raw_delete(filename);
+
+	return retval;
 }
 
 /**
@@ -227,10 +247,15 @@ static int nvm_delete_var(char* name)
 static int nvm_load_array_data(char* name, int index, uint8_t* data,
 								TypeLen_t size)
 {
+	int retval;
 	char filename[MAX_FILENAME_SIZE];
 
-	snprintf(filename, MAX_FILENAME_SIZE, "%s/%d", name, index);
-	return nvm_load_var(filename, data, size);
+	if (snprintf(filename, MAX_FILENAME_SIZE, "%s/%d", name, index) < 0)
+		retval = -1;
+	else
+		retval = nvm_load_var(filename, data, size);
+
+	return retval;
 }
 
 /**
@@ -252,10 +277,15 @@ static int nvm_load_array_data(char* name, int index, uint8_t* data,
  */
 int nvm_update_array_data(char* name, int index, uint8_t* data, TypeLen_t size)
 {
+	int retval;
 	char filename[MAX_FILENAME_SIZE];
 
-	snprintf(filename, MAX_FILENAME_SIZE, "%s/%d", name, index);
-	return nvm_update_var(filename, data, size);
+	if (snprintf(filename, MAX_FILENAME_SIZE, "%s/%d", name, index) < 0)
+		retval = -1;
+	else
+		retval = nvm_update_var(filename, data, size);
+
+	return retval;
 }
 
 /**
@@ -274,10 +304,15 @@ int nvm_update_array_data(char* name, int index, uint8_t* data, TypeLen_t size)
  */
 int nvm_delete_array_data(char* name, int index)
 {
+	int retval;
 	char filename[MAX_FILENAME_SIZE];
 
-	snprintf(filename, MAX_FILENAME_SIZE, "%s/%d", name, index);
-	return nvm_delete_var(filename);
+	if (snprintf(filename, MAX_FILENAME_SIZE, "%s/%d", name, index) < 0)
+		retval = -1;
+	else
+		retval = nvm_delete_var(filename);
+
+	return retval;
 }
 
 /**
@@ -350,16 +385,23 @@ exit:
  */
 int nvm_load_generic_data(int index, uint8_t* data, TypeLen_t* size)
 {
+	int retval = 0;
 	char filename[MAX_FILENAME_SIZE];
 	int sizeread;
 
-	snprintf(filename, MAX_FILENAME_SIZE, GENERIC_STORAGE_PATH"%d", index);
-	sizeread = nvm_raw_load(filename, data, V2XSE_MAX_DATA_SIZE_GSA);
-	if (sizeread < (int)V2XSE_MIN_DATA_SIZE_GSA)
-		return -1;
+	if (snprintf(filename, MAX_FILENAME_SIZE, GENERIC_STORAGE_PATH"%d",
+								index) < 0) {
+		retval = -1;
+	} else {
+		sizeread = nvm_raw_load(filename, data,
+						V2XSE_MAX_DATA_SIZE_GSA);
+		if (sizeread < (int)V2XSE_MIN_DATA_SIZE_GSA)
+			retval = -1;
+		else
+			*size = sizeread;
+	}
 
-	*size = sizeread;
-	return 0;
+	return retval;
 }
 
 /**
@@ -380,13 +422,18 @@ int nvm_load_generic_data(int index, uint8_t* data, TypeLen_t* size)
  */
 int nvm_update_generic_data(int index, uint8_t* data, TypeLen_t size)
 {
+	int retval;
 	char filename[MAX_FILENAME_SIZE];
 
 	if ((size > V2XSE_MAX_DATA_SIZE_GSA) || !size)
-		return -1;
+		retval = -1;
+	else if (snprintf(filename, MAX_FILENAME_SIZE, GENERIC_STORAGE_PATH"%d",
+								index) < 0)
+		retval = -1;
+	else
+		retval = nvm_raw_update(filename, data, size);
 
-	snprintf(filename, MAX_FILENAME_SIZE, GENERIC_STORAGE_PATH"%d", index);
-	return nvm_raw_update(filename, data, size);
+	return retval;
 }
 
 /**
@@ -404,11 +451,16 @@ int nvm_update_generic_data(int index, uint8_t* data, TypeLen_t size)
  */
 int nvm_delete_generic_data(int index)
 {
+	int retval;
 	char filename[MAX_FILENAME_SIZE];
 
-	snprintf(filename, MAX_FILENAME_SIZE, GENERIC_STORAGE_PATH"%d", index);
+	if (snprintf(filename, MAX_FILENAME_SIZE, GENERIC_STORAGE_PATH"%d",
+								index) < 0)
+		retval = -1;
+	else
+		retval = nvm_raw_delete(filename);
 
-	return nvm_raw_delete(filename);
+	return retval;
 }
 
 /**
@@ -579,15 +631,17 @@ static int var_mkdir(char* arrayname)
 	char filename[MAX_FILENAME_SIZE];
 	int retval;
 
-	snprintf(filename, MAX_FILENAME_SIZE, "%s%s", appletVarStoragePath,
-								arrayname);
-	retval = mkdir(filename, 0700);
-	/* Ignore error if already exists */
-	if ((retval == -1) && (errno == EEXIST))
-		retval = 0;
+	if (snprintf(filename, MAX_FILENAME_SIZE, "%s%s", appletVarStoragePath,
+							arrayname) < 0) {
+		retval = -1;
+	} else {
+		retval = mkdir(filename, 0700);
+		/* Ignore error if already exists */
+		if ((retval == -1) && (errno == EEXIST))
+			retval = 0;
+	}
 
 	return retval;
-
 }
 
 /**
