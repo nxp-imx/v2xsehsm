@@ -68,7 +68,7 @@
  * @return Number of bytes read, 0 in case of ERROR
  *
  */
-static int nvm_raw_load(char* name, uint8_t* data, TypeLen_t size)
+static int nvm_raw_load(char *name, uint8_t *data, TypeLen_t size)
 {
 	int fd;
 	int numread = -1;
@@ -99,7 +99,7 @@ static int nvm_raw_load(char* name, uint8_t* data, TypeLen_t size)
  * @return 0 if OK, -1 in case of ERROR
  *
  */
-static int nvm_raw_update(char* name, uint8_t* data, TypeLen_t size)
+static int nvm_raw_update(char *name, uint8_t *data, TypeLen_t size)
 {
 	int fd;
 	int retval = -1;
@@ -125,7 +125,7 @@ static int nvm_raw_update(char* name, uint8_t* data, TypeLen_t size)
  * @return 0 if OK, -1 in case of ERROR
  *
  */
-static int nvm_raw_delete(char* name)
+static int nvm_raw_delete(char *name)
 {
 	int retval = 0;
 
@@ -152,7 +152,7 @@ static int nvm_raw_delete(char* name)
  * @return 0 if OK, -1 in case of ERROR
  *
  */
-static int nvm_load_var(char* name, uint8_t* data, TypeLen_t size)
+static int nvm_load_var(char *name, uint8_t *data, TypeLen_t size)
 {
 	int retval = 0;
 	char filename[MAX_FILENAME_SIZE];
@@ -185,7 +185,7 @@ static int nvm_load_var(char* name, uint8_t* data, TypeLen_t size)
  * @return 0 if OK, -1 in case of ERROR
  *
  */
-int nvm_update_var(char* name, uint8_t* data, TypeLen_t size)
+int nvm_update_var(char *name, uint8_t *data, TypeLen_t size)
 {
 	int retval;
 	char filename[MAX_FILENAME_SIZE];
@@ -213,7 +213,7 @@ int nvm_update_var(char* name, uint8_t* data, TypeLen_t size)
  * @return 0 if OK, -1 in case of ERROR
  *
  */
-static int nvm_delete_var(char* name)
+static int nvm_delete_var(char *name)
 {
 	int retval;
 	char filename[MAX_FILENAME_SIZE];
@@ -244,7 +244,7 @@ static int nvm_delete_var(char* name)
  * @return 0 if OK, -1 in case of ERROR
  *
  */
-static int nvm_load_array_data(char* name, int index, uint8_t* data,
+static int nvm_load_array_data(char *name, int index, uint8_t *data,
 								TypeLen_t size)
 {
 	int retval;
@@ -275,7 +275,7 @@ static int nvm_load_array_data(char* name, int index, uint8_t* data,
  * @return 0 if OK, -1 in case of ERROR
  *
  */
-int nvm_update_array_data(char* name, int index, uint8_t* data, TypeLen_t size)
+int nvm_update_array_data(char *name, int index, uint8_t *data, TypeLen_t size)
 {
 	int retval;
 	char filename[MAX_FILENAME_SIZE];
@@ -302,7 +302,7 @@ int nvm_update_array_data(char* name, int index, uint8_t* data, TypeLen_t size)
  * @return 0 if OK, -1 in case of ERROR
  *
  */
-int nvm_delete_array_data(char* name, int index)
+int nvm_delete_array_data(char *name, int index)
 {
 	int retval;
 	char filename[MAX_FILENAME_SIZE];
@@ -383,7 +383,7 @@ exit:
  * @return 0 if OK, -1 in case of ERROR
  *
  */
-int nvm_load_generic_data(int index, uint8_t* data, TypeLen_t* size)
+int nvm_load_generic_data(int index, uint8_t *data, TypeLen_t *size)
 {
 	int retval = 0;
 	char filename[MAX_FILENAME_SIZE];
@@ -420,7 +420,7 @@ int nvm_load_generic_data(int index, uint8_t* data, TypeLen_t* size)
  * @return 0 if OK, -1 in case of ERROR
  *
  */
-int nvm_update_generic_data(int index, uint8_t* data, TypeLen_t size)
+int nvm_update_generic_data(int index, uint8_t *data, TypeLen_t size)
 {
 	int retval;
 	char filename[MAX_FILENAME_SIZE];
@@ -479,7 +479,7 @@ int nvm_delete_generic_data(int index)
  * @return 0 if OK, -1 in case of ERROR
  *
  */
-int nvm_retrieve_ma_key_handle(uint32_t* handle, TypeCurveId_t* id)
+int nvm_retrieve_ma_key_handle(uint32_t *handle, TypeCurveId_t *id)
 {
 	if (maKeyHandle) {
 		/* Key already in memory, return info */
@@ -528,7 +528,8 @@ int nvm_retrieve_ma_key_handle(uint32_t* handle, TypeCurveId_t* id)
  * @return 0 if OK, -1 in case of ERROR
  *
  */
-int nvm_retrieve_rt_key_handle(int index, uint32_t* handle, TypeCurveId_t* id)
+int nvm_retrieve_rt_key_handle(TypeRtKeyId_t index, uint32_t *handle,
+							TypeCurveId_t *id)
 {
 	if (rtKeyHandle[index]) {
 		/* Key already in memory, return info */
@@ -578,7 +579,8 @@ int nvm_retrieve_rt_key_handle(int index, uint32_t* handle, TypeCurveId_t* id)
  * @return 0 if OK, -1 in case of ERROR
  *
  */
-int nvm_retrieve_ba_key_handle(int index, uint32_t* handle, TypeCurveId_t* id)
+int nvm_retrieve_ba_key_handle(TypeBaseKeyId_t index, uint32_t *handle,
+							TypeCurveId_t *id)
 {
 	if (baKeyHandle[index]) {
 		/* Key already in memory, return info */
@@ -626,7 +628,7 @@ int nvm_retrieve_ba_key_handle(int index, uint32_t* handle, TypeCurveId_t* id)
  * @return 0 if created or already exists, non-zero otherwise
  *
  */
-static int var_mkdir(char* arrayname)
+static int var_mkdir(char *arrayname)
 {
 	char filename[MAX_FILENAME_SIZE];
 	int retval;
