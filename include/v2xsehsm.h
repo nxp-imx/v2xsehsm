@@ -171,6 +171,15 @@ int is256bitCurve(hsm_key_type_t keyType);
 		return V2XSE_FAILURE;				\
 } while (0)
 
+/** Abort function (return) if security level is not 5 */
+#define ENFORCE_SECURITY_LEVEL_5() do {				\
+	if (v2xseSecurityLevel != e_channelSecLevel_5) {	\
+		if (pHsmStatusCode)				\
+			*pHsmStatusCode = V2XSE_SECURITY_STATUS_NOT_SATISFIED;\
+		return V2XSE_FAILURE;				\
+	}							\
+} while (0)
+
 /**
  * This structure describes the format that the hsm uses to encode
  * public keys for 256 bit curves

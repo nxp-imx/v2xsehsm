@@ -125,7 +125,7 @@ int32_t v2xSe_connect(void)
  * @brief Activate V2X opertions using default security level
  *
  * This function activates V2X operations using the default security level.
- * It simply calls v2xSe_activate specifying e_channelSecLevel_5 for security
+ * It simply calls v2xSe_activate specifying e_channelSecLevel_1 for security
  * level.
 
  * @param appletId Applet(s) to activate: US or EU, and optionally GS
@@ -136,7 +136,7 @@ int32_t v2xSe_connect(void)
  */
 int32_t v2xSe_activate(appletSelection_t appletId, TypeSW_t *pHsmStatusCode)
 {
-	return v2xSe_activateWithSecurityLevel(appletId, e_channelSecLevel_5,
+	return v2xSe_activateWithSecurityLevel(appletId, e_channelSecLevel_1,
 						pHsmStatusCode);
 }
 
@@ -440,14 +440,11 @@ int32_t v2xSe_sendReceive(uint8_t *pTxBuf, uint16_t txLen,  uint16_t *pRxLen,
 int32_t v2xSe_endKeyInjection (TypeSW_t *pHsmStatusCode)
 {
 	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
+	ENFORCE_SECURITY_LEVEL_5();
 	ENFORCE_STATE_ACTIVATED();
 
 	if (v2xsePhase != V2XSE_KEY_INJECTION_PHASE) {
 		*pHsmStatusCode = V2XSE_FUNC_NOT_SUPPORTED;
-		return V2XSE_FAILURE;
-	}
-	if (v2xseSecurityLevel != e_channelSecLevel_5) {
-		*pHsmStatusCode = V2XSE_SECURITY_STATUS_NOT_SATISFIED;
 		return V2XSE_FAILURE;
 	}
 	v2xsePhase = V2XSE_NORMAL_OPERATING_PHASE;
@@ -478,13 +475,10 @@ int32_t v2xSe_endKeyInjection (TypeSW_t *pHsmStatusCode)
 int32_t v2xSe_getSePhase (uint8_t *pPhaseInfo, TypeSW_t *pHsmStatusCode)
 {
 	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
+	ENFORCE_SECURITY_LEVEL_5();
 	ENFORCE_STATE_ACTIVATED();
 	ENFORCE_POINTER_NOT_NULL(pPhaseInfo);
 
-	if (v2xseSecurityLevel != e_channelSecLevel_5) {
-		*pHsmStatusCode = V2XSE_SECURITY_STATUS_NOT_SATISFIED;
-		return V2XSE_FAILURE;
-	}
 	*pPhaseInfo = v2xsePhase;
 	*pHsmStatusCode = V2XSE_NO_ERROR;
 	return V2XSE_SUCCESS;
