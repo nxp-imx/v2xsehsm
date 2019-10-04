@@ -46,12 +46,12 @@
  *
  */
 
-/** HSM based SE implementation is generation 3 - do not change */
-#define VERSION_GENERATION	3
-/** Major version number of adaptation libary - taken from cmake */
+/** Major version number of adaptation library - taken from cmake */
 #define VERSION_MAJOR		@v2xsehsm_MAJOR@
-/** Minor version number of adaptation libary - taken from cmake */
+/** Minor version number of adaptation library - taken from cmake */
 #define VERSION_MINOR		@v2xsehsm_MINOR@
+/** Patch version number of adaptation library - taken from cmake */
+#define VERSION_PATCH		@v2xsehsm_PATCH@
 
 /**
  * String prividing info about platform the system is running on

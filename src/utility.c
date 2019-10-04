@@ -146,9 +146,9 @@ int32_t v2xSe_getAppletVersion
 			return V2XSE_FAILURE;
 		}
 	}
-	pVersion->data[0] = VERSION_GENERATION;
-	pVersion->data[1] = VERSION_MAJOR;
-	pVersion->data[2] = VERSION_MINOR;
+	pVersion->data[0] = VERSION_MAJOR;
+	pVersion->data[1] = VERSION_MINOR;
+	pVersion->data[2] = VERSION_PATCH;
 	*pHsmStatusCode = V2XSE_NO_ERROR;
 	return V2XSE_SUCCESS;
 }
@@ -229,12 +229,17 @@ int32_t v2xSe_getCryptoLibVersion
     TypeVersion_t *pVersion
 )
 {
-	if (!pVersion)
-		return V2XSE_FAILURE;
-	pVersion->data[0] = VERSION_GENERATION;
-	pVersion->data[1] = VERSION_MAJOR;
-	pVersion->data[2] = VERSION_MINOR;
-	return V2XSE_SUCCESS;
+	int retval = V2XSE_SUCCESS;
+
+	if (pVersion) {
+		pVersion->data[0] = VERSION_MAJOR;
+		pVersion->data[1] = VERSION_MINOR;
+		pVersion->data[2] = VERSION_PATCH;
+	} else {
+		retval = V2XSE_FAILURE;
+	}
+
+	return retval;
 }
 
 /**
