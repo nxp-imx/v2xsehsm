@@ -16,7 +16,7 @@ configure_file (
 	${CMAKE_CURRENT_SOURCE_DIR}/include/version.h
 	)
 
-add_library (v2xsehsm SHARED
+add_library (v2xCrypto SHARED
 	src/v2xsehsm.c
 	src/nvm.c
 	src/keymanagement.c
@@ -26,24 +26,24 @@ add_library (v2xsehsm SHARED
 	src/utility.c
 	)
 
-target_link_libraries(v2xsehsm
+target_link_libraries(v2xCrypto
 	${SECO_LIBS_DIR}/hsm_lib.a
 	)
 
-target_include_directories(v2xsehsm PRIVATE ${SECO_LIBS_DIR}/include/)
+target_include_directories(v2xCrypto PRIVATE ${SECO_LIBS_DIR}/include/)
 
-target_include_directories (v2xsehsm PUBLIC
+target_include_directories (v2xCrypto PUBLIC
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 	$<INSTALL_INTERFACE:include/v2xsehsm>
 	)
 
-set_target_properties (v2xsehsm PROPERTIES
+set_target_properties (v2xCrypto PROPERTIES
 	PUBLIC_HEADER "include/v2xSe.h"
 	VERSION ${v2xsehsm_VERSION}
 	SOVERSION ${v2xsehsm_MAJOR}
 	)
 
-target_compile_options(v2xsehsm PRIVATE -Werror -Wall)
+target_compile_options(v2xCrypto PRIVATE -Werror -Wall)
 
 configure_file(
 	${PROJECT_SOURCE_DIR}/Doxyfile.in
@@ -58,7 +58,7 @@ add_custom_target(doc
 	COMMAND mv doxygen/latex/refman.pdf v2xsehsm_api_manual.pdf
 	VERBATIM)
 
-install (TARGETS v2xsehsm
+install (TARGETS v2xCrypto
 	EXPORT v2xsehsmTargets
 	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/v2xsehsm
