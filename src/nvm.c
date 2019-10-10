@@ -358,7 +358,9 @@ static int nvm_empty_dir(char *name)
 			}
 		}
 	}
-	if (!errno)
+	if (errno)
+		retval = -1;
+	if (!closedir(arrayDir))
 		goto exit;
 
 err_exit:
