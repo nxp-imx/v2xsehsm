@@ -71,7 +71,7 @@
 #define EU_NVM_VAR_PATH COMMON_STORAGE_PATH"/EU/"
 
 /** Number of slots for generic data and key storage */
-#define NUM_STORAGE_SLOTS	10000
+#define NUM_STORAGE_SLOTS	100
 
 extern uint8_t	v2xseState;
 extern appletSelection_t v2xseAppletId;
@@ -224,17 +224,17 @@ typedef struct
 } hsmSignature384_t;
 
 /**
- * This structure described the possible types of keys that can be
- * generated in the hsm:
- *  - TRANSIENT corresponds to run time key in the v2xSe API
- *  - PERSISTENT corresponds to base key in the v2xSe API
- *  - PERMANENT corresponds to module authentication key in the v2xSe API
+ * This structure described the possible key usages, which determine the
+ * flags used to create the key.  It can be:
+ *  - RT_KEY - run time key
+ *  - BA_KEY - base key
+ *  - MA_KEY - module authentication
  */
 typedef enum {
-	TRANSIENT_KEY,
-	PERSISTENT_KEY,
-	PERMANENT_KEY
-} keyAttr_t;
+	RT_KEY,
+	BA_KEY,
+	MA_KEY
+} keyUsage_t;
 
 /**
  * This structure describes the two options possible when generating a

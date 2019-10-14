@@ -93,14 +93,14 @@ static void convertPublicKeyToV2xseApi(hsm_key_type_t keyType,
  * @param pubKeySize size of public key to generate
  * @param pPubKey location to write public key
  * @param action indicates whether to create or update key
- * @param attr key attributes (transient, persistent or permanent)
+ * @param usage indicates required key usage (rt, ba or ma)
  *
  * @return V2XSE_SUCCESS if no error, non-zero on error
  *
  */
 static int32_t genHsmKey(uint32_t *pKeyHandle, hsm_key_type_t keyType,
 		uint16_t pubKeySize, uint8_t *pPubKey, genKeyAction_t action,
-		keyAttr_t attr)
+		keyUsage_t usage)
 {
 	op_generate_key_args_t args;
 
@@ -109,22 +109,27 @@ static int32_t genHsmKey(uint32_t *pKeyHandle, hsm_key_type_t keyType,
 	args.out_size = pubKeySize;
 	if (action == UPDATE_KEY) {
 		args.flags = HSM_OP_KEY_GENERATION_FLAGS_UPDATE;
-		if (attr != TRANSIENT_KEY)
-			args.flags |=
-				HSM_OP_KEY_GENERATION_FLAGS_STRICT_OPERATION;
-	} else { /* Must be CREATE_KEY */
-		if (attr == TRANSIENT_KEY)
-			args.flags =
-				HSM_OP_KEY_GENERATION_FLAGS_CREATE_TRANSIENT;
-		else
-			args.flags =
-				HSM_OP_KEY_GENERATION_FLAGS_CREATE_PERSISTENT |
-				HSM_OP_KEY_GENERATION_FLAGS_STRICT_OPERATION;
-
+	} else { /* CREATE_KEY */
+		args.flags = HSM_OP_KEY_GENERATION_FLAGS_CREATE;
+		/* For now map each key usage to a different group */
+		args.key_group = usage;
+	}
+	/* Always use strict update - need to modify for closed part */
+	args.flags |= HSM_OP_KEY_GENERATION_FLAGS_STRICT_OPERATION;
+	switch (usage) {
+	case RT_KEY:
+		/* RT key does not need any flags set */
+		break;
+	case BA_KEY:
+		/* BA keys can be used for butterfly */
+		args.key_info = HSM_KEY_INFO_MASTER;
+		break;
+	case MA_KEY:
+		/* MA key cannot be modified */
+		args.key_info = HSM_KEY_INFO_PERMANENT;
+		break;
 	}
 	args.key_type = keyType;
-	if (attr == PERMANENT_KEY)
-		args.key_info = HSM_KEY_INFO_PERMANENT;
 	args.out_key = pPubKey;
 	return hsm_generate_key(hsmKeyMgmtHandle, &args);
 }
@@ -288,7 +293,7 @@ int32_t v2xSe_generateMaEccKeyPair
 
 	if (genHsmKey(&keyHandle, keyType, v2xSe_getKeyLenFromCurveID(curveId),
 				(uint8_t *)pPublicKeyPlain, CREATE_KEY,
-							PERMANENT_KEY)) {
+								MA_KEY)) {
 		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 		return V2XSE_FAILURE;
 	}
@@ -426,7 +431,7 @@ int32_t v2xSe_generateRtEccKeyPair
 	if (genHsmKey(&keyHandle, keyType, v2xSe_getKeyLenFromCurveID(curveId),
 				(uint8_t *)pPublicKeyPlain,
 				rtKeyHandle[rtKeyId] ? UPDATE_KEY : CREATE_KEY,
-							TRANSIENT_KEY)) {
+								RT_KEY)) {
 		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 		return V2XSE_FAILURE;
 	}
@@ -619,7 +624,7 @@ int32_t v2xSe_generateBaEccKeyPair
 	if (genHsmKey(&keyHandle, keyType, v2xSe_getKeyLenFromCurveID(curveId),
 			(uint8_t *)pPublicKeyPlain,
 			baKeyHandle[baseKeyId] ? UPDATE_KEY : CREATE_KEY,
-							PERSISTENT_KEY)) {
+								BA_KEY)) {
 		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 		return V2XSE_FAILURE;
 	}
