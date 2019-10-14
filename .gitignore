@@ -1,0 +1,7 @@
+build/
+include/version.h
+.tags
+*.swp
+*.out
+*~
+cscope.*
