@@ -48,6 +48,7 @@
 /**
  *
  * @brief Store generic data in NVM
+ * @ingroup datastorage
  *
  * This function stores generic data in NVM in the specified slot.  For this
  * system, it is stored in plaintext in the filesystem.   The data must be
@@ -94,6 +95,7 @@ int32_t v2xSe_storeData(TypeGsDataIndex_t index, TypeLen_t length,
 /**
  *
  * @brief Retrieve generic data from NVM
+ * @ingroup datastorage
  *
  * This function retrieves generic data in NVM from the specified slot.
  *
@@ -136,6 +138,7 @@ int32_t v2xSe_getData(TypeGsDataIndex_t index, TypeLen_t *pLength,
 /**
  *
  * @brief Delete generic data from NVM
+ * @ingroup datastorage
  *
  * This function deletes generic data in NVM from the specified slot.
  *
@@ -173,6 +176,7 @@ int32_t v2xSe_deleteData(TypeGsDataIndex_t index, TypeSW_t *pHsmStatusCode)
 /**
  *
  * @brief Retrieve amount of available NVM
+ * @ingroup devicemanagement
  *
  * This function returns the amount of available NVM.  As this system only
  * simulates NVM and actually uses the filesystem to store nvm data, for the

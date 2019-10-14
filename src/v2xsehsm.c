@@ -105,6 +105,7 @@ TypeCurveId_t baCurveId[NUM_STORAGE_SLOTS];
 /**
  *
  * @brief Move emulated SXF1800 state machine to Connected state
+ * @ingroup devicemanagement
  *
  * Move emulated SXF1800 state machine to Connected state.  This state is
  * only used to allow/disallow specific V2X SE API commands.
@@ -341,6 +342,7 @@ int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId,
 /**
  *
  * @brief Activate V2X opertions using default security level
+ * @ingroup devicemanagement
  *
  * This function activates V2X operations using the default security level.
  * It calls the activateV2x helper function specifying e_channelSecLevel_1
@@ -447,6 +449,7 @@ int32_t v2xSe_reset(void)
 /**
  *
  * @brief Deactivates the emulated SXF1800
+ * @ingroup devicemanagement
  *
  * This function deactivates the emulated SXF1800.  The only functional
  * difference from v2xSe_reset is that it cannot be called from init state.
@@ -474,6 +477,7 @@ int32_t v2xSe_deactivate(void)
 /**
  *
  * @brief Disconnects the emulated SXF1800
+ * @ingroup devicemanagement
  *
  * This function disconnects the emulated SXF1800, which has no
  * functional difference in this system to deactivate.
@@ -499,6 +503,7 @@ int32_t v2xSe_disconnect(void)
 /**
  *
  * @brief Generate a random number
+ * @ingroup utility
  *
  * This function calls the HSM to generate a random number of the requested
  * size.
@@ -548,6 +553,7 @@ int32_t v2xSe_getRandomNumber
 /**
  *
  * @brief Exchange APDU packets with SE
+ * @ingroup devicemanagement
  *
  * This function exchanges APDU packets with the SE.  As this system does
  * not support APDU packets, this function will always return error
@@ -577,6 +583,7 @@ int32_t v2xSe_sendReceive(uint8_t *pTxBuf, uint16_t txLen,  uint16_t *pRxLen,
 /**
  *
  * @brief End key injection phase
+ * @ingroup keyinjection
  *
  * This function ends key injection phase for the selected applet.  For the
  * moment this simply involves updating a variable in NVM.  This function
@@ -618,6 +625,7 @@ int32_t v2xSe_endKeyInjection (TypeSW_t *pHsmStatusCode)
 /**
  *
  * @brief Retrieve the phase of the current applet
+ * @ingroup devicemanagement
  *
  * This function retrieves the phase (key injection or normal operating) for
  * the current applet.  For the moment this simply involves querying a variable

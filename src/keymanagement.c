@@ -311,6 +311,7 @@ int32_t deleteBaKey(TypeBaseKeyId_t baKeyId)
 /**
  *
  * @brief Generate Module Authentication ECC key pair
+ * @ingroup keymanagement
  *
  * This function instructs the system to randomly generate the Module
  * Authentication ECC key pair for the current applet.  This will fail
@@ -399,6 +400,7 @@ int32_t v2xSe_generateMaEccKeyPair
 /**
  *
  * @brief Get Module Authenitication public key
+ * @ingroup keymanagement
  *
  * This function retrieves the public key and curveId for the Module
  * Authentication ECC key pair.  The handle of the MA key is retrieved
@@ -458,6 +460,7 @@ int32_t v2xSe_getMaEccPublicKey
 /**
  *
  * @brief Generate Runtime ECC key pair
+ * @ingroup keymanagement
  *
  * This function instructs the system to randomly generate a Runtime ECC
  * key pair in the specified slot for the current applet.  If a runtime
@@ -561,6 +564,7 @@ int32_t v2xSe_generateRtEccKeyPair
 /**
  *
  * @brief Delete runtime ECC key pair
+ * @ingroup keymanagement
  *
  * This function deletes the runtime ECC key pair from the specified slot.
  * The corresponding private key is deleted from the HSM key store, the
@@ -608,6 +612,7 @@ int32_t v2xSe_deleteRtEccPrivateKey
 /**
  *
  * @brief Get Runtime public key
+ * @ingroup keymanagement
  *
  * This function retrieves the public key and curveId for the runtime key
  * in the specified slot.  The handle of the runtime key is retrieved
@@ -672,6 +677,7 @@ int32_t v2xSe_getRtEccPublicKey
 /**
  *
  * @brief Generate Base ECC key pair
+ * @ingroup keymanagement
  *
  * This function instructs the system to randomly generate a Base ECC
  * key pair in the specified slot for the current applet.  If a Base
@@ -776,6 +782,7 @@ int32_t v2xSe_generateBaEccKeyPair
 /**
  *
  * @brief Delete base ECC key pair
+ * @ingroup keymanagement
  *
  * This function deletes the base ECC key pair from the specified slot.
  * The corresponding private key is deleted from the HSM key store, the
@@ -823,6 +830,7 @@ int32_t v2xSe_deleteBaEccPrivateKey
 /**
  *
  * @brief Get Base public key
+ * @ingroup keymanagement
  *
  * This function retrieves the public key and curveId for the base key
  * in the specified slot.  The handle of the base key is retrieved
@@ -887,6 +895,7 @@ int32_t v2xSe_getBaEccPublicKey
 /**
  *
  * @brief Dervice a runtime key from the specified base key
+ * @ingroup keymanagement
  *
  * This function derives a runtime key from the specified base key using
  * the butterfly algorithm.

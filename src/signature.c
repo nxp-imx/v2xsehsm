@@ -127,6 +127,7 @@ static hsm_err_t genHsmSignature(uint32_t keyHandle,
 /**
  *
  * @brief Generate signature using MA private key
+ * @ingroup signature
  *
  * This function calculates the signature of the given hash using the MA
  * private key.
@@ -195,6 +196,7 @@ int32_t v2xSe_createMaSign
 /**
  *
  * @brief Activate specified run time key for low latency signing
+ * @ingroup keymanagement
  *
  * This function is meant to prepare for low latency signing by performing
  * the initial signature calculations that do not rely on the data to sign.
@@ -265,6 +267,7 @@ int32_t v2xSe_activateRtKeyForSigning
 /**
  *
  * @brief Generate low latency signature using runtime private key
+ * @ingroup signature
  *
  * This function finalizes the signature calculation of the given hash.
  * The key to use must already have been specified using the function
@@ -330,6 +333,7 @@ int32_t v2xSe_createRtSignLowLatency
 /**
  *
  * @brief Generate signature using runtime private key
+ * @ingroup signature
  *
  * This function calculates the signature of the given hash using the runtime
  * private key in the specified slot.
@@ -391,6 +395,7 @@ int32_t v2xSe_createRtSign
 /**
  *
  * @brief Generate signature using base private key
+ * @ingroup signature
  *
  * This function calculates the signature of the given hash using the base
  * private key in the specified slot.

@@ -142,6 +142,7 @@ static hsm_err_t doHsmDecryption(uint32_t keyHandle, hsm_key_type_t keyType,
 /**
  *
  * @brief Encrypt data using ECIES
+ * @ingroup ecies
  *
  * This function encrypts data using the ECIES encryption scheme.  The data to
  * encrypt, public key, and all other parameters needed to perform the
@@ -214,6 +215,7 @@ int32_t v2xSe_encryptUsingEcies (TypeEncryptEcies_t *pEciesData,
 /**
  *
  * @brief Decrypt data using ECIES and runtime key
+ * @ingroup ecies
  *
  * This function decrypts data using ECIES and the specified runtime key.
  * The data to decrypt and all other parameters needed to perform the
@@ -267,6 +269,7 @@ int32_t v2xSe_decryptUsingRtEcies (TypeRtKeyId_t rtKeyId,
 /**
  *
  * @brief Decrypt data using ECIES and module authentication key
+ * @ingroup ecies
  *
  * This function decrypts data using ECIES and the module authentication key.
  * The data to decrypt and all other parameters needed to perform the
@@ -318,6 +321,7 @@ int32_t v2xSe_decryptUsingMaEcies
 /**
  *
  * @brief Decrypt data using ECIES and base key
+ * @ingroup ecies
  *
  * This function decrypts data using ECIES and the specified base key.
  * The data to decrypt and all other parameters needed to perform the

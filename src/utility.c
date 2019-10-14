@@ -123,6 +123,7 @@ int is256bitCurve(hsm_key_type_t keyType)
 /**
  *
  * @brief Retrive the version of the V2X or storage applet
+ * @ingroup devicemanagement
  *
  * This function retrieves the version of the V2X or storage applet.  As
  * this system does not actually use applets, the version of this adaptation
@@ -171,6 +172,7 @@ int32_t v2xSe_getAppletVersion
 /**
  *
  * @brief Retrive information regarding SE capabilities
+ * @ingroup devicemanagement
  *
  * This function fills a structure indicating SE capabilities.
  *
@@ -238,6 +240,7 @@ int32_t v2xSe_getSeInfo
 /**
  *
  * @brief Retrieve version of CryptoLibrary
+ * @ingroup devicemanagement
  *
  * This function retrieves the version of the CryptoLibrary, which in this
  * system corresponds to this adaptation layer.
@@ -270,6 +273,7 @@ int32_t v2xSe_getCryptoLibVersion
 /**
  *
  * @brief Retrieve platform identification info
+ * @ingroup devicemanagement
  *
  * This function retrieves a string that provides information about the
  * platform being used to run the SE implementation.
@@ -303,6 +307,7 @@ int32_t v2xSe_getPlatformInfo(TypeSW_t *pHsmStatusCode,
 /**
  *
  * @brief Retrieve trust provisioning profile info
+ * @ingroup devicemanagement
  *
  * This function retrives a 4 byte indicator that refers to the trust
  * provisioning profile of the SE implementation.
@@ -338,6 +343,7 @@ int32_t v2xSe_getPlatformConfig(TypeSW_t *pHsmStatusCode,
 /**
  *
  * @brief Retrieve serial number of SE chip
+ * @ingroup devicemanagement
  *
  * This function retrives the serial number of the SE chip.  This is
  * currently simulated by returning a fixed value.
@@ -370,6 +376,7 @@ int32_t v2xSe_getChipInfo(TypeSW_t *pHsmStatusCode,
 /**
  *
  * @brief Retrieve SE attack log
+ * @ingroup devicemanagement
  *
  * This function retrives the attack log from the SE device.  This system
  * does not support an attack log, so the log will always be empty.
@@ -438,6 +445,7 @@ int32_t keyLenFromCurveID(TypeCurveId_t curveID)
 /**
  *
  * @brief External API function to get key length from curveId
+ * @ingroup utility
  *
  * This  function returns the key length that corresponds to the specified
  * curveId.  It just calls the helper function, which is a separate function
@@ -493,6 +501,7 @@ int32_t sigLenFromHashLen(TypeHashLength_t hashLength)
 /**
  *
  * @brief External API function to get signature length from hash length
+ * @ingroup utility
  *
  * This function returns the signature length used to sign a hash of the
  * specified length. It just calls the helper function, which is a separate
@@ -518,6 +527,7 @@ int32_t v2xSe_getSigLenFromHashLen(TypeHashLength_t hashLength)
 /**
  *
  * @brief Invoke garbage collector
+ * @ingroup devicemanagement
  *
  * This function invokes the JavaCard garbage collector on an SE.  As this
  * system does not use JavaCard, this function does nothing.
