@@ -168,6 +168,7 @@ int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId,
 	open_svc_sign_gen_args_t sig_gen_args;
 	uint32_t keystore_identifier;
 	uint32_t key_store_nonce;
+	uint8_t justCreatedKeystore = 0;
 
 	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
 	ENFORCE_STATE_INIT();
@@ -231,12 +232,35 @@ int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId,
 		if (hsm_open_key_store_service(hsmSessionHandle,
 					&key_store_args, &hsmKeyStoreHandle))
 			return V2XSE_FAILURE;
+		justCreatedKeystore = 1;
 	}
 
 	memset(&key_mgmt_args, 0, sizeof(key_mgmt_args));
 	if (hsm_open_key_management_service(hsmKeyStoreHandle, &key_mgmt_args,
 							&hsmKeyMgmtHandle))
 		return V2XSE_FAILURE;
+
+	if (justCreatedKeystore) {
+		/*
+		 * Workaround: create dummy key to make sure key store is
+		 * updated in filesystem, so that it can be opened in the
+		 * future
+		 */
+		op_generate_key_args_t args;
+		uint8_t dummyPubKey[V2XSE_256_EC_PUB_KEY];
+		uint32_t dummyKeyHandle;
+
+		memset(&args, 0, sizeof(args));
+		args.key_identifier = &dummyKeyHandle;
+		args.out_size = V2XSE_256_EC_PUB_KEY;
+		args.flags = HSM_OP_KEY_GENERATION_FLAGS_CREATE |
+			HSM_OP_KEY_GENERATION_FLAGS_STRICT_OPERATION;
+		args.key_group = MA_KEY; /* only 1 MA key, have room */
+		args.key_type = HSM_KEY_TYPE_ECDSA_NIST_P256;
+		args.out_key = dummyPubKey;
+		if (hsm_generate_key(hsmKeyMgmtHandle, &args))
+			return V2XSE_FAILURE;
+	}
 
 	/* Keys just opened, so no activated key/sigScheme yet */
 	activatedKeyHandle = 0;
