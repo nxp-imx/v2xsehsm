@@ -107,8 +107,8 @@ extern const uint8_t serialNumber[V2XSE_SERIAL_NUMBER];
 #define MAGIC_KEYSTORE_IDENTIFIER_EU	0x87131966
 /** Keystore nonce for EU applet keystore */
 #define MAGIC_KEYSTORE_NONCE_EU	0x75A8CC6D
-/** Number of expected keystore updates in product lifetime */
-#define MAX_KEYSTORE_UPDATES		0xffff
+/** Number of expected keystore updates in product lifetime - set to max */
+#define MAX_KEYSTORE_UPDATES		0
 
 /** Priority of session opened with HSM */
 #define HSM_SESSION_PRIORITY	0
