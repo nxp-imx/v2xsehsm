@@ -853,12 +853,14 @@ int32_t v2xSe_deriveRtEccKeyPair
 	args.expansion_function_value_size = V2XSE_INT256_SIZE;
 	args.hash_value_size = V2XSE_INT256_SIZE;
 	args.pr_reconstruction_value_size = V2XSE_INT256_SIZE;
-	if (rtKeyHandle[rtKeyId])
-		/* Butterfly update flag not defined in hsm_api.h */
-		args.flags = 1;		/* Bit 0 = update key */
-	else
-		/* Butterfly create flag not defined in hsm_api.h */
-		args.flags = 2;		/* Bit 1 = create key */
+	if (rtKeyHandle[rtKeyId]) {
+		args.flags = HSM_OP_BUTTERFLY_KEY_FLAGS_UPDATE;
+	} else {
+		args.flags = HSM_OP_BUTTERFLY_KEY_FLAGS_CREATE;
+		args.key_group = RT_KEY;
+	}
+	/* Always use strict update - need to modify for closed part */
+	args.flags |= HSM_OP_BUTTERFLY_KEY_FLAGS_STRICT_OPERATION;
 	/* Params provided to this API correspond to implicit certificate */
 	args.flags |= HSM_OP_BUTTERFLY_KEY_FLAGS_IMPLICIT_CERTIF;
 	args.dest_key_identifier = &outputRtKeyHandle;
