@@ -225,7 +225,7 @@ typedef enum {
 } genKeyAction_t;
 
 hsm_key_type_t convertCurveId(TypeCurveId_t curveId);
-int is256bitCurve(hsm_key_type_t keyType);
+int32_t is256bitCurve(hsm_key_type_t keyType);
 int32_t setupDefaultStatusCode(TypeSW_t *pStatusCode);
 int32_t enforceInitState(int32_t *pApiRetVal);
 int32_t enforceNotInitState(int32_t *pApiRetVal);

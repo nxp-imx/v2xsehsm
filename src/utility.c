@@ -107,9 +107,9 @@ hsm_key_type_t convertCurveId(TypeCurveId_t curveId)
  * @return 1 if ECC curve is 256 bits, 0 if invalid or not 256 bits
  *
  */
-int is256bitCurve(hsm_key_type_t keyType)
+int32_t is256bitCurve(hsm_key_type_t keyType)
 {
-	int retval = 0;
+	int32_t retval = 0;
 
 	switch (keyType) {
 		case HSM_KEY_TYPE_ECDSA_NIST_P256:

@@ -64,18 +64,19 @@
 /** Used to delete nvm variables at applet root level */
 #define ROOT_LEVEL_NAME		""
 
-int nvm_init(void);
-int nvm_update_array_data(char *name, int index, uint8_t *data, TypeLen_t size);
-int nvm_delete_array_data(char *name, int index);
-int nvm_load_generic_data(int index, uint8_t *data, TypeLen_t *size);
-int nvm_update_generic_data(int index, uint8_t *data, TypeLen_t size);
-int nvm_delete_generic_data(int index);
-int nvm_update_var(char *name, uint8_t *data, TypeLen_t size);
-int nvm_delete_var(char *name);
-int nvm_retrieve_ma_key_handle(uint32_t *handle, TypeCurveId_t *id);
-int nvm_retrieve_rt_key_handle(TypeRtKeyId_t index, uint32_t *handle,
+int32_t nvm_init(void);
+int32_t nvm_update_array_data(char *name, uint32_t index, uint8_t *data,
+							TypeLen_t size);
+int32_t nvm_delete_array_data(char *name, uint32_t index);
+int32_t nvm_load_generic_data(uint32_t index, uint8_t *data, TypeLen_t *size);
+int32_t nvm_update_generic_data(uint32_t index, uint8_t *data, TypeLen_t size);
+int32_t nvm_delete_generic_data(uint32_t index);
+int32_t nvm_update_var(char *name, uint8_t *data, TypeLen_t size);
+int32_t nvm_delete_var(char *name);
+int32_t nvm_retrieve_ma_key_handle(uint32_t *handle, TypeCurveId_t *id);
+int32_t nvm_retrieve_rt_key_handle(TypeRtKeyId_t index, uint32_t *handle,
 							TypeCurveId_t *id);
-int nvm_retrieve_ba_key_handle(TypeBaseKeyId_t index, uint32_t *handle,
+int32_t nvm_retrieve_ba_key_handle(TypeBaseKeyId_t index, uint32_t *handle,
 							TypeCurveId_t *id);
 
 #endif

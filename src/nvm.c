@@ -68,10 +68,10 @@
  * @return Number of bytes read, 0 in case of ERROR
  *
  */
-static int nvm_raw_load(char *name, uint8_t *data, TypeLen_t size)
+static int32_t nvm_raw_load(char *name, uint8_t *data, TypeLen_t size)
 {
-	int fd;
-	int numread = -1;
+	int32_t fd;
+	int32_t numread = -1;
 	struct stat fileInfo;
 	int32_t fstatret;
 
@@ -111,11 +111,11 @@ static int nvm_raw_load(char *name, uint8_t *data, TypeLen_t size)
  * @return 0 if OK, -1 in case of ERROR
  *
  */
-static int nvm_raw_update(char *name, uint8_t *data, TypeLen_t size)
+static int32_t nvm_raw_update(char *name, uint8_t *data, TypeLen_t size)
 {
-	int fd;
-	int retval = -1;
-	int writeret;
+	int32_t fd;
+	int32_t retval = -1;
+	int32_t writeret;
 
 	TRACE_SYSTEM_CALL(PROFILE_ID_SYSTEM_OPEN);
 	fd = open(name, O_CREAT|O_WRONLY|O_TRUNC, S_IRUSR|S_IWUSR);
@@ -143,10 +143,10 @@ static int nvm_raw_update(char *name, uint8_t *data, TypeLen_t size)
  * @return 0 if OK, -1 in case of ERROR
  *
  */
-static int nvm_raw_delete(char *name)
+static int32_t nvm_raw_delete(char *name)
 {
-	int retval = 0;
-	int removeret;
+	int32_t retval = 0;
+	int32_t removeret;
 
 	TRACE_SYSTEM_CALL(PROFILE_ID_SYSTEM_REMOVE);
 	removeret = remove(name);
@@ -174,9 +174,9 @@ static int nvm_raw_delete(char *name)
  * @return 0 if OK, -1 in case of ERROR
  *
  */
-static int nvm_load_var(char *name, uint8_t *data, TypeLen_t size)
+static int32_t nvm_load_var(char *name, uint8_t *data, TypeLen_t size)
 {
-	int retval = 0;
+	int32_t retval = 0;
 	char filename[MAX_FILENAME_SIZE];
 
 	if (snprintf(filename, MAX_FILENAME_SIZE, "%s%s", appletVarStoragePath,
@@ -207,9 +207,9 @@ static int nvm_load_var(char *name, uint8_t *data, TypeLen_t size)
  * @return 0 if OK, -1 in case of ERROR
  *
  */
-int nvm_update_var(char *name, uint8_t *data, TypeLen_t size)
+int32_t nvm_update_var(char *name, uint8_t *data, TypeLen_t size)
 {
-	int retval;
+	int32_t retval;
 	char filename[MAX_FILENAME_SIZE];
 
 	if (snprintf(filename, MAX_FILENAME_SIZE, "%s%s", appletVarStoragePath,
@@ -235,9 +235,9 @@ int nvm_update_var(char *name, uint8_t *data, TypeLen_t size)
  * @return 0 if OK, -1 in case of ERROR
  *
  */
-int nvm_delete_var(char *name)
+int32_t nvm_delete_var(char *name)
 {
-	int retval;
+	int32_t retval;
 	char filename[MAX_FILENAME_SIZE];
 
 	if (snprintf(filename, MAX_FILENAME_SIZE, "%s%s", appletVarStoragePath,
@@ -266,10 +266,10 @@ int nvm_delete_var(char *name)
  * @return 0 if OK, -1 in case of ERROR
  *
  */
-static int nvm_load_array_data(char *name, int index, uint8_t *data,
+static int32_t nvm_load_array_data(char *name, uint32_t index, uint8_t *data,
 								TypeLen_t size)
 {
-	int retval;
+	int32_t retval;
 	char filename[MAX_FILENAME_SIZE];
 
 	if (snprintf(filename, MAX_FILENAME_SIZE, "%s/%d", name, index) < 0)
@@ -297,9 +297,10 @@ static int nvm_load_array_data(char *name, int index, uint8_t *data,
  * @return 0 if OK, -1 in case of ERROR
  *
  */
-int nvm_update_array_data(char *name, int index, uint8_t *data, TypeLen_t size)
+int32_t nvm_update_array_data(char *name, uint32_t index, uint8_t *data,
+								TypeLen_t size)
 {
-	int retval;
+	int32_t retval;
 	char filename[MAX_FILENAME_SIZE];
 
 	if (snprintf(filename, MAX_FILENAME_SIZE, "%s/%d", name, index) < 0)
@@ -324,9 +325,9 @@ int nvm_update_array_data(char *name, int index, uint8_t *data, TypeLen_t size)
  * @return 0 if OK, -1 in case of ERROR
  *
  */
-int nvm_delete_array_data(char *name, int index)
+int32_t nvm_delete_array_data(char *name, uint32_t index)
 {
-	int retval;
+	int32_t retval;
 	char filename[MAX_FILENAME_SIZE];
 
 	if (snprintf(filename, MAX_FILENAME_SIZE, "%s/%d", name, index) < 0)
@@ -351,13 +352,13 @@ int nvm_delete_array_data(char *name, int index)
  * @return 0 if OK, -1 in case of ERROR
  *
  */
-static int nvm_empty_dir(char *name)
+static int32_t nvm_empty_dir(char *name)
 {
 	DIR *arrayDir;
 	struct dirent *arrayEntry;
-	int retval = -1;
-	int fileErr = 0;
-	int sysretval;
+	int32_t retval = -1;
+	int32_t fileErr = 0;
+	int32_t sysretval;
 	char dirName[MAX_FILENAME_SIZE];
 	char fileName[MAX_FILENAME_SIZE];
 
@@ -425,11 +426,11 @@ static int nvm_empty_dir(char *name)
  * @return 0 if OK, -1 in case of ERROR
  *
  */
-int nvm_load_generic_data(int index, uint8_t *data, TypeLen_t *size)
+int32_t nvm_load_generic_data(uint32_t index, uint8_t *data, TypeLen_t *size)
 {
-	int retval = 0;
+	int32_t retval = 0;
 	char filename[MAX_FILENAME_SIZE];
-	int sizeread;
+	int32_t sizeread;
 
 	if (snprintf(filename, MAX_FILENAME_SIZE, GENERIC_STORAGE_PATH"%d",
 								index) < 0) {
@@ -437,7 +438,7 @@ int nvm_load_generic_data(int index, uint8_t *data, TypeLen_t *size)
 	} else {
 		sizeread = nvm_raw_load(filename, data,
 						V2XSE_MAX_DATA_SIZE_GSA);
-		if (sizeread < (int)V2XSE_MIN_DATA_SIZE_GSA)
+		if (sizeread < (int32_t)V2XSE_MIN_DATA_SIZE_GSA)
 			retval = -1;
 		else
 			*size = sizeread;
@@ -462,9 +463,9 @@ int nvm_load_generic_data(int index, uint8_t *data, TypeLen_t *size)
  * @return 0 if OK, -1 in case of ERROR
  *
  */
-int nvm_update_generic_data(int index, uint8_t *data, TypeLen_t size)
+int32_t nvm_update_generic_data(uint32_t index, uint8_t *data, TypeLen_t size)
 {
-	int retval;
+	int32_t retval;
 	char filename[MAX_FILENAME_SIZE];
 
 	if ((size > V2XSE_MAX_DATA_SIZE_GSA) || !size)
@@ -491,9 +492,9 @@ int nvm_update_generic_data(int index, uint8_t *data, TypeLen_t size)
  * @return 0 if OK, -1 in case of ERROR
  *
  */
-int nvm_delete_generic_data(int index)
+int32_t nvm_delete_generic_data(uint32_t index)
 {
-	int retval;
+	int32_t retval;
 	char filename[MAX_FILENAME_SIZE];
 
 	if (snprintf(filename, MAX_FILENAME_SIZE, GENERIC_STORAGE_PATH"%d",
@@ -521,9 +522,9 @@ int nvm_delete_generic_data(int index)
  * @return 0 if OK, -1 in case of ERROR
  *
  */
-int nvm_retrieve_ma_key_handle(uint32_t *handle, TypeCurveId_t *id)
+int32_t nvm_retrieve_ma_key_handle(uint32_t *handle, TypeCurveId_t *id)
 {
-	int retval = -1;
+	int32_t retval = -1;
 
 	if (maKeyHandle) {
 		/* Key already in memory, return info */
@@ -569,10 +570,10 @@ int nvm_retrieve_ma_key_handle(uint32_t *handle, TypeCurveId_t *id)
  * @return 0 if OK, -1 in case of ERROR
  *
  */
-int nvm_retrieve_rt_key_handle(TypeRtKeyId_t index, uint32_t *handle,
+int32_t nvm_retrieve_rt_key_handle(TypeRtKeyId_t index, uint32_t *handle,
 							TypeCurveId_t *id)
 {
-	int retval = -1;
+	int32_t retval = -1;
 
 	if (rtKeyHandle[index]) {
 		/* Key already in memory, return info */
@@ -618,10 +619,10 @@ int nvm_retrieve_rt_key_handle(TypeRtKeyId_t index, uint32_t *handle,
  * @return 0 if OK, -1 in case of ERROR
  *
  */
-int nvm_retrieve_ba_key_handle(TypeBaseKeyId_t index, uint32_t *handle,
+int32_t nvm_retrieve_ba_key_handle(TypeBaseKeyId_t index, uint32_t *handle,
 							TypeCurveId_t *id)
 {
-	int retval = -1;
+	int32_t retval = -1;
 
 	if (baKeyHandle[index]) {
 		/* Key already in memory, return info */
@@ -665,10 +666,10 @@ int nvm_retrieve_ba_key_handle(TypeBaseKeyId_t index, uint32_t *handle,
  * @return 0 if created or already exists, non-zero otherwise
  *
  */
-static int var_mkdir(char *arrayname)
+static int32_t var_mkdir(char *arrayname)
 {
 	char filename[MAX_FILENAME_SIZE];
-	int retval;
+	int32_t retval;
 
 	if (snprintf(filename, MAX_FILENAME_SIZE, "%s%s", appletVarStoragePath,
 							arrayname) < 0) {
@@ -697,9 +698,9 @@ static int var_mkdir(char *arrayname)
  * @return 0 if OK, non-zero if ERROR
  *
  */
-static int nvm_clear(void)
+static int32_t nvm_clear(void)
 {
-	int retval = 0;
+	int32_t retval = 0;
 
 	if (nvm_empty_dir(ROOT_LEVEL_NAME))
 		retval = -1;
@@ -729,11 +730,11 @@ static int nvm_clear(void)
  * @return 0 if initialized OK, non-zero otherwise
  *
  */
-int nvm_init(void)
+int32_t nvm_init(void)
 {
-	int phaseValid;
-	int retval = -1;
-	int mkdirret;
+	int32_t phaseValid;
+	int32_t retval = -1;
+	int32_t mkdirret;
 
 	do {
 		/* Make sure top level storage directory exists */
