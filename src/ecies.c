@@ -56,23 +56,38 @@
  * The v2xse API format is as follows for all curve sizes:
  *  - x in bits 0 - 47, y in bits 48 - 95
  *  - in case of 256 bit curves, bits 32 - 47 of x and y unused
- * Conversion is only required for 256 bit keys.
+ * The v2xSe format key comes directly from the API caller, the
+ * new key is placed in a separate buffer.  It is possible to modify
+ * the original buffer to the new format, but this creates a side effect
+ * that the key passed by the caller is modified - which can cause hard
+ * to debug issues if the caller expects to store a copy of the key and
+ * use it multiple times.
+ * Conversion is only required for 256 bit keys.  Unused bits are not
+ * cleared in case output buffer is allocated for size of hsm key (i.e.
+ * no unused bits).
  *
  * @param keyType The ECC curve used to generate the public key
- * @param pPublicKeyPlain location of the generated public key
+ * @param pPublicKeyPlain location of the public key in v2xSe API format
+ * @param hsm_key location of buffer to place public key in hsm API format
  *
  */
 static void convertPublicKeyToHsmApi(hsm_key_type_t keyType,
-					TypePublicKey_t *pPublicKeyPlain)
+			TypePublicKey_t *pPublicKeyPlain, uint8_t *hsm_key)
 {
-	hsmPubKey256_t *hsmApiPtr = (hsmPubKey256_t*)pPublicKeyPlain;
-	uint8_t *bytePtr = (uint8_t *)pPublicKeyPlain;
-
 	if (is256bitCurve(keyType)) {
-		memmove(hsmApiPtr->y, pPublicKeyPlain->y,
+		hsmPubKey256_t *hsmApiPtr = (hsmPubKey256_t *)hsm_key;
+
+		memcpy(hsmApiPtr->x, pPublicKeyPlain->x,
 				sizeof(hsmApiPtr->y));
-		memset(bytePtr + sizeof(hsmPubKey256_t), 0,
-			sizeof(TypePublicKey_t) - sizeof(hsmPubKey256_t));
+		memcpy(hsmApiPtr->y, pPublicKeyPlain->y,
+				sizeof(hsmApiPtr->y));
+	} else {
+		hsmPubKey384_t *hsmApiPtr = (hsmPubKey384_t *)hsm_key;
+
+		memcpy(hsmApiPtr->x, pPublicKeyPlain->x,
+				sizeof(hsmApiPtr->y));
+		memcpy(hsmApiPtr->y, pPublicKeyPlain->y,
+				sizeof(hsmApiPtr->y));
 	}
 }
 
@@ -145,6 +160,7 @@ int32_t v2xSe_encryptUsingEcies (TypeEncryptEcies_t *pEciesData,
 {
 	hsm_op_ecies_enc_args_t args;
 	hsm_key_type_t keyType;
+	uint8_t hsm_key[V2XSE_384_EC_PUB_KEY];
 
 	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
 	ENFORCE_STATE_ACTIVATED();
@@ -154,11 +170,11 @@ int32_t v2xSe_encryptUsingEcies (TypeEncryptEcies_t *pEciesData,
 	ENFORCE_POINTER_NOT_NULL(pVctData);
 
 	keyType = convertCurveId(pEciesData->curveId);
-	convertPublicKeyToHsmApi(keyType, pEciesData->pEccPublicKey);
+	convertPublicKeyToHsmApi(keyType, pEciesData->pEccPublicKey, hsm_key);
 
 	memset(&args, 0, sizeof(args));
 	args.input = pEciesData->pMsgData->data;
-	args.pub_key = (uint8_t*)(pEciesData->pEccPublicKey);
+	args.pub_key = hsm_key;
 	if (pEciesData->kdfParamP1Len) {
 		args.p1 = pEciesData->kdfParamP1;
 		args.p1_size = pEciesData->kdfParamP1Len;
