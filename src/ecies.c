@@ -1,6 +1,6 @@
 
 /*
- * Copyright 2019 NXP
+ * Copyright 2019-2020 NXP
  */
 
 /*
@@ -161,41 +161,46 @@ int32_t v2xSe_encryptUsingEcies (TypeEncryptEcies_t *pEciesData,
 	hsm_op_ecies_enc_args_t args;
 	hsm_key_type_t keyType;
 	uint8_t hsm_key[V2XSE_384_EC_PUB_KEY];
+	int32_t retval = V2XSE_FAILURE;
 
-	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
-	ENFORCE_STATE_ACTIVATED();
-	ENFORCE_NORMAL_OPERATING_PHASE();
-	ENFORCE_POINTER_NOT_NULL(pEciesData);
-	ENFORCE_POINTER_NOT_NULL(pVctLen);
-	ENFORCE_POINTER_NOT_NULL(pVctData);
+	if (!setupDefaultStatusCode(pHsmStatusCode) &&
+			!enforceActivatedState(pHsmStatusCode, &retval) &&
+			(v2xsePhase == V2XSE_NORMAL_OPERATING_PHASE) &&
+			(pEciesData != NULL) &&
+			(pVctLen != NULL) &&
+			(pVctData != NULL)) {
 
-	keyType = convertCurveId(pEciesData->curveId);
-	convertPublicKeyToHsmApi(keyType, pEciesData->pEccPublicKey, hsm_key);
+		keyType = convertCurveId(pEciesData->curveId);
+		convertPublicKeyToHsmApi(keyType, pEciesData->pEccPublicKey,
+								hsm_key);
 
-	memset(&args, 0, sizeof(args));
-	args.input = pEciesData->pMsgData->data;
-	args.pub_key = hsm_key;
-	if (pEciesData->kdfParamP1Len) {
-		args.p1 = pEciesData->kdfParamP1;
-		args.p1_size = pEciesData->kdfParamP1Len;
+		memset(&args, 0, sizeof(args));
+		args.input = pEciesData->pMsgData->data;
+		args.pub_key = hsm_key;
+		if (pEciesData->kdfParamP1Len) {
+			args.p1 = pEciesData->kdfParamP1;
+			args.p1_size = pEciesData->kdfParamP1Len;
+		}
+		if (pEciesData->macParamP2Len) {
+			args.p2 = pEciesData->macParamP2;
+			args.p2_size = pEciesData->macParamP2Len;
+		}
+		args.output = pVctData->data;
+		args.input_size = pEciesData->msgLen;
+		args.pub_key_size = v2xSe_getKeyLenFromCurveID(
+							pEciesData->curveId);
+		args.mac_size = pEciesData->macLen;
+		args.out_size = HSM_ECIES_VECTOR_SIZE;
+		args.key_type = keyType;
+		if (hsm_ecies_encryption(hsmSessionHandle, &args)) {
+			*pHsmStatusCode = V2XSE_WRONG_DATA;
+		} else {
+			*pVctLen = args.out_size;
+			*pHsmStatusCode = V2XSE_NO_ERROR;
+			retval = V2XSE_SUCCESS;
+		}
 	}
-	if (pEciesData->macParamP2Len) {
-		args.p2 = pEciesData->macParamP2;
-		args.p2_size = pEciesData->macParamP2Len;
-	}
-	args.output = pVctData->data;
-	args.input_size = pEciesData->msgLen;
-	args.pub_key_size = v2xSe_getKeyLenFromCurveID(pEciesData->curveId);
-	args.mac_size = pEciesData->macLen;
-	args.out_size = HSM_ECIES_VECTOR_SIZE;
-	args.key_type = keyType;
-	if (hsm_ecies_encryption(hsmSessionHandle, &args)) {
-		*pHsmStatusCode = V2XSE_WRONG_DATA;
-		return V2XSE_FAILURE;
-	}
-	*pVctLen = args.out_size;
-	*pHsmStatusCode = V2XSE_NO_ERROR;
-	return V2XSE_SUCCESS;
+	return retval;
 }
 
 /**
@@ -223,30 +228,29 @@ int32_t v2xSe_decryptUsingRtEcies (TypeRtKeyId_t rtKeyId,
 {
 	uint32_t keyHandle;
 	TypeCurveId_t curveId;
+	int32_t retval = V2XSE_FAILURE;
 
-	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
-	ENFORCE_STATE_ACTIVATED();
-	ENFORCE_NORMAL_OPERATING_PHASE();
-	ENFORCE_POINTER_NOT_NULL(pEciesData);
-	ENFORCE_POINTER_NOT_NULL(pMsgLen);
-	ENFORCE_POINTER_NOT_NULL(pMsgData);
+	if (!setupDefaultStatusCode(pHsmStatusCode) &&
+			!enforceActivatedState(pHsmStatusCode, &retval) &&
+			(v2xsePhase == V2XSE_NORMAL_OPERATING_PHASE) &&
+			(pEciesData != NULL) &&
+			(pMsgLen != NULL) &&
+			(pMsgData != NULL)) {
 
-	if (rtKeyId >= NUM_STORAGE_SLOTS){
-		*pHsmStatusCode = V2XSE_WRONG_DATA;
-		return V2XSE_FAILURE;
+		if (rtKeyId >= NUM_STORAGE_SLOTS) {
+			*pHsmStatusCode = V2XSE_WRONG_DATA;
+		} else if (nvm_retrieve_rt_key_handle(rtKeyId, &keyHandle,
+								&curveId)) {
+			*pHsmStatusCode = V2XSE_WRONG_DATA;
+		} else if (doHsmDecryption(keyHandle, convertCurveId(curveId),
+					pEciesData, pMsgLen, pMsgData)) {
+			*pHsmStatusCode = V2XSE_WRONG_DATA;
+		} else {
+			*pHsmStatusCode = V2XSE_NO_ERROR;
+			retval = V2XSE_SUCCESS;
+		}
 	}
-	if(nvm_retrieve_rt_key_handle(rtKeyId, &keyHandle, &curveId)) {
-		*pHsmStatusCode = V2XSE_WRONG_DATA;
-		return V2XSE_FAILURE;
-	}
-
-	if (doHsmDecryption(keyHandle, convertCurveId(curveId), pEciesData,
-						pMsgLen, pMsgData)) {
-		*pHsmStatusCode = V2XSE_WRONG_DATA;
-		return V2XSE_FAILURE;
-	}
-	*pHsmStatusCode = V2XSE_NO_ERROR;
-	return V2XSE_SUCCESS;
+	return retval;
 }
 
 /**
@@ -275,26 +279,26 @@ int32_t v2xSe_decryptUsingMaEcies
 {
 	uint32_t keyHandle;
 	TypeCurveId_t curveId;
+	int32_t retval = V2XSE_FAILURE;
 
-	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
-	ENFORCE_STATE_ACTIVATED();
-	ENFORCE_NORMAL_OPERATING_PHASE();
-	ENFORCE_POINTER_NOT_NULL(pEciesData);
-	ENFORCE_POINTER_NOT_NULL(pMsgLen);
-	ENFORCE_POINTER_NOT_NULL(pMsgData);
+	if (!setupDefaultStatusCode(pHsmStatusCode) &&
+			!enforceActivatedState(pHsmStatusCode, &retval) &&
+			(v2xsePhase == V2XSE_NORMAL_OPERATING_PHASE) &&
+			(pEciesData != NULL) &&
+			(pMsgLen != NULL) &&
+			(pMsgData != NULL)) {
 
-	if(nvm_retrieve_ma_key_handle(&keyHandle, &curveId)) {
-		*pHsmStatusCode = V2XSE_WRONG_DATA;
-		return V2XSE_FAILURE;
+		if (nvm_retrieve_ma_key_handle(&keyHandle, &curveId)) {
+			*pHsmStatusCode = V2XSE_WRONG_DATA;
+		} else if (doHsmDecryption(keyHandle, convertCurveId(curveId),
+					pEciesData, pMsgLen, pMsgData)) {
+			*pHsmStatusCode = V2XSE_WRONG_DATA;
+		} else {
+			*pHsmStatusCode = V2XSE_NO_ERROR;
+			retval = V2XSE_SUCCESS;
+		}
 	}
-
-	if (doHsmDecryption(keyHandle, convertCurveId(curveId), pEciesData,
-						pMsgLen, pMsgData)) {
-		*pHsmStatusCode = V2XSE_WRONG_DATA;
-		return V2XSE_FAILURE;
-	}
-	*pHsmStatusCode = V2XSE_NO_ERROR;
-	return V2XSE_SUCCESS;
+	return retval;
 }
 
 /**
@@ -325,28 +329,27 @@ int32_t v2xSe_decryptUsingBaEcies
 {
 	uint32_t keyHandle;
 	TypeCurveId_t curveId;
+	int32_t retval = V2XSE_FAILURE;
 
-	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
-	ENFORCE_STATE_ACTIVATED();
-	ENFORCE_NORMAL_OPERATING_PHASE();
-	ENFORCE_POINTER_NOT_NULL(pEciesData);
-	ENFORCE_POINTER_NOT_NULL(pMsgLen);
-	ENFORCE_POINTER_NOT_NULL(pMsgData);
+	if (!setupDefaultStatusCode(pHsmStatusCode) &&
+			!enforceActivatedState(pHsmStatusCode, &retval) &&
+			(v2xsePhase == V2XSE_NORMAL_OPERATING_PHASE) &&
+			(pEciesData != NULL) &&
+			(pMsgLen != NULL) &&
+			(pMsgData != NULL)) {
 
-	if (baseKeyId >= NUM_STORAGE_SLOTS){
-		*pHsmStatusCode = V2XSE_WRONG_DATA;
-		return V2XSE_FAILURE;
+		if (baseKeyId >= NUM_STORAGE_SLOTS) {
+			*pHsmStatusCode = V2XSE_WRONG_DATA;
+		} else if (nvm_retrieve_ba_key_handle(baseKeyId, &keyHandle,
+								&curveId)) {
+			*pHsmStatusCode = V2XSE_WRONG_DATA;
+		} else if (doHsmDecryption(keyHandle, convertCurveId(curveId),
+					pEciesData, pMsgLen, pMsgData)) {
+			*pHsmStatusCode = V2XSE_WRONG_DATA;
+		} else {
+			*pHsmStatusCode = V2XSE_NO_ERROR;
+			retval = V2XSE_SUCCESS;
+		}
 	}
-	if(nvm_retrieve_ba_key_handle(baseKeyId, &keyHandle, &curveId)) {
-		*pHsmStatusCode = V2XSE_WRONG_DATA;
-		return V2XSE_FAILURE;
-	}
-
-	if (doHsmDecryption(keyHandle, convertCurveId(curveId), pEciesData,
-						pMsgLen, pMsgData)) {
-		*pHsmStatusCode = V2XSE_WRONG_DATA;
-		return V2XSE_FAILURE;
-	}
-	*pHsmStatusCode = V2XSE_NO_ERROR;
-	return V2XSE_SUCCESS;
+	return retval;
 }

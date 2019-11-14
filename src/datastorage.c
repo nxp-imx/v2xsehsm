@@ -1,6 +1,6 @@
 
 /*
- * Copyright 2019 NXP
+ * Copyright 2019-2020 NXP
  */
 
 /*
@@ -41,6 +41,7 @@
  *
  */
 
+#include <stddef.h>
 #include "v2xsehsm.h"
 #include "nvm.h"
 
@@ -64,26 +65,27 @@
 int32_t v2xSe_storeData(TypeGsDataIndex_t index, TypeLen_t length,
 				uint8_t  *pData,TypeSW_t *pHsmStatusCode)
 {
-	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
-	ENFORCE_STATE_ACTIVATED();
+	int32_t retval = V2XSE_FAILURE;
 
-	if ((v2xseAppletId != e_EU_AND_GS) &&
-		(v2xseAppletId != e_US_AND_GS)) {
-		*pHsmStatusCode = V2XSE_INS_NOT_SUPPORTED;
-		return V2XSE_FAILURE;
+	if (!setupDefaultStatusCode(pHsmStatusCode) &&
+			!enforceActivatedState(pHsmStatusCode, &retval)) {
+
+		if ((v2xseAppletId != e_EU_AND_GS) &&
+					(v2xseAppletId != e_US_AND_GS)) {
+			*pHsmStatusCode = V2XSE_INS_NOT_SUPPORTED;
+		} else if (!pData || (length < V2XSE_MIN_DATA_SIZE_GSA) ||
+				(length > V2XSE_MAX_DATA_SIZE_GSA) ||
+				(index > (NUM_STORAGE_SLOTS-1))) {
+			*pHsmStatusCode = V2XSE_WRONG_DATA;
+		} else if (nvm_update_generic_data(index, pData, length)
+								== -1) {
+			*pHsmStatusCode = V2XSE_FILE_FULL;
+		} else {
+			*pHsmStatusCode = V2XSE_NO_ERROR;
+			retval = V2XSE_SUCCESS;
+		}
 	}
-	if (!pData || (length < V2XSE_MIN_DATA_SIZE_GSA) ||
-			(length > V2XSE_MAX_DATA_SIZE_GSA) ||
-			(index > (NUM_STORAGE_SLOTS-1))) {
-		*pHsmStatusCode = V2XSE_WRONG_DATA;
-		return V2XSE_DEVICE_NOT_CONNECTED;
-	}
-	if (nvm_update_generic_data(index, pData, length) == -1) {
-		*pHsmStatusCode = V2XSE_FILE_FULL;
-		return V2XSE_DEVICE_NOT_CONNECTED;
-	}
-	*pHsmStatusCode = V2XSE_NO_ERROR;
-	return V2XSE_SUCCESS;
+	return retval;
 }
 
 /**
@@ -103,24 +105,26 @@ int32_t v2xSe_storeData(TypeGsDataIndex_t index, TypeLen_t length,
 int32_t v2xSe_getData(TypeGsDataIndex_t index, TypeLen_t *pLength,
 				uint8_t *pData,TypeSW_t *pHsmStatusCode)
 {
-	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
-	ENFORCE_STATE_ACTIVATED();
+	int32_t retval = V2XSE_FAILURE;
 
-	if ((v2xseAppletId != e_EU_AND_GS) &&
-		(v2xseAppletId != e_US_AND_GS)) {
-		*pHsmStatusCode = V2XSE_INS_NOT_SUPPORTED;
-		return V2XSE_FAILURE;
+	if (!setupDefaultStatusCode(pHsmStatusCode) &&
+			!enforceActivatedState(pHsmStatusCode, &retval)) {
+
+		if ((v2xseAppletId != e_EU_AND_GS) &&
+					(v2xseAppletId != e_US_AND_GS)) {
+			*pHsmStatusCode = V2XSE_INS_NOT_SUPPORTED;
+		} else if (!pData || (!pLength) ||
+					(index > (NUM_STORAGE_SLOTS-1))) {
+			*pHsmStatusCode = V2XSE_WRONG_DATA;
+		} else if (nvm_load_generic_data(index, pData, pLength)
+								== -1) {
+			*pHsmStatusCode = V2XSE_WRONG_DATA;
+		} else {
+			*pHsmStatusCode = V2XSE_NO_ERROR;
+			retval = V2XSE_SUCCESS;
+		}
 	}
-	if (!pData || (!pLength) || (index > (NUM_STORAGE_SLOTS-1))) {
-		*pHsmStatusCode = V2XSE_WRONG_DATA;
-		return V2XSE_FAILURE;
-	}
-	if (nvm_load_generic_data(index, pData, pLength) == -1) {
-		*pHsmStatusCode = V2XSE_WRONG_DATA;
-		return V2XSE_FAILURE;
-	}
-	*pHsmStatusCode = V2XSE_NO_ERROR;
-	return V2XSE_SUCCESS;
+	return retval;
 }
 
 /**
@@ -137,24 +141,24 @@ int32_t v2xSe_getData(TypeGsDataIndex_t index, TypeLen_t *pLength,
  */
 int32_t v2xSe_deleteData(TypeGsDataIndex_t index, TypeSW_t *pHsmStatusCode)
 {
-	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
-	ENFORCE_STATE_ACTIVATED();
+	int32_t retval = V2XSE_FAILURE;
 
-	if ((v2xseAppletId != e_EU_AND_GS) &&
-		(v2xseAppletId != e_US_AND_GS)) {
-		*pHsmStatusCode = V2XSE_INS_NOT_SUPPORTED;
-		return V2XSE_FAILURE;
+	if (!setupDefaultStatusCode(pHsmStatusCode) &&
+			!enforceActivatedState(pHsmStatusCode, &retval)) {
+
+		if ((v2xseAppletId != e_EU_AND_GS) &&
+			(v2xseAppletId != e_US_AND_GS)) {
+			*pHsmStatusCode = V2XSE_INS_NOT_SUPPORTED;
+		} else if (index > (NUM_STORAGE_SLOTS-1)) {
+			*pHsmStatusCode = V2XSE_WRONG_DATA;
+		} else if (nvm_delete_generic_data(index) == -1) {
+			*pHsmStatusCode = V2XSE_WRONG_DATA;
+		} else {
+			*pHsmStatusCode = V2XSE_NO_ERROR;
+			retval = V2XSE_SUCCESS;
+		}
 	}
-	if (index > (NUM_STORAGE_SLOTS-1)) {
-		*pHsmStatusCode = V2XSE_WRONG_DATA;
-		return V2XSE_DEVICE_NOT_CONNECTED;
-	}
-	if (nvm_delete_generic_data(index) == -1) {
-		*pHsmStatusCode = V2XSE_WRONG_DATA;
-		return V2XSE_DEVICE_NOT_CONNECTED;
-	}
-	*pHsmStatusCode = V2XSE_NO_ERROR;
-	return V2XSE_SUCCESS;
+	return retval;
 }
 
 /**
@@ -174,13 +178,17 @@ int32_t v2xSe_deleteData(TypeGsDataIndex_t index, TypeSW_t *pHsmStatusCode)
  */
 int32_t v2xSe_getRemainingNvm (uint32_t *pSize, TypeSW_t *pHsmStatusCode)
 {
-	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
-	ENFORCE_STATE_NOT_INIT();
-	ENFORCE_POINTER_NOT_NULL(pSize);
+	int32_t retval = V2XSE_FAILURE;
 
-	/* For now, return fixed value 2MB */
-	*pSize = 2 * 1024 * 1024;
+	if (!setupDefaultStatusCode(pHsmStatusCode) &&
+				!enforceNotInitState(&retval) &&
+				(pSize != NULL)) {
 
-	*pHsmStatusCode = V2XSE_NO_ERROR;
-	return V2XSE_SUCCESS;
+		/* For now, return fixed value 2MB */
+		*pSize = 2 * 1024 * 1024;
+
+		*pHsmStatusCode = V2XSE_NO_ERROR;
+		retval = V2XSE_SUCCESS;
+	}
+	return retval;
 }

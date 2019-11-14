@@ -1,6 +1,6 @@
 
 /*
- * Copyright 2019 NXP
+ * Copyright 2019-2020 NXP
  */
 
 /*
@@ -114,10 +114,14 @@ TypeCurveId_t baCurveId[NUM_STORAGE_SLOTS];
  */
 int32_t v2xSe_connect(void)
 {
-	ENFORCE_STATE_INIT();
+	int32_t retval = V2XSE_FAILURE;
 
-	v2xseState = V2XSE_STATE_CONNECTED;
-	return V2XSE_SUCCESS;
+	if (!enforceInitState(&retval)) {
+		v2xseState = V2XSE_STATE_CONNECTED;
+		retval = V2XSE_SUCCESS;
+	}
+
+	return retval;
 }
 
 /**
@@ -166,121 +170,144 @@ int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId,
 	open_svc_key_management_args_t key_mgmt_args;
 	open_svc_cipher_args_t cipher_args;
 	open_svc_sign_gen_args_t sig_gen_args;
+	int32_t retval = V2XSE_FAILURE;
 	uint32_t keystore_identifier;
 	uint32_t key_store_nonce;
-	uint8_t justCreatedKeystore = 0;
+	uint32_t justCreatedKeystore = 0;
 
-	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
-	ENFORCE_STATE_INIT();
+	if (!setupDefaultStatusCode(pHsmStatusCode) &&
+				!enforceInitState(&retval)) {
 
-	if ((appletId == e_US_AND_GS) || (appletId == e_US)){
-		appletVarStoragePath = usVarStorage;
+		do {
+			if ((appletId == e_US_AND_GS) || (appletId == e_US)) {
+				appletVarStoragePath = usVarStorage;
 #ifdef SINGLE_KEYSTORE
 		/* Workaround for single keystore support in current hsm */
 		/*  - both apps use EU keystore defines			 */
-		keystore_identifier = MAGIC_KEYSTORE_IDENTIFIER_EU;
-		key_store_nonce = MAGIC_KEYSTORE_NONCE_EU;
+				keystore_identifier =
+						MAGIC_KEYSTORE_IDENTIFIER_EU;
+				key_store_nonce = MAGIC_KEYSTORE_NONCE_EU;
 #else
-		keystore_identifier = MAGIC_KEYSTORE_IDENTIFIER_US;
-		key_store_nonce = MAGIC_KEYSTORE_NONCE_US;
+				keystore_identifier =
+						MAGIC_KEYSTORE_IDENTIFIER_US;
+				key_store_nonce = MAGIC_KEYSTORE_NONCE_US;
 #endif
-	} else if ((appletId == e_EU_AND_GS) || (appletId == e_EU)){
-		appletVarStoragePath = euVarStorage;
-		keystore_identifier = MAGIC_KEYSTORE_IDENTIFIER_EU;
-		key_store_nonce = MAGIC_KEYSTORE_NONCE_EU;
-	} else {
-		*pHsmStatusCode = V2XSE_APP_MISSING;
-		return V2XSE_FAILURE;
+			} else if ((appletId == e_EU_AND_GS) ||
+							(appletId == e_EU)) {
+				appletVarStoragePath = euVarStorage;
+				keystore_identifier =
+						MAGIC_KEYSTORE_IDENTIFIER_EU;
+				key_store_nonce = MAGIC_KEYSTORE_NONCE_EU;
+			} else {
+				*pHsmStatusCode = V2XSE_APP_MISSING;
+				break;
+			}
+
+			if ((securityLevel < e_channelSecLevel_1) ||
+					(securityLevel > e_channelSecLevel_5)
+									) {
+				*pHsmStatusCode = V2XSE_WRONG_DATA;
+				break;
+			}
+
+			if (nvm_init())
+				break;
+
+			memset(&session_args, 0, sizeof(session_args));
+			session_args.session_priority = HSM_SESSION_PRIORITY;
+			session_args.operating_mode = HSM_OPERATING_MODE;
+			if (hsm_open_session(&session_args, &hsmSessionHandle))
+				break;
+
+			memset(&rng_open_args, 0, sizeof(rng_open_args));
+			if (hsm_open_rng_service(hsmSessionHandle,
+						&rng_open_args, &hsmRngHandle))
+				break;
+
+			/* Assume keystore exists, try to open */
+			memset(&key_store_args, 0, sizeof(key_store_args));
+			key_store_args.key_store_identifier =
+						keystore_identifier;
+			key_store_args.authentication_nonce =
+						key_store_nonce;
+			key_store_args.flags = HSM_SVC_KEY_STORE_FLAGS_UPDATE;
+			if (hsm_open_key_store_service(hsmSessionHandle,
+					&key_store_args, &hsmKeyStoreHandle)) {
+				/*
+				 * Failure to open, try to create
+				 *  - re-initialize argument structure in case
+				 *    it was modified by
+				 *    hsm_open_key_store_service above
+				 */
+				memset(&key_store_args, 0,
+						sizeof(key_store_args));
+				key_store_args.key_store_identifier =
+						keystore_identifier;
+				key_store_args.authentication_nonce =
+						key_store_nonce;
+				key_store_args.max_updates_number =
+						MAX_KEYSTORE_UPDATES;
+				key_store_args.flags =
+						HSM_SVC_KEY_STORE_FLAGS_CREATE;
+				if (hsm_open_key_store_service(hsmSessionHandle,
+						&key_store_args,
+						&hsmKeyStoreHandle))
+					break;
+				justCreatedKeystore = 1;
+			}
+
+			memset(&key_mgmt_args, 0, sizeof(key_mgmt_args));
+			if (hsm_open_key_management_service(hsmKeyStoreHandle,
+					&key_mgmt_args, &hsmKeyMgmtHandle))
+				break;
+
+			if (justCreatedKeystore) {
+				/*
+				 * Workaround: create dummy key to make sure
+				 * key store is updated in filesystem, so that
+				 * it can be opened in the future
+				 */
+				op_generate_key_args_t args;
+				uint8_t dummyPubKey[V2XSE_256_EC_PUB_KEY];
+				uint32_t dummyKeyHandle;
+
+				memset(&args, 0, sizeof(args));
+				args.key_identifier = &dummyKeyHandle;
+				args.out_size = V2XSE_256_EC_PUB_KEY;
+				args.flags =
+					HSM_OP_KEY_GENERATION_FLAGS_CREATE |
+				HSM_OP_KEY_GENERATION_FLAGS_STRICT_OPERATION;
+				args.key_group = MA_KEY;
+				args.key_type = HSM_KEY_TYPE_ECDSA_NIST_P256;
+				args.out_key = dummyPubKey;
+				if (hsm_generate_key(hsmKeyMgmtHandle, &args))
+					break;
+			}
+
+			/* Keys just opened, no activated key/sigScheme yet */
+			activatedKeyHandle = 0;
+			activatedSigScheme = 0;
+
+			memset(&cipher_args, 0, sizeof(cipher_args));
+			if (hsm_open_cipher_service(hsmKeyStoreHandle,
+					&cipher_args, &hsmCipherHandle))
+				break;
+
+			memset(&sig_gen_args, 0, sizeof(sig_gen_args));
+			if (hsm_open_signature_generation_service(
+						hsmKeyStoreHandle,
+						&sig_gen_args,
+						&hsmSigGenHandle))
+				break;
+
+			v2xseState = V2XSE_STATE_ACTIVATED;
+			v2xseAppletId = appletId;
+			v2xseSecurityLevel = securityLevel;
+			*pHsmStatusCode = V2XSE_NO_ERROR;
+			retval = V2XSE_SUCCESS;
+		} while (0);
 	}
-	if ((securityLevel < e_channelSecLevel_1) ||
-			(securityLevel > e_channelSecLevel_5)){
-		*pHsmStatusCode = V2XSE_WRONG_DATA;
-		return V2XSE_FAILURE;
-	}
-
-	if (nvm_init())
-		return V2XSE_FAILURE;
-
-	memset(&session_args, 0, sizeof(session_args));
-	session_args.session_priority = HSM_SESSION_PRIORITY;
-	session_args.operating_mode = HSM_OPERATING_MODE;
-	if (hsm_open_session(&session_args, &hsmSessionHandle))
-		return V2XSE_FAILURE;
-
-	memset(&rng_open_args, 0, sizeof(rng_open_args));
-	if (hsm_open_rng_service(hsmSessionHandle, &rng_open_args,
-								&hsmRngHandle))
-		return V2XSE_FAILURE;
-
-	/* Assume keystore exists, try to open */
-	memset(&key_store_args, 0, sizeof(key_store_args));
-	key_store_args.key_store_identifier = keystore_identifier;
-	key_store_args.authentication_nonce = key_store_nonce;
-	key_store_args.flags = HSM_SVC_KEY_STORE_FLAGS_UPDATE;
-	if (hsm_open_key_store_service(hsmSessionHandle,
-				&key_store_args, &hsmKeyStoreHandle)) {
-		/*
-		 * Failure to open, try to create
-		 *  - re-initialize argument structure in case it was
-		 *    modified by hsm_open_key_store_service above
-		 */
-		memset(&key_store_args, 0, sizeof(key_store_args));
-		key_store_args.key_store_identifier = keystore_identifier;
-		key_store_args.authentication_nonce = key_store_nonce;
-		key_store_args.max_updates_number = MAX_KEYSTORE_UPDATES;
-		key_store_args.flags = HSM_SVC_KEY_STORE_FLAGS_CREATE;
-		if (hsm_open_key_store_service(hsmSessionHandle,
-					&key_store_args, &hsmKeyStoreHandle))
-			return V2XSE_FAILURE;
-		justCreatedKeystore = 1;
-	}
-
-	memset(&key_mgmt_args, 0, sizeof(key_mgmt_args));
-	if (hsm_open_key_management_service(hsmKeyStoreHandle, &key_mgmt_args,
-							&hsmKeyMgmtHandle))
-		return V2XSE_FAILURE;
-
-	if (justCreatedKeystore) {
-		/*
-		 * Workaround: create dummy key to make sure key store is
-		 * updated in filesystem, so that it can be opened in the
-		 * future
-		 */
-		op_generate_key_args_t args;
-		uint8_t dummyPubKey[V2XSE_256_EC_PUB_KEY];
-		uint32_t dummyKeyHandle;
-
-		memset(&args, 0, sizeof(args));
-		args.key_identifier = &dummyKeyHandle;
-		args.out_size = V2XSE_256_EC_PUB_KEY;
-		args.flags = HSM_OP_KEY_GENERATION_FLAGS_CREATE |
-			HSM_OP_KEY_GENERATION_FLAGS_STRICT_OPERATION;
-		args.key_group = MA_KEY; /* only 1 MA key, have room */
-		args.key_type = HSM_KEY_TYPE_ECDSA_NIST_P256;
-		args.out_key = dummyPubKey;
-		if (hsm_generate_key(hsmKeyMgmtHandle, &args))
-			return V2XSE_FAILURE;
-	}
-
-	/* Keys just opened, so no activated key/sigScheme yet */
-	activatedKeyHandle = 0;
-	activatedSigScheme = 0;
-
-	memset(&cipher_args, 0, sizeof(cipher_args));
-	if (hsm_open_cipher_service(hsmKeyStoreHandle, &cipher_args,
-							&hsmCipherHandle))
-		return V2XSE_FAILURE;
-
-	memset(&sig_gen_args, 0, sizeof(sig_gen_args));
-	if (hsm_open_signature_generation_service(hsmKeyStoreHandle,
-					&sig_gen_args, &hsmSigGenHandle))
-		return V2XSE_FAILURE;
-
-	v2xseState = V2XSE_STATE_ACTIVATED;
-	v2xseAppletId = appletId;
-	v2xseSecurityLevel = securityLevel;
-	*pHsmStatusCode = V2XSE_NO_ERROR;
-	return V2XSE_SUCCESS;
+	return retval;
 }
 
 /**
@@ -299,26 +326,25 @@ int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId,
  */
 int32_t v2xSe_reset(void)
 {
-	hsm_err_t error_seen = 0;
+	int32_t retval = V2XSE_SUCCESS;
+
 	if (v2xseState == V2XSE_STATE_ACTIVATED) {
 		if (hsm_close_signature_generation_service(hsmSigGenHandle))
-			error_seen = 1;
+			retval = V2XSE_FAILURE;
 		if (hsm_close_cipher_service(hsmCipherHandle))
-			error_seen = 1;
+			retval = V2XSE_FAILURE;
 		if (hsm_close_key_management_service(hsmKeyMgmtHandle))
-			error_seen = 1;
+			retval = V2XSE_FAILURE;
 		if (hsm_close_key_store_service(hsmKeyStoreHandle))
-			error_seen = 1;
+			retval = V2XSE_FAILURE;
 		if (hsm_close_rng_service(hsmRngHandle))
-			error_seen = 1;
+			retval = V2XSE_FAILURE;
 		if (hsm_close_session(hsmSessionHandle))
-			error_seen = 1;
+			retval = V2XSE_FAILURE;
 	}
 	v2xseState = V2XSE_STATE_INIT;
-	if (error_seen)
-		return V2XSE_FAILURE;
 
-	return V2XSE_SUCCESS;
+	return retval;
 }
 
 /**
@@ -335,9 +361,14 @@ int32_t v2xSe_reset(void)
  */
 int32_t v2xSe_deactivate(void)
 {
+	int32_t retval;
+
 	if (v2xseState == V2XSE_STATE_INIT)
-		return V2XSE_FAILURE_INIT;
-	return v2xSe_reset();
+		retval = V2XSE_FAILURE_INIT;
+	else
+		retval = v2xSe_reset();
+
+	return retval;
 }
 
 /**
@@ -378,23 +409,24 @@ int32_t v2xSe_getRandomNumber
 )
 {
 	op_get_random_args_t args;
+	int32_t retval = V2XSE_FAILURE;
 
-	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
-	ENFORCE_STATE_ACTIVATED();
-	ENFORCE_POINTER_NOT_NULL(pRandomNumber);
+	if (!setupDefaultStatusCode(pHsmStatusCode) &&
+			!enforceActivatedState(pHsmStatusCode, &retval) &&
+			(pRandomNumber != NULL)) {
 
-	if (!length || length > V2XSE_MAX_RND_NUM_SIZE) {
-		*pHsmStatusCode = V2XSE_WRONG_DATA;
-		return V2XSE_FAILURE;
+		if (!length || length > V2XSE_MAX_RND_NUM_SIZE) {
+			*pHsmStatusCode = V2XSE_WRONG_DATA;
+		} else {
+			args.output = pRandomNumber->data;
+			args.random_size = length;
+			if (!hsm_get_random(hsmRngHandle, &args)) {
+				*pHsmStatusCode = V2XSE_NO_ERROR;
+				retval = V2XSE_SUCCESS;
+			}
+		}
 	}
-
-	args.output = pRandomNumber->data;
-	args.random_size = length;
-	if (hsm_get_random(hsmRngHandle, &args))
-		return V2XSE_FAILURE;
-
-	*pHsmStatusCode = V2XSE_NO_ERROR;
-	return V2XSE_SUCCESS;
+	return retval;
 }
 
 /**
@@ -416,9 +448,9 @@ int32_t v2xSe_getRandomNumber
 int32_t v2xSe_sendReceive(uint8_t *pTxBuf, uint16_t txLen,  uint16_t *pRxLen,
 				uint8_t *pRxBuf,TypeSW_t *pHsmStatusCode)
 {
-	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
+	if (pHsmStatusCode)
+		*pHsmStatusCode = V2XSE_FUNC_NOT_SUPPORTED;
 
-	*pHsmStatusCode = V2XSE_FUNC_NOT_SUPPORTED;
 	return V2XSE_FAILURE;
 }
 
@@ -439,22 +471,26 @@ int32_t v2xSe_sendReceive(uint8_t *pTxBuf, uint16_t txLen,  uint16_t *pRxLen,
  */
 int32_t v2xSe_endKeyInjection (TypeSW_t *pHsmStatusCode)
 {
-	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
-	ENFORCE_SECURITY_LEVEL_5();
-	ENFORCE_STATE_ACTIVATED();
+	int32_t retval = V2XSE_FAILURE;
 
-	if (v2xsePhase != V2XSE_KEY_INJECTION_PHASE) {
-		*pHsmStatusCode = V2XSE_FUNC_NOT_SUPPORTED;
-		return V2XSE_FAILURE;
-	}
-	v2xsePhase = V2XSE_NORMAL_OPERATING_PHASE;
-	if (nvm_update_var(V2XSE_PHASE_NAME, &v2xsePhase,
+	if (!setupDefaultStatusCode(pHsmStatusCode) &&
+			!enforceSecurityLevel5(pHsmStatusCode) &&
+			!enforceActivatedState(pHsmStatusCode, &retval)) {
+
+		if (v2xsePhase != V2XSE_KEY_INJECTION_PHASE) {
+			*pHsmStatusCode = V2XSE_FUNC_NOT_SUPPORTED;
+		} else {
+			v2xsePhase = V2XSE_NORMAL_OPERATING_PHASE;
+			if (nvm_update_var(V2XSE_PHASE_NAME, &v2xsePhase,
 							sizeof(v2xsePhase))) {
-		*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
-		return V2XSE_FAILURE;
+				*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
+			} else {
+				*pHsmStatusCode = V2XSE_NO_ERROR;
+				retval = V2XSE_SUCCESS;
+			}
+		}
 	}
-	*pHsmStatusCode = V2XSE_NO_ERROR;
-	return V2XSE_SUCCESS;
+	return retval;
 }
 
 /**
@@ -474,12 +510,150 @@ int32_t v2xSe_endKeyInjection (TypeSW_t *pHsmStatusCode)
  */
 int32_t v2xSe_getSePhase (uint8_t *pPhaseInfo, TypeSW_t *pHsmStatusCode)
 {
-	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
-	ENFORCE_SECURITY_LEVEL_5();
-	ENFORCE_STATE_ACTIVATED();
-	ENFORCE_POINTER_NOT_NULL(pPhaseInfo);
+	int32_t retval = V2XSE_FAILURE;
 
-	*pPhaseInfo = v2xsePhase;
-	*pHsmStatusCode = V2XSE_NO_ERROR;
-	return V2XSE_SUCCESS;
+
+	if (!setupDefaultStatusCode(pHsmStatusCode) &&
+			!enforceSecurityLevel5(pHsmStatusCode) &&
+			!enforceActivatedState(pHsmStatusCode, &retval) &&
+			(pPhaseInfo != NULL)) {
+		*pPhaseInfo = v2xsePhase;
+		*pHsmStatusCode = V2XSE_NO_ERROR;
+		retval = V2XSE_SUCCESS;
+	}
+	return retval;
+}
+
+/**
+ *
+ * @brief Utility function to verify status code ptr & set default status
+ *
+ * This function verifies that the status code pointer provided is not
+ * NULL, and if not NULL it initializes the default status code.
+ *
+ * @param pStatusCode status code pointer to check
+ *
+ * @return 0 if OK, -1 in case of ERROR
+ *
+ */
+int32_t setupDefaultStatusCode(TypeSW_t *pStatusCode)
+{
+	int32_t localret = -1;
+
+	if (pStatusCode != NULL) {
+		*pStatusCode = V2XSE_UNDEFINED_ERROR;
+		localret = 0;
+	}
+	return localret;
+}
+
+/**
+ *
+ * @brief Utility function to verify system is in init state
+ *
+ * This function verifies that the system is in init state, and in case
+ * of error it sets the API return code appropriately.
+ *
+ * @param pApiRetVal pointer to value that v2xSe API will return
+ *
+ * @return 0 if OK, -1 in case of ERROR
+ *
+ */
+int32_t enforceInitState(int32_t *pApiRetVal)
+{
+	int32_t localret = -1;
+
+	switch (v2xseState) {
+	case V2XSE_STATE_INIT:
+		localret = 0;
+		break;
+	case V2XSE_STATE_CONNECTED:
+		*pApiRetVal = V2XSE_FAILURE_CONNECTED;
+		break;
+	case V2XSE_STATE_ACTIVATED:
+		*pApiRetVal = V2XSE_FAILURE_ACTIVATED;
+		break;
+	}
+
+	return localret;
+}
+
+/**
+ *
+ * @brief Utility function to verify system is not in init state
+ *
+ * This function verifies that the system is not in init state, and in case
+ * of error it sets the API return code appropriately.
+ *
+ * @param pApiRetVal pointer to value that v2xSe API will return
+ *
+ * @return 0 if OK, -1 in case of ERROR
+ *
+ */
+int32_t enforceNotInitState(int32_t *pApiRetVal)
+{
+	int32_t localret = -1;
+
+	if (v2xseState != V2XSE_STATE_INIT)
+		localret = 0;
+	else
+		*pApiRetVal = V2XSE_DEVICE_NOT_CONNECTED;
+
+	return localret;
+}
+
+/**
+ *
+ * @brief Utility function to verify system is in activated state
+ *
+ * This function verifies that the system is in activated state, and in case
+ * of error it sets the API return or status code appropriately.
+ *
+ * @param pStatusCode status code pointer to check
+ * @param pApiRetVal pointer to value that v2xSe API will return
+ *
+ * @return 0 if OK, -1 in case of ERROR
+ *
+ */
+int32_t enforceActivatedState(TypeSW_t *pStatusCode, int32_t *pApiRetVal)
+{
+	int32_t localret = -1;
+
+	switch (v2xseState) {
+	case V2XSE_STATE_ACTIVATED:
+		localret = 0;
+		break;
+	case V2XSE_STATE_CONNECTED:
+		*pStatusCode = V2XSE_INACTIVE_CHANNEL;
+		break;
+	default:
+		*pApiRetVal = V2XSE_DEVICE_NOT_CONNECTED;
+		break;
+	}
+
+	return localret;
+}
+
+/**
+ *
+ * @brief Utility function to verify system is at security level 5
+ *
+ * This function verifies that the system is at security level 5, and in case
+ * of error it sets the status code appropriately.
+ *
+ * @param pStatusCode status code pointer to check
+ *
+ * @return 0 if OK, -1 in case of ERROR
+ *
+ */
+int32_t enforceSecurityLevel5(TypeSW_t *pStatusCode)
+{
+	int32_t localret = -1;
+
+	if (v2xseSecurityLevel != e_channelSecLevel_5)
+		*pStatusCode = V2XSE_SECURITY_STATUS_NOT_SATISFIED;
+	else
+		localret = 0;
+
+	return localret;
 }

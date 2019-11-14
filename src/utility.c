@@ -1,6 +1,6 @@
 
 /*
- * Copyright 2019 NXP
+ * Copyright 2019-2020 NXP
  */
 
 /*
@@ -59,30 +59,39 @@
  */
 hsm_key_type_t convertCurveId(TypeCurveId_t curveId)
 {
+	hsm_key_type_t keyType;
+
 	switch(curveId) {
 		case V2XSE_CURVE_NISTP256:
-			return HSM_KEY_TYPE_ECDSA_NIST_P256;
+			keyType = HSM_KEY_TYPE_ECDSA_NIST_P256;
+			break;
 		case V2XSE_CURVE_BP256R1:
-			return HSM_KEY_TYPE_ECDSA_BRAINPOOL_R1_256;
+			keyType = HSM_KEY_TYPE_ECDSA_BRAINPOOL_R1_256;
+			break;
 		case V2XSE_CURVE_BP256T1:
 #ifdef NO_BP_T1
-			return HSM_KEY_TYPE_ECDSA_BRAINPOOL_R1_256;
+			keyType = HSM_KEY_TYPE_ECDSA_BRAINPOOL_R1_256;
 #else
-			return HSM_KEY_TYPE_ECDSA_BRAINPOOL_T1_256;
+			keyType = HSM_KEY_TYPE_ECDSA_BRAINPOOL_T1_256;
 #endif
+			break;
 		case V2XSE_CURVE_NISTP384:
-			return HSM_KEY_TYPE_ECDSA_NIST_P384;
+			keyType = HSM_KEY_TYPE_ECDSA_NIST_P384;
+			break;
 		case V2XSE_CURVE_BP384R1:
-			return HSM_KEY_TYPE_ECDSA_BRAINPOOL_R1_384;
+			keyType = HSM_KEY_TYPE_ECDSA_BRAINPOOL_R1_384;
+			break;
 		case V2XSE_CURVE_BP384T1:
 #ifdef NO_BP_T1
-			return HSM_KEY_TYPE_ECDSA_BRAINPOOL_R1_384;
+			keyType = HSM_KEY_TYPE_ECDSA_BRAINPOOL_R1_384;
 #else
-			return HSM_KEY_TYPE_ECDSA_BRAINPOOL_T1_384;
+			keyType = HSM_KEY_TYPE_ECDSA_BRAINPOOL_T1_384;
 #endif
+			break;
 		default:
-			return 0;
+			keyType = 0;
 	}
+	return keyType;
 }
 
 /**
@@ -100,13 +109,15 @@ hsm_key_type_t convertCurveId(TypeCurveId_t curveId)
  */
 int is256bitCurve(hsm_key_type_t keyType)
 {
+	int retval = 0;
+
 	switch (keyType) {
 		case HSM_KEY_TYPE_ECDSA_NIST_P256:
 		case HSM_KEY_TYPE_ECDSA_BRAINPOOL_R1_256:
 		case HSM_KEY_TYPE_ECDSA_BRAINPOOL_T1_256:
-			return 1;
+			retval = 1;
 	}
-	return 0;
+	return retval;
 }
 
 /**
@@ -131,26 +142,27 @@ int32_t v2xSe_getAppletVersion
     TypeVersion_t *pVersion
 )
 {
-	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
-	ENFORCE_STATE_ACTIVATED();
-	ENFORCE_POINTER_NOT_NULL(pVersion);
+	int32_t retval = V2XSE_FAILURE;
 
-	if ((appletType != e_V2X) && (appletType != e_GS)) {
-		*pHsmStatusCode = V2XSE_WRONG_DATA;
-		return V2XSE_FAILURE;
-	}
-	if (appletType == e_GS) {
-		if ((v2xseAppletId != e_EU_AND_GS) &&
-					(v2xseAppletId != e_US_AND_GS)) {
+	if (!setupDefaultStatusCode(pHsmStatusCode) &&
+			!enforceActivatedState(pHsmStatusCode, &retval) &&
+			(pVersion != NULL)) {
+
+		if ((appletType != e_V2X) && (appletType != e_GS)) {
+			*pHsmStatusCode = V2XSE_WRONG_DATA;
+		} else if ((appletType == e_GS) &&
+				((v2xseAppletId == e_EU) ||
+				(v2xseAppletId == e_US))) {
 			*pHsmStatusCode = V2XSE_INS_NOT_SUPPORTED;
-			return V2XSE_FAILURE;
+		} else {
+			pVersion->data[0] = VERSION_MAJOR;
+			pVersion->data[1] = VERSION_MINOR;
+			pVersion->data[2] = VERSION_PATCH;
+			*pHsmStatusCode = V2XSE_NO_ERROR;
+			retval = V2XSE_SUCCESS;
 		}
 	}
-	pVersion->data[0] = VERSION_MAJOR;
-	pVersion->data[1] = VERSION_MINOR;
-	pVersion->data[2] = VERSION_PATCH;
-	*pHsmStatusCode = V2XSE_NO_ERROR;
-	return V2XSE_SUCCESS;
+	return retval;
 }
 
 /**
@@ -171,45 +183,50 @@ int32_t v2xSe_getSeInfo
     TypeInformation_t *pInfo
 )
 {
-	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
-	ENFORCE_STATE_ACTIVATED();
-	ENFORCE_POINTER_NOT_NULL(pInfo);
+	int32_t retval = V2XSE_FAILURE;
 
-	/* Maximum Runtime keys supported by applet */
-	pInfo->maxRtKeysAllowed = NUM_STORAGE_SLOTS;
+	if (!setupDefaultStatusCode(pHsmStatusCode) &&
+			!enforceActivatedState(pHsmStatusCode, &retval) &&
+			(pInfo != NULL)) {
 
-	/* Maximum Base keys supported by applet */
-	pInfo->maxBaKeysAllowed = NUM_STORAGE_SLOTS;
+		/* Maximum Runtime keys supported by applet */
+		pInfo->maxRtKeysAllowed = NUM_STORAGE_SLOTS;
 
-	/* Maximum number of prepared values supported */
-	pInfo->numPreparedVal = 0;
+		/* Maximum Base keys supported by applet */
+		pInfo->maxBaKeysAllowed = NUM_STORAGE_SLOTS;
 
-	/* FIPS approved mode indicator */
-	pInfo->fipsModeIndicator = 0;
+		/* Maximum number of prepared values supported */
+		pInfo->numPreparedVal = 0;
 
-	/* Proof of possession support indicator */
-	pInfo->proofOfPossession = 0;
+		/* FIPS approved mode indicator */
+		pInfo->fipsModeIndicator = 0;
 
-	/* Rollback protection status indicator */
-	pInfo->rollBackProtection = 1;
+		/* Proof of possession support indicator */
+		pInfo->proofOfPossession = 0;
 
-	/* Key derivation support indicator */
-	if ((v2xseAppletId == e_US_AND_GS) || (v2xseAppletId == e_US))
-		pInfo->rtKeyDerivation = 1;
-	else
-		pInfo->rtKeyDerivation = 0;
+		/* Rollback protection status indicator */
+		pInfo->rollBackProtection = 1;
 
-	/* ECIES support indicator */
-	pInfo->eciesSupport = 1;
+		/* Key derivation support indicator */
+		if ((v2xseAppletId == e_US_AND_GS) || (v2xseAppletId == e_US))
+			pInfo->rtKeyDerivation = 1;
+		else
+			pInfo->rtKeyDerivation = 0;
 
-	/* Maximum number of data slots supported by Generic storage applet */
-	if ((v2xseAppletId == e_EU_AND_GS) || (v2xseAppletId == e_US_AND_GS))
-		pInfo->maxDataSlots = NUM_STORAGE_SLOTS;
-	else
-		pInfo->maxDataSlots = 0;
+		/* ECIES support indicator */
+		pInfo->eciesSupport = 1;
 
-	*pHsmStatusCode = V2XSE_NO_ERROR;
-	return V2XSE_SUCCESS;
+		/* Maximum number of data slots supported by GS applet */
+		if ((v2xseAppletId == e_EU_AND_GS) ||
+						(v2xseAppletId == e_US_AND_GS))
+			pInfo->maxDataSlots = NUM_STORAGE_SLOTS;
+		else
+			pInfo->maxDataSlots = 0;
+
+		*pHsmStatusCode = V2XSE_NO_ERROR;
+		retval = V2XSE_SUCCESS;
+	}
+	return retval;
 }
 
 /**
@@ -229,14 +246,13 @@ int32_t v2xSe_getCryptoLibVersion
     TypeVersion_t *pVersion
 )
 {
-	int retval = V2XSE_SUCCESS;
+	int32_t retval = V2XSE_FAILURE;
 
 	if (pVersion) {
 		pVersion->data[0] = VERSION_MAJOR;
 		pVersion->data[1] = VERSION_MINOR;
 		pVersion->data[2] = VERSION_PATCH;
-	} else {
-		retval = V2XSE_FAILURE;
+		retval = V2XSE_SUCCESS;
 	}
 
 	return retval;
@@ -258,15 +274,18 @@ int32_t v2xSe_getCryptoLibVersion
 int32_t v2xSe_getPlatformInfo(TypeSW_t *pHsmStatusCode,
 			TypePlatformIdentity_t *pPlatformIdentifier)
 {
-	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
-	ENFORCE_STATE_NOT_INIT();
-	ENFORCE_POINTER_NOT_NULL(pPlatformIdentifier);
+	int32_t retval = V2XSE_FAILURE;
 
-	/* TODO: Figure out real values */
-	memcpy(pPlatformIdentifier->data, PLATFORMINFO_STRING,
-					V2XSE_PLATFORM_IDENTITY);
-	*pHsmStatusCode = V2XSE_NO_ERROR;
-	return V2XSE_SUCCESS;
+	if (!setupDefaultStatusCode(pHsmStatusCode) &&
+				!enforceNotInitState(&retval) &&
+				(pPlatformIdentifier != NULL)) {
+		/* TODO: Figure out real values */
+		memcpy(pPlatformIdentifier->data, PLATFORMINFO_STRING,
+						V2XSE_PLATFORM_IDENTITY);
+		*pHsmStatusCode = V2XSE_NO_ERROR;
+		retval = V2XSE_SUCCESS;
+	}
+	return retval;
 }
 
 /**
@@ -285,17 +304,20 @@ int32_t v2xSe_getPlatformInfo(TypeSW_t *pHsmStatusCode,
 int32_t v2xSe_getPlatformConfig(TypeSW_t *pHsmStatusCode,
 			TypePlatformConfiguration_t *pPlatformConfig)
 {
-	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
-	ENFORCE_STATE_NOT_INIT();
-	ENFORCE_POINTER_NOT_NULL(pPlatformConfig);
+	int32_t retval = V2XSE_FAILURE;
 
-	/* TODO: Figure out real values */
-	pPlatformConfig->data[0] = 0;
-	pPlatformConfig->data[1] = 'H';
-	pPlatformConfig->data[2] = 'S';
-	pPlatformConfig->data[3] = 'M';
-	*pHsmStatusCode = V2XSE_NO_ERROR;
-	return V2XSE_SUCCESS;
+	if (!setupDefaultStatusCode(pHsmStatusCode) &&
+				!enforceNotInitState(&retval) &&
+				(pPlatformConfig != NULL)) {
+		/* TODO: Figure out real values */
+		pPlatformConfig->data[0] = 0;
+		pPlatformConfig->data[1] = 'H';
+		pPlatformConfig->data[2] = 'S';
+		pPlatformConfig->data[3] = 'M';
+		*pHsmStatusCode = V2XSE_NO_ERROR;
+		retval = V2XSE_SUCCESS;
+	}
+	return retval;
 }
 
 /**
@@ -314,14 +336,17 @@ int32_t v2xSe_getPlatformConfig(TypeSW_t *pHsmStatusCode,
 int32_t v2xSe_getChipInfo(TypeSW_t *pHsmStatusCode,
 					TypeChipInformation_t *pChipInfo)
 {
-	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
-	ENFORCE_STATE_NOT_INIT();
-	ENFORCE_POINTER_NOT_NULL(pChipInfo);
+	int32_t retval = V2XSE_FAILURE;
 
-	/* TODO: Figure out real values */
-	memcpy(pChipInfo->data, serialNumber, V2XSE_SERIAL_NUMBER);
-	*pHsmStatusCode = V2XSE_NO_ERROR;
-	return V2XSE_SUCCESS;
+	if (!setupDefaultStatusCode(pHsmStatusCode) &&
+				!enforceNotInitState(&retval) &&
+				(pChipInfo != NULL)) {
+		/* TODO: Figure out real values */
+		memcpy(pChipInfo->data, serialNumber, V2XSE_SERIAL_NUMBER);
+		*pHsmStatusCode = V2XSE_NO_ERROR;
+		retval = V2XSE_SUCCESS;
+	}
+	return retval;
 }
 
 /**
@@ -340,14 +365,17 @@ int32_t v2xSe_getChipInfo(TypeSW_t *pHsmStatusCode,
 int32_t v2xSe_getAttackLog(TypeSW_t *pHsmStatusCode,
 					TypeAttackLog_t *pAttackLog)
 {
-	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
-	ENFORCE_STATE_NOT_INIT();
-	ENFORCE_POINTER_NOT_NULL(pAttackLog);
+	int32_t retval = V2XSE_FAILURE;
 
-	pAttackLog->currAttackCntrStatus = V2XSE_ATTACK_CNT_ZERO;
-	pAttackLog->len = 0;
-	*pHsmStatusCode = V2XSE_NO_ERROR;
-	return V2XSE_SUCCESS;
+	if (!setupDefaultStatusCode(pHsmStatusCode) &&
+				!enforceNotInitState(&retval) &&
+				(pAttackLog != NULL)) {
+		pAttackLog->currAttackCntrStatus = V2XSE_ATTACK_CNT_ZERO;
+		pAttackLog->len = 0;
+		*pHsmStatusCode = V2XSE_NO_ERROR;
+		retval = V2XSE_SUCCESS;
+	}
+	return retval;
 }
 
 /**
@@ -364,21 +392,26 @@ int32_t v2xSe_getAttackLog(TypeSW_t *pHsmStatusCode,
  */
 int32_t v2xSe_getKeyLenFromCurveID(TypeCurveId_t curveID)
 {
+	int32_t lengthVal;
+
 	switch(curveID)
 	{
 		case V2XSE_CURVE_NISTP256:
 		case V2XSE_CURVE_BP256R1:
 		case V2XSE_CURVE_BP256T1:
-			return V2XSE_256_EC_PUB_KEY;
+			lengthVal = V2XSE_256_EC_PUB_KEY;
+			break;
 
 		case V2XSE_CURVE_NISTP384:
 		case V2XSE_CURVE_BP384R1:
 		case V2XSE_CURVE_BP384T1:
-			return V2XSE_384_EC_PUB_KEY;
+			lengthVal = V2XSE_384_EC_PUB_KEY;
+			break;
 
 		default:
-			return V2XSE_FAILURE;
+			lengthVal = V2XSE_FAILURE;
 	}
+	return lengthVal;
 }
 
 /**
@@ -395,15 +428,20 @@ int32_t v2xSe_getKeyLenFromCurveID(TypeCurveId_t curveID)
  */
 int32_t v2xSe_getSigLenFromHashLen(TypeHashLength_t hashLength)
 {
+	int32_t sigLen;
+
 	switch(hashLength)
 	{
 		case V2XSE_256_EC_HASH_SIZE:
-			return V2XSE_256_EC_COMP_SIGN;
+			sigLen = V2XSE_256_EC_COMP_SIGN;
+			break;
 		case V2XSE_384_EC_HASH_SIZE:
-			return V2XSE_384_EC_COMP_SIGN;
+			sigLen = V2XSE_384_EC_COMP_SIGN;
+			break;
 		default:
-			return V2XSE_FAILURE;
+			sigLen = V2XSE_FAILURE;
 	}
+	return sigLen;
 }
 
 /**
@@ -420,10 +458,14 @@ int32_t v2xSe_getSigLenFromHashLen(TypeHashLength_t hashLength)
  */
 int32_t v2xSe_invokeGarbageCollector(TypeSW_t *pHsmStatusCode)
 {
-	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
-	ENFORCE_STATE_ACTIVATED();
-	ENFORCE_NORMAL_OPERATING_PHASE();
+	int32_t retval = V2XSE_FAILURE;
 
-	*pHsmStatusCode = V2XSE_NO_ERROR;
-	return V2XSE_SUCCESS;
+	if (!setupDefaultStatusCode(pHsmStatusCode) &&
+			!enforceActivatedState(pHsmStatusCode, &retval) &&
+			(v2xsePhase == V2XSE_NORMAL_OPERATING_PHASE)) {
+
+		*pHsmStatusCode = V2XSE_NO_ERROR;
+		retval = V2XSE_SUCCESS;
+	}
+	return retval;
 }

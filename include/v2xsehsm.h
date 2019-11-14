@@ -1,6 +1,6 @@
 
 /*
- * Copyright 2019 NXP
+ * Copyright 2019-2020 NXP
  */
 
 /*
@@ -122,63 +122,11 @@ extern const uint8_t serialNumber[V2XSE_SERIAL_NUMBER];
 
 hsm_key_type_t convertCurveId(TypeCurveId_t curveId);
 int is256bitCurve(hsm_key_type_t keyType);
-
-/** Abort function (return) if pHsmStatusCode is NULL */
-#define VERIFY_STATUS_PTR_AND_SET_DEFAULT() do {		\
-	if (!pHsmStatusCode)					\
-		return V2XSE_FAILURE;				\
-	*pHsmStatusCode = V2XSE_UNDEFINED_ERROR;		\
-} while (0)
-
-/** Abort function (return) if not in init state */
-#define ENFORCE_STATE_INIT() do {				\
-	if (v2xseState != V2XSE_STATE_INIT) {			\
-		if (v2xseState == V2XSE_STATE_CONNECTED)	\
-			return V2XSE_FAILURE_CONNECTED;		\
-		if (v2xseState == V2XSE_STATE_ACTIVATED)	\
-			return V2XSE_FAILURE_ACTIVATED;		\
-		return V2XSE_FAILURE;				\
-	}							\
-} while (0)
-
-/** Abort function (return) if currently in init state */
-#define ENFORCE_STATE_NOT_INIT() do {				\
-	if (v2xseState == V2XSE_STATE_INIT)			\
-		return V2XSE_DEVICE_NOT_CONNECTED;		\
-} while (0)
-
-/** Abort function (return) if not in activated state */
-#define ENFORCE_STATE_ACTIVATED() do {					\
-	if (v2xseState != V2XSE_STATE_ACTIVATED) {			\
-		if (v2xseState == V2XSE_STATE_CONNECTED) {		\
-			if (pHsmStatusCode)				\
-				*pHsmStatusCode = V2XSE_INACTIVE_CHANNEL;\
-			return V2XSE_FAILURE;				\
-		}							\
-		return V2XSE_DEVICE_NOT_CONNECTED;			\
-	}								\
-} while (0)
-
-/** Abort function (return) if ptr is NULL */
-#define ENFORCE_POINTER_NOT_NULL(ptr) do {			\
-	if (!ptr)						\
-		return V2XSE_FAILURE;				\
-} while (0)
-
-/** Abort function (return) if not in normal operating phase */
-#define ENFORCE_NORMAL_OPERATING_PHASE() do {			\
-	if (v2xsePhase != V2XSE_NORMAL_OPERATING_PHASE)		\
-		return V2XSE_FAILURE;				\
-} while (0)
-
-/** Abort function (return) if security level is not 5 */
-#define ENFORCE_SECURITY_LEVEL_5() do {				\
-	if (v2xseSecurityLevel != e_channelSecLevel_5) {	\
-		if (pHsmStatusCode)				\
-			*pHsmStatusCode = V2XSE_SECURITY_STATUS_NOT_SATISFIED;\
-		return V2XSE_FAILURE;				\
-	}							\
-} while (0)
+int32_t setupDefaultStatusCode(TypeSW_t *pStatusCode);
+int32_t enforceInitState(int32_t *pApiRetVal);
+int32_t enforceNotInitState(int32_t *pApiRetVal);
+int32_t enforceActivatedState(TypeSW_t *pStatusCode, int32_t *pApiRetVal);
+int32_t enforceSecurityLevel5(TypeSW_t *pStatusCode);
 
 /**
  * This structure describes the format that the hsm uses to encode

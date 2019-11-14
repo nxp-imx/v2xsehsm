@@ -1,6 +1,6 @@
 
 /*
- * Copyright 2019 NXP
+ * Copyright 2019-2020 NXP
  */
 
 /*
@@ -333,39 +333,41 @@ static int nvm_empty_dir(char *name)
 {
 	DIR *arrayDir;
 	struct dirent *arrayEntry;
-	int retval = 0;
+	int retval = -1;
+	int fileErr = 0;
 	char dirName[MAX_FILENAME_SIZE];
 	char fileName[MAX_FILENAME_SIZE];
 
-	if (snprintf(dirName, MAX_FILENAME_SIZE, "%s%s", appletVarStoragePath,
-								name) < 0)
-		goto err_exit;
+	do {
+		if (snprintf(dirName, MAX_FILENAME_SIZE, "%s%s",
+					appletVarStoragePath, name) < 0)
+			break;
 
-	arrayDir = opendir(dirName);
-	if (!arrayDir)
-		goto err_exit;
+		arrayDir = opendir(dirName);
+		if (!arrayDir)
+			break;
 
-	/* Clear errno to tell difference between end of list and error */
-	errno = 0;
-	while ((arrayEntry = readdir(arrayDir)) != NULL) {
-		if (arrayEntry->d_type == DT_REG) {
-			if (snprintf(fileName, MAX_FILENAME_SIZE, "%s/%s",
-					dirName, arrayEntry->d_name) < 0) {
-				retval = -1;
-			} else {
-				if (remove(fileName))
-					retval = -1;
+		/* Clear errno to detect diff between end of list and error */
+		errno = 0;
+		while ((arrayEntry = readdir(arrayDir)) != NULL) {
+			if (arrayEntry->d_type == DT_REG) {
+				if (snprintf(fileName, MAX_FILENAME_SIZE,
+					"%s/%s", dirName, arrayEntry->d_name)
+								< 0) {
+					fileErr = 1;
+				} else {
+					if (remove(fileName))
+						fileErr = 1;
+				}
 			}
 		}
-	}
-	if (errno)
-		retval = -1;
-	if (!closedir(arrayDir))
-		goto exit;
-
-err_exit:
-	retval = -1;
-exit:
+		if (errno)
+			fileErr = 1;
+		if (closedir(arrayDir))
+			break;
+		if (!fileErr)
+			retval = 0;
+	} while (0);
 	return retval;
 }
 
@@ -483,34 +485,33 @@ int nvm_delete_generic_data(int index)
  */
 int nvm_retrieve_ma_key_handle(uint32_t *handle, TypeCurveId_t *id)
 {
+	int retval = -1;
+
 	if (maKeyHandle) {
 		/* Key already in memory, return info */
 		*handle = maKeyHandle;
 		*id = maCurveId;
-		return 0;
+		retval = 0;
+	} else {
+		/*
+		 * Key not in memory, check if in NVM and load if it is.
+		 * Verify that curveId is valid, may have been changed in fs.
+		 * This is done by calling convertCurveId and verifying that it
+		 * returns a non-zero (ie valid) keyid - the returned keyid
+		 * value is not used.
+		 */
+		if (!nvm_load_var(MA_KEYHANDLE_NAME, (uint8_t *)handle,
+							sizeof(*handle)) &&
+				!nvm_load_var(MA_CURVEID_NAME, id,
+							sizeof(*id)) &&
+				convertCurveId(*id)) {
+			/* Save values for fast reply next time */
+			maKeyHandle = *handle;
+			maCurveId = *id;
+			retval = 0;
+		}
 	}
-
-	/* Key not in memory, check if in NVM and load if it is */
-	if (nvm_load_var(MA_KEYHANDLE_NAME, (uint8_t *)handle, sizeof(*handle)))
-		return -1;
-
-	if (nvm_load_var(MA_CURVEID_NAME, id, sizeof(*id)))
-		return -1;
-
-	/*
-	 * Verify that curveId is valid, may have been changed in fs.
-	 * This is done by calling convertCurveId and verifying that it
-	 * returns a non-zero (ie valid) keyid - the returned keyid value
-	 * is not used.
-	 */
-	if (!convertCurveId(*id))
-		return -1;
-
-	/* Save values for fast reply next time */
-	maKeyHandle = *handle;
-	maCurveId = *id;
-
-	return 0;
+	return retval;
 }
 
 /**
@@ -533,35 +534,33 @@ int nvm_retrieve_ma_key_handle(uint32_t *handle, TypeCurveId_t *id)
 int nvm_retrieve_rt_key_handle(TypeRtKeyId_t index, uint32_t *handle,
 							TypeCurveId_t *id)
 {
+	int retval = -1;
+
 	if (rtKeyHandle[index]) {
 		/* Key already in memory, return info */
 		*handle = rtKeyHandle[index];
 		*id = rtCurveId[index];
-		return 0;
+		retval = 0;
+	} else {
+		/*
+		 * Key not in memory, check if in NVM and load if it is.
+		 * Verify that curveId is valid, may have been changed in fs.
+		 * This is done by calling convertCurveId and verifying that it
+		 * returns a non-zero (ie valid) keyid - the returned keyid
+		 * value is not used.
+		 */
+		if (!nvm_load_array_data(RT_KEYHANDLE_NAME, index,
+					(uint8_t *)handle, sizeof(*handle)) &&
+				!nvm_load_array_data(RT_CURVEID_NAME, index,
+					id, sizeof(*id)) &&
+				convertCurveId(*id)) {
+			/* Save values for fast reply next time */
+			rtKeyHandle[index] = *handle;
+			rtCurveId[index] = *id;
+			retval = 0;
+		}
 	}
-
-	/* Key not in memory, check if in NVM and load if it is */
-	if (nvm_load_array_data(RT_KEYHANDLE_NAME, index, (uint8_t *)handle,
-							sizeof(*handle)))
-		return -1;
-
-	if (nvm_load_array_data(RT_CURVEID_NAME, index, id, sizeof(*id)))
-		return -1;
-
-	/*
-	 * Verify that curveId is valid, may have been changed in fs.
-	 * This is done by calling convertCurveId and verifying that it
-	 * returns a non-zero (ie valid) keyid - the returned keyid value
-	 * is not used.
-	 */
-	if (!convertCurveId(*id))
-		return -1;
-
-	/* Save values for fast reply next time */
-	rtKeyHandle[index] = *handle;
-	rtCurveId[index] = *id;
-
-	return 0;
+	return retval;
 }
 
 /**
@@ -584,35 +583,33 @@ int nvm_retrieve_rt_key_handle(TypeRtKeyId_t index, uint32_t *handle,
 int nvm_retrieve_ba_key_handle(TypeBaseKeyId_t index, uint32_t *handle,
 							TypeCurveId_t *id)
 {
+	int retval = -1;
+
 	if (baKeyHandle[index]) {
 		/* Key already in memory, return info */
 		*handle = baKeyHandle[index];
 		*id = baCurveId[index];
-		return 0;
+		retval = 0;
+	} else {
+		/*
+		 * Key not in memory, check if in NVM and load if it is.
+		 * Verify that curveId is valid, may have been changed in fs.
+		 * This is done by calling convertCurveId and verifying that it
+		 * returns a non-zero (ie valid) keyid - the returned keyid
+		 * value is not used.
+		 */
+		if (!nvm_load_array_data(BA_KEYHANDLE_NAME, index,
+					(uint8_t *)handle, sizeof(*handle)) &&
+				!nvm_load_array_data(BA_CURVEID_NAME, index,
+					id, sizeof(*id)) &&
+				convertCurveId(*id)) {
+			/* Save values for fast reply next time */
+			baKeyHandle[index] = *handle;
+			baCurveId[index] = *id;
+			retval = 0;
+		}
 	}
-
-	/* Key not in memory, check if in NVM and load if it is */
-	if (nvm_load_array_data(BA_KEYHANDLE_NAME, index, (uint8_t *)handle,
-							sizeof(*handle)))
-		return -1;
-
-	if (nvm_load_array_data(BA_CURVEID_NAME, index, id, sizeof(*id)))
-		return -1;
-
-	/*
-	 * Verify that curveId is valid, may have been changed in fs.
-	 * This is done by calling convertCurveId and verifying that it
-	 * returns a non-zero (ie valid) keyid - the returned keyid value
-	 * is not used.
-	 */
-	if (!convertCurveId(*id))
-		return -1;
-
-	/* Save values for fast reply next time */
-	baKeyHandle[index] = *handle;
-	baCurveId[index] = *id;
-
-	return 0;
+	return retval;
 }
 
 /**
@@ -695,66 +692,56 @@ static int nvm_clear(void)
 int nvm_init(void)
 {
 	int phaseValid;
-	int retval = 0;
+	int retval = -1;
 
-	/* Make sure top level storage directory exists */
-	if (mkdir(COMMON_STORAGE_PATH, 0700)) {
-		if (errno != EEXIST)
-			goto err_exit;
-	}
+		/* Make sure top level storage directory exists */
+	if ((!mkdir(COMMON_STORAGE_PATH, 0700) || (errno == EEXIST)) &&
+			/* Make sure appl specific storage directory exists */
+			(!mkdir(appletVarStoragePath, 0700) ||
+						(errno == EEXIST)) &&
+			/* Make sure generic storage directory exists */
+			(!mkdir(GENERIC_STORAGE_PATH, 0700) ||
+						(errno == EEXIST)) &&
+			/* Make sure rt key handle & curve directories exist */
+			!var_mkdir(RT_KEYHANDLE_NAME) &&
+			!var_mkdir(RT_CURVEID_NAME) &&
+			/* Make sure ba key handle & curve directories exist */
+			!var_mkdir(BA_KEYHANDLE_NAME) &&
+			!var_mkdir(BA_CURVEID_NAME)) {
 
-	/* Make sure applet specific storage directory exists */
-	if (mkdir(appletVarStoragePath, 0700)) {
-		if (errno != EEXIST)
-			goto err_exit;
-	}
+		/*
+		 * Verify phase variable is valid, create if not and
+		 * clear all data
+		 */
+		phaseValid = 0;
+		if (!nvm_load_var(V2XSE_PHASE_NAME, &v2xsePhase,
+							sizeof(v2xsePhase))) {
+			if ((v2xsePhase == V2XSE_KEY_INJECTION_PHASE) ||
+					(v2xsePhase ==
+						V2XSE_NORMAL_OPERATING_PHASE)) {
+				phaseValid = 1;
+			}
+		}
+		if (!phaseValid) {
+			if (!nvm_clear()) {
+				v2xsePhase = V2XSE_KEY_INJECTION_PHASE;
+				if (!nvm_update_var(V2XSE_PHASE_NAME,
+						&v2xsePhase,
+							sizeof(v2xsePhase)))
+					phaseValid = 1;
+			}
+		}
 
-	/* Make sure generic storage directory exists */
-	if (mkdir(GENERIC_STORAGE_PATH, 0700)) {
-		if (errno != EEXIST)
-			goto err_exit;
-	}
-
-	/* Make sure rt key handle & curve directories exist */
-	if (var_mkdir(RT_KEYHANDLE_NAME))
-		goto err_exit;
-	if (var_mkdir(RT_CURVEID_NAME))
-		goto err_exit;
-
-	/* Make sure ba key handle & curve directories exist */
-	if (var_mkdir(BA_KEYHANDLE_NAME))
-		goto err_exit;
-	if (var_mkdir(BA_CURVEID_NAME))
-		goto err_exit;
-
-	/* Verify phase variable is valid, create if not and clear all data */
-	phaseValid = 0;
-	if (!nvm_load_var(V2XSE_PHASE_NAME, &v2xsePhase, sizeof(v2xsePhase))) {
-		if ((v2xsePhase == V2XSE_KEY_INJECTION_PHASE) ||
-				(v2xsePhase == V2XSE_NORMAL_OPERATING_PHASE)) {
-			phaseValid = 1;
+		/*
+		 * Key handles: initialize all to zero, will try to load from
+		 * filesystem on first use
+		 */
+		if (phaseValid) {
+			maKeyHandle = 0;
+			memset(rtKeyHandle, 0, sizeof(rtKeyHandle));
+			memset(baKeyHandle, 0, sizeof(baKeyHandle));
+			retval = 0;
 		}
 	}
-	if (!phaseValid) {
-		if (nvm_clear())
-			goto err_exit;
-		v2xsePhase = V2XSE_KEY_INJECTION_PHASE;
-		if (nvm_update_var(V2XSE_PHASE_NAME, &v2xsePhase,
-							sizeof(v2xsePhase)))
-			goto err_exit;
-	}
-
-	/*
-	 * Key handles: initialize all to zero, will try to load from
-	 * filesystem on first use
-	 */
-	maKeyHandle = 0;
-	memset(rtKeyHandle, 0, sizeof(rtKeyHandle));
-	memset(baKeyHandle, 0, sizeof(baKeyHandle));
-	goto exit;
-
-err_exit:
-	retval = -1;
-exit:
 	return retval;
 }
