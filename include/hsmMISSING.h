@@ -54,7 +54,4 @@
  */
 #define NO_KEY_DELETION
 
-/** Maximum size of random number - to be fixed in hsm */
-#define HSM_MAX_RNG_SIZE	128
-
 #endif

@@ -378,10 +378,6 @@ int32_t v2xSe_getRandomNumber
 )
 {
 	op_get_random_args_t args;
-#ifdef HSM_MAX_RNG_SIZE
-	uint8_t *hsm_rng_ptr;
-	uint32_t hsm_rng_len;
-#endif
 
 	VERIFY_STATUS_PTR_AND_SET_DEFAULT();
 	ENFORCE_STATE_ACTIVATED();
@@ -392,28 +388,10 @@ int32_t v2xSe_getRandomNumber
 		return V2XSE_FAILURE;
 	}
 
-#ifdef HSM_MAX_RNG_SIZE
-	hsm_rng_ptr = pRandomNumber->data;
-	while (length) {
-		/* Break large number down into separate hsm requests */
-		if (length > HSM_MAX_RNG_SIZE)
-			hsm_rng_len = HSM_MAX_RNG_SIZE;
-		else
-			hsm_rng_len = length;
-		args.output = hsm_rng_ptr;
-		args.random_size = hsm_rng_len;
-		if (hsm_get_random(hsmRngHandle, &args))
-			return V2XSE_FAILURE;
-		/* Prepare for next request */
-		length -= hsm_rng_len;
-		hsm_rng_ptr += hsm_rng_len;
-	}
-#else
 	args.output = pRandomNumber->data;
 	args.random_size = length;
 	if (hsm_get_random(hsmRngHandle, &args))
 		return V2XSE_FAILURE;
-#endif
 
 	*pHsmStatusCode = V2XSE_NO_ERROR;
 	return V2XSE_SUCCESS;
