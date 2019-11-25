@@ -25,13 +25,18 @@ add_library (v2xCrypto SHARED
 	src/datastorage.c
 	src/utility.c
 	src/keyimport.c
+	src/trace.c
 	)
 
 target_link_libraries(v2xCrypto
 	${SECO_LIBS_DIR}/hsm_lib.a
 	)
 
-target_include_directories(v2xCrypto PRIVATE ${SECO_LIBS_DIR}/include/)
+target_include_directories(v2xCrypto PRIVATE
+	${SECO_LIBS_DIR}/include/
+	${LTTNG_DIR}/include/
+	${URCU_DIR}/include/
+	)
 
 target_include_directories (v2xCrypto PUBLIC
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -44,7 +49,7 @@ set_target_properties (v2xCrypto PROPERTIES
 	SOVERSION ${v2xsehsm_MAJOR}
 	)
 
-target_compile_options(v2xCrypto PRIVATE -Werror -Wall)
+target_compile_options(v2xCrypto PRIVATE -Werror -Wall ${TRACE_SETTING})
 
 configure_file(
 	${PROJECT_SOURCE_DIR}/Doxyfile.in

@@ -106,16 +106,20 @@ static hsm_err_t genHsmSignature(uint32_t keyHandle,
 			TypeSignature_t *pSignature)
 {
 	op_generate_sign_args_t args;
+	hsm_err_t hsmret;
 
 	memset(&args, 0, sizeof(args));
 	args.key_identifier = keyHandle;
 	args.message = pHashValue->data;
 	args.signature = (uint8_t *)pSignature;
 	args.message_size = hashLength;
-	args.signature_size = v2xSe_getSigLenFromHashLen(hashLength);
+	args.signature_size = sigLenFromHashLen(hashLength);
 	args.scheme_id = sig_scheme;
 	args.flags = HSM_OP_GENERATE_SIGN_FLAGS_INPUT_DIGEST;
-	return hsm_generate_signature(hsmSigGenHandle, &args);
+	TRACE_HSM_CALL(PROFILE_ID_HSM_GENERATE_SIGNATURE);
+	hsmret = hsm_generate_signature(hsmSigGenHandle, &args);
+	TRACE_HSM_RETURN(PROFILE_ID_HSM_GENERATE_SIGNATURE);
+	return hsmret;
 }
 
 
@@ -150,6 +154,8 @@ int32_t v2xSe_createMaSign
 	uint32_t is256bits;
 	int32_t retval = V2XSE_FAILURE;
 
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_CREATEMASIGN);
+
 	if (!setupDefaultStatusCode(pHsmStatusCode) &&
 			!enforceActivatedState(pHsmStatusCode, &retval) &&
 			(v2xsePhase == V2XSE_NORMAL_OPERATING_PHASE) &&
@@ -182,6 +188,7 @@ int32_t v2xSe_createMaSign
 			}
 		}
 	}
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_CREATEMASIGN);
 	return retval;
 }
 
@@ -224,6 +231,8 @@ int32_t v2xSe_activateRtKeyForSigning
 	hsm_signature_scheme_id_t sigScheme;
 	int32_t retval = V2XSE_FAILURE;
 
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_ACTIVATERTKEYFORSIGNING);
+
 	/* Clear previous data */
 	activatedKeyHandle = 0;
 	activatedSigScheme = 0;
@@ -249,6 +258,7 @@ int32_t v2xSe_activateRtKeyForSigning
 			}
 		}
 	}
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_ACTIVATERTKEYFORSIGNING);
 	return retval;
 }
 
@@ -293,6 +303,8 @@ int32_t v2xSe_createRtSignLowLatency
 {
 	int32_t retval = V2XSE_FAILURE;
 
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_CREATERTSIGNLOWLATENCY);
+
 	if (!setupDefaultStatusCode(pHsmStatusCode) &&
 			!enforceActivatedState(pHsmStatusCode, &retval) &&
 			(v2xsePhase == V2XSE_NORMAL_OPERATING_PHASE) &&
@@ -311,6 +323,7 @@ int32_t v2xSe_createRtSignLowLatency
 			retval = V2XSE_SUCCESS;
 		}
 	}
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_CREATERTSIGNLOWLATENCY);
 	return retval;
 }
 
@@ -343,6 +356,8 @@ int32_t v2xSe_createRtSign
 	hsm_signature_scheme_id_t sig_scheme;
 	int32_t retval = V2XSE_FAILURE;
 
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_CREATERTSIGN);
+
 	if (!setupDefaultStatusCode(pHsmStatusCode) &&
 			!enforceActivatedState(pHsmStatusCode, &retval) &&
 			(v2xsePhase == V2XSE_NORMAL_OPERATING_PHASE) &&
@@ -369,6 +384,7 @@ int32_t v2xSe_createRtSign
 			}
 		}
 	}
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_CREATERTSIGN);
 	return retval;
 }
 
@@ -403,6 +419,8 @@ int32_t v2xSe_createBaSign
 	TypeHashLength_t expectedHashLength;
 	uint32_t is256bits;
 	int32_t retval = V2XSE_FAILURE;
+
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_CREATEBASIGN);
 
 	if (!setupDefaultStatusCode(pHsmStatusCode) &&
 			!enforceActivatedState(pHsmStatusCode, &retval) &&
@@ -441,5 +459,6 @@ int32_t v2xSe_createBaSign
 			}
 		}
 	}
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_CREATEBASIGN);
 	return retval;
 }

@@ -73,14 +73,26 @@ static int nvm_raw_load(char *name, uint8_t *data, TypeLen_t size)
 	int fd;
 	int numread = -1;
 	struct stat fileInfo;
+	int32_t fstatret;
+
+	TRACE_SYSTEM_CALL(PROFILE_ID_SYSTEM_OPEN);
 	fd = open(name, O_RDONLY);
+	TRACE_SYSTEM_RETURN(PROFILE_ID_SYSTEM_OPEN);
 	if (fd != -1) {
 		/* Check length is as expected before use */
-		if (fstat(fd, &fileInfo) != -1) {
-			if (fileInfo.st_size <= size)
+		TRACE_SYSTEM_CALL(PROFILE_ID_SYSTEM_FSTAT);
+		fstatret = fstat(fd, &fileInfo);
+		TRACE_SYSTEM_RETURN(PROFILE_ID_SYSTEM_FSTAT);
+		if (fstatret != -1) {
+			if (fileInfo.st_size <= size) {
+				TRACE_SYSTEM_CALL(PROFILE_ID_SYSTEM_READ);
 				numread = read(fd, data, size);
+				TRACE_SYSTEM_RETURN(PROFILE_ID_SYSTEM_READ);
+			}
 		}
+		TRACE_SYSTEM_CALL(PROFILE_ID_SYSTEM_CLOSE);
 		close(fd);
+		TRACE_SYSTEM_RETURN(PROFILE_ID_SYSTEM_CLOSE);
 	}
 	return numread;
 }
@@ -103,10 +115,16 @@ static int nvm_raw_update(char *name, uint8_t *data, TypeLen_t size)
 {
 	int fd;
 	int retval = -1;
+	int writeret;
 
+	TRACE_SYSTEM_CALL(PROFILE_ID_SYSTEM_OPEN);
 	fd = open(name, O_CREAT|O_WRONLY|O_TRUNC, S_IRUSR|S_IWUSR);
+	TRACE_SYSTEM_RETURN(PROFILE_ID_SYSTEM_OPEN);
 	if (fd != -1) {
-		if (write(fd, data, size) == size)
+		TRACE_SYSTEM_CALL(PROFILE_ID_SYSTEM_WRITE);
+		writeret = write(fd, data, size);
+		TRACE_SYSTEM_RETURN(PROFILE_ID_SYSTEM_WRITE);
+		if (writeret == size)
 			retval = 0;
 		close(fd);
 	}
@@ -128,8 +146,12 @@ static int nvm_raw_update(char *name, uint8_t *data, TypeLen_t size)
 static int nvm_raw_delete(char *name)
 {
 	int retval = 0;
+	int removeret;
 
-	if (remove(name))
+	TRACE_SYSTEM_CALL(PROFILE_ID_SYSTEM_REMOVE);
+	removeret = remove(name);
+	TRACE_SYSTEM_RETURN(PROFILE_ID_SYSTEM_REMOVE);
+	if (removeret)
 		retval = -1;
 
 	return retval;
@@ -335,6 +357,7 @@ static int nvm_empty_dir(char *name)
 	struct dirent *arrayEntry;
 	int retval = -1;
 	int fileErr = 0;
+	int sysretval;
 	char dirName[MAX_FILENAME_SIZE];
 	char fileName[MAX_FILENAME_SIZE];
 
@@ -343,27 +366,42 @@ static int nvm_empty_dir(char *name)
 					appletVarStoragePath, name) < 0)
 			break;
 
+		TRACE_SYSTEM_CALL(PROFILE_ID_SYSTEM_OPENDIR);
 		arrayDir = opendir(dirName);
+		TRACE_SYSTEM_RETURN(PROFILE_ID_SYSTEM_OPENDIR);
 		if (!arrayDir)
 			break;
 
 		/* Clear errno to detect diff between end of list and error */
 		errno = 0;
-		while ((arrayEntry = readdir(arrayDir)) != NULL) {
+		do {
+			TRACE_SYSTEM_CALL(PROFILE_ID_SYSTEM_READDIR);
+			arrayEntry = readdir(arrayDir);
+			TRACE_SYSTEM_RETURN(PROFILE_ID_SYSTEM_READDIR);
+			if (arrayEntry == NULL)
+				break;
 			if (arrayEntry->d_type == DT_REG) {
 				if (snprintf(fileName, MAX_FILENAME_SIZE,
 					"%s/%s", dirName, arrayEntry->d_name)
 								< 0) {
 					fileErr = 1;
 				} else {
-					if (remove(fileName))
+					TRACE_SYSTEM_CALL(
+						PROFILE_ID_SYSTEM_REMOVE);
+					sysretval = remove(fileName);
+					TRACE_SYSTEM_RETURN(
+						PROFILE_ID_SYSTEM_REMOVE);
+					if (sysretval)
 						fileErr = 1;
 				}
 			}
-		}
+		} while (1);
 		if (errno)
 			fileErr = 1;
-		if (closedir(arrayDir))
+		TRACE_SYSTEM_CALL(PROFILE_ID_SYSTEM_CLOSEDIR);
+		sysretval = closedir(arrayDir);
+		TRACE_SYSTEM_RETURN(PROFILE_ID_SYSTEM_CLOSEDIR);
+		if (sysretval)
 			break;
 		if (!fileErr)
 			retval = 0;
@@ -636,7 +674,9 @@ static int var_mkdir(char *arrayname)
 							arrayname) < 0) {
 		retval = -1;
 	} else {
+		TRACE_SYSTEM_CALL(PROFILE_ID_SYSTEM_MKDIR);
 		retval = mkdir(filename, 0700);
+		TRACE_SYSTEM_RETURN(PROFILE_ID_SYSTEM_MKDIR);
 		/* Ignore error if already exists */
 		if ((retval == -1) && (errno == EEXIST))
 			retval = 0;
@@ -693,36 +733,60 @@ int nvm_init(void)
 {
 	int phaseValid;
 	int retval = -1;
+	int mkdirret;
 
+	do {
 		/* Make sure top level storage directory exists */
-	if ((!mkdir(COMMON_STORAGE_PATH, 0700) || (errno == EEXIST)) &&
-			/* Make sure appl specific storage directory exists */
-			(!mkdir(appletVarStoragePath, 0700) ||
-						(errno == EEXIST)) &&
-			/* Make sure generic storage directory exists */
-			(!mkdir(GENERIC_STORAGE_PATH, 0700) ||
-						(errno == EEXIST)) &&
-			/* Make sure rt key handle & curve directories exist */
-			!var_mkdir(RT_KEYHANDLE_NAME) &&
-			!var_mkdir(RT_CURVEID_NAME) &&
-			/* Make sure ba key handle & curve directories exist */
-			!var_mkdir(BA_KEYHANDLE_NAME) &&
-			!var_mkdir(BA_CURVEID_NAME)) {
+		TRACE_SYSTEM_CALL(PROFILE_ID_SYSTEM_MKDIR);
+		mkdirret = mkdir(COMMON_STORAGE_PATH, 0700);
+		TRACE_SYSTEM_RETURN(PROFILE_ID_SYSTEM_MKDIR);
+		if (mkdirret) {
+			if (errno != EEXIST)
+				break;
+		}
 
-		/*
-		 * Verify phase variable is valid, create if not and
-		 * clear all data
-		 */
+		/* Make sure applet specific storage directory exists */
+		TRACE_SYSTEM_CALL(PROFILE_ID_SYSTEM_MKDIR);
+		mkdirret = mkdir(appletVarStoragePath, 0700);
+		TRACE_SYSTEM_RETURN(PROFILE_ID_SYSTEM_MKDIR);
+		if (mkdirret) {
+			if (errno != EEXIST)
+				break;
+		}
+
+		/* Make sure generic storage directory exists */
+		TRACE_SYSTEM_CALL(PROFILE_ID_SYSTEM_MKDIR);
+		mkdirret = mkdir(GENERIC_STORAGE_PATH, 0700);
+		TRACE_SYSTEM_RETURN(PROFILE_ID_SYSTEM_MKDIR);
+		if (mkdirret) {
+			if (errno != EEXIST)
+				break;
+		}
+
+		/* Make sure rt key handle & curve directories exist */
+		if (var_mkdir(RT_KEYHANDLE_NAME))
+			break;
+		if (var_mkdir(RT_CURVEID_NAME))
+			break;
+
+		/* Make sure ba key handle & curve directories exist */
+		if (var_mkdir(BA_KEYHANDLE_NAME))
+			break;
+		if (var_mkdir(BA_CURVEID_NAME))
+			break;
+
+		/* Verify phase variable is valid */
 		phaseValid = 0;
 		if (!nvm_load_var(V2XSE_PHASE_NAME, &v2xsePhase,
 							sizeof(v2xsePhase))) {
 			if ((v2xsePhase == V2XSE_KEY_INJECTION_PHASE) ||
-					(v2xsePhase ==
-						V2XSE_NORMAL_OPERATING_PHASE)) {
+				(v2xsePhase == V2XSE_NORMAL_OPERATING_PHASE)) {
 				phaseValid = 1;
 			}
+
 		}
 		if (!phaseValid) {
+			/* If phase not valid, clear all data & create phase */
 			if (!nvm_clear()) {
 				v2xsePhase = V2XSE_KEY_INJECTION_PHASE;
 				if (!nvm_update_var(V2XSE_PHASE_NAME,
@@ -742,6 +806,6 @@ int nvm_init(void)
 			memset(baKeyHandle, 0, sizeof(baKeyHandle));
 			retval = 0;
 		}
-	}
+	} while (0);
 	return retval;
 }

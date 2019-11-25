@@ -144,6 +144,7 @@ static int32_t genHsmKey(uint32_t *pKeyHandle, hsm_key_type_t keyType,
 		keyUsage_t usage, hsm_key_group_t group)
 {
 	op_generate_key_args_t args;
+	hsm_err_t hsmret;
 
 	memset(&args, 0, sizeof(args));
 	args.key_identifier = pKeyHandle;
@@ -172,7 +173,10 @@ static int32_t genHsmKey(uint32_t *pKeyHandle, hsm_key_type_t keyType,
 	}
 	args.key_type = keyType;
 	args.out_key = pPubKey;
-	return hsm_generate_key(hsmKeyMgmtHandle, &args);
+	TRACE_HSM_CALL(PROFILE_ID_HSM_GENERATE_KEY);
+	hsmret = hsm_generate_key(hsmKeyMgmtHandle, &args);
+	TRACE_HSM_RETURN(PROFILE_ID_HSM_GENERATE_KEY);
+	return hsmret;
 }
 
 /**
@@ -194,13 +198,17 @@ int32_t getHsmPubKey(uint32_t keyHandle, hsm_key_type_t keyType,
 		uint16_t pubKeySize, uint8_t *pPubKey)
 {
 	hsm_op_pub_key_recovery_args_t args;
+	hsm_err_t hsmret;
 
 	memset(&args, 0, sizeof(args));
 	args.key_identifier = keyHandle;
 	args.out_key = pPubKey;
 	args.out_key_size = pubKeySize;
 	args.key_type = keyType;
-	return hsm_pub_key_recovery(hsmKeyStoreHandle, &args);
+	TRACE_HSM_CALL(PROFILE_ID_HSM_PUB_KEY_RECOVERY);
+	hsmret = hsm_pub_key_recovery(hsmKeyStoreHandle, &args);
+	TRACE_HSM_RETURN(PROFILE_ID_HSM_PUB_KEY_RECOVERY);
+	return hsmret;
 }
 
 /**
@@ -220,6 +228,7 @@ int32_t deleteHsmKey(uint32_t keyHandle, hsm_key_type_t keyType,
 							hsm_key_group_t group)
 {
 	op_manage_key_args_t del_args;
+	hsm_err_t hsmret;
 
 	memset(&del_args, 0, sizeof(del_args));
 	del_args.key_identifier = &keyHandle;
@@ -228,7 +237,10 @@ int32_t deleteHsmKey(uint32_t keyHandle, hsm_key_type_t keyType,
 	del_args.flags |= HSM_OP_KEY_GENERATION_FLAGS_STRICT_OPERATION;
 	del_args.key_type = keyType;
 	del_args.key_group = group;
-	return hsm_manage_key(hsmKeyMgmtHandle, &del_args);
+	TRACE_HSM_CALL(PROFILE_ID_HSM_MANAGE_KEY);
+	hsmret = hsm_manage_key(hsmKeyMgmtHandle, &del_args);
+	TRACE_HSM_RETURN(PROFILE_ID_HSM_MANAGE_KEY);
+	return hsmret;
 }
 
 /**
@@ -327,6 +339,8 @@ int32_t v2xSe_generateMaEccKeyPair
 	int32_t retval = V2XSE_FAILURE;
 	int32_t keyCreated = 0;
 
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_GENERATEMAECCKEYPAIR);
+
 	if (!setupDefaultStatusCode(pHsmStatusCode) &&
 			!enforceActivatedState(pHsmStatusCode, &retval) &&
 			(v2xsePhase == V2XSE_NORMAL_OPERATING_PHASE) &&
@@ -345,7 +359,7 @@ int32_t v2xSe_generateMaEccKeyPair
 				break;
 			}
 			if (genHsmKey(&keyHandle, keyType,
-					v2xSe_getKeyLenFromCurveID(curveId),
+					keyLenFromCurveID(curveId),
 					(uint8_t *)pPublicKeyPlain, CREATE_KEY,
 						MA_KEY, MA_KEY_GROUP)) {
 				*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
@@ -378,6 +392,7 @@ int32_t v2xSe_generateMaEccKeyPair
 			nvm_delete_var(MA_KEYHANDLE_NAME);
 		}
 	}
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_GENERATEMAECCKEYPAIR);
 	return retval;
 }
 
@@ -410,6 +425,8 @@ int32_t v2xSe_getMaEccPublicKey
 	hsm_key_type_t keyType;
 	int32_t retval = V2XSE_FAILURE;
 
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_GETMAECCPUBLICKEY);
+
 	if (!setupDefaultStatusCode(pHsmStatusCode) &&
 			!enforceActivatedState(pHsmStatusCode, &retval) &&
 			(pCurveId != NULL) &&
@@ -422,7 +439,7 @@ int32_t v2xSe_getMaEccPublicKey
 			if (!keyType) {
 				*pHsmStatusCode = V2XSE_WRONG_DATA;
 			} else if (getHsmPubKey(keyHandle, keyType,
-					v2xSe_getKeyLenFromCurveID(curveId),
+					keyLenFromCurveID(curveId),
 					(uint8_t *)pPublicKeyPlain)) {
 				*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 			} else {
@@ -434,6 +451,7 @@ int32_t v2xSe_getMaEccPublicKey
 			}
 		}
 	}
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_GETMAECCPUBLICKEY);
 	return retval;
 }
 
@@ -472,6 +490,8 @@ int32_t v2xSe_generateRtEccKeyPair
 	int32_t keyModified = 0;
 	int32_t keyCreated = 0;
 
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_GENERATERTECCKEYPAIR);
+
 	do {
 		if (setupDefaultStatusCode(pHsmStatusCode) ||
 				enforceActivatedState(pHsmStatusCode,
@@ -502,7 +522,7 @@ int32_t v2xSe_generateRtEccKeyPair
 			}
 		}
 		if (genHsmKey(&keyHandle, keyType,
-				v2xSe_getKeyLenFromCurveID(curveId),
+				keyLenFromCurveID(curveId),
 				(uint8_t *)pPublicKeyPlain,
 				rtKeyHandle[rtKeyId] ? UPDATE_KEY :
 						CREATE_KEY,
@@ -534,6 +554,7 @@ int32_t v2xSe_generateRtEccKeyPair
 				*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 		}
 	}
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_GENERATERTECCKEYPAIR);
 	return retval;
 }
 
@@ -562,6 +583,8 @@ int32_t v2xSe_deleteRtEccPrivateKey
 	TypeCurveId_t storedCurveId;
 	int32_t retval = V2XSE_FAILURE;
 
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_DELETERTECCPRIVATEKEY);
+
 	if (!setupDefaultStatusCode(pHsmStatusCode) &&
 			!enforceActivatedState(pHsmStatusCode, &retval) &&
 			(v2xsePhase == V2XSE_NORMAL_OPERATING_PHASE)) {
@@ -578,6 +601,7 @@ int32_t v2xSe_deleteRtEccPrivateKey
 			retval = V2XSE_SUCCESS;
 		}
 	}
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_DELETERTECCPRIVATEKEY);
 	return retval;
 }
 
@@ -612,6 +636,8 @@ int32_t v2xSe_getRtEccPublicKey
 	hsm_key_type_t keyType;
 	int32_t retval = V2XSE_FAILURE;
 
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_GETRTECCPUBLICKEY);
+
 	if (!setupDefaultStatusCode(pHsmStatusCode) &&
 			!enforceActivatedState(pHsmStatusCode, &retval) &&
 			(pCurveId != NULL) &&
@@ -627,7 +653,7 @@ int32_t v2xSe_getRtEccPublicKey
 			if (!is256bitCurve(keyType)) {
 				*pHsmStatusCode = V2XSE_WRONG_DATA;
 			} else if (getHsmPubKey(keyHandle, keyType,
-					v2xSe_getKeyLenFromCurveID(curveId),
+					keyLenFromCurveID(curveId),
 					(uint8_t *)pPublicKeyPlain)) {
 				*pHsmStatusCode = V2XSE_WRONG_DATA;
 			} else {
@@ -639,6 +665,7 @@ int32_t v2xSe_getRtEccPublicKey
 			}
 		}
 	}
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_GETRTECCPUBLICKEY);
 	return retval;
 }
 
@@ -677,6 +704,8 @@ int32_t v2xSe_generateBaEccKeyPair
 	int32_t keyModified = 0;
 	int32_t keyCreated = 0;
 
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_GENERATEBAECCKEYPAIR);
+
 	do {
 		if (setupDefaultStatusCode(pHsmStatusCode) ||
 				enforceActivatedState(pHsmStatusCode,
@@ -707,7 +736,7 @@ int32_t v2xSe_generateBaEccKeyPair
 			}
 		}
 		if (genHsmKey(&keyHandle, keyType,
-				v2xSe_getKeyLenFromCurveID(curveId),
+				keyLenFromCurveID(curveId),
 				(uint8_t *)pPublicKeyPlain,
 				baKeyHandle[baseKeyId] ?
 					UPDATE_KEY : CREATE_KEY,
@@ -740,6 +769,7 @@ int32_t v2xSe_generateBaEccKeyPair
 				*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 		}
 	}
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_GENERATEBAECCKEYPAIR);
 	return retval;
 }
 
@@ -768,6 +798,8 @@ int32_t v2xSe_deleteBaEccPrivateKey
 	TypeCurveId_t storedCurveId;
 	int32_t retval = V2XSE_FAILURE;
 
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_DELETEBAECCPRIVATEKEY);
+
 	if (!setupDefaultStatusCode(pHsmStatusCode) &&
 			!enforceActivatedState(pHsmStatusCode, &retval) &&
 			(v2xsePhase == V2XSE_NORMAL_OPERATING_PHASE)) {
@@ -784,6 +816,7 @@ int32_t v2xSe_deleteBaEccPrivateKey
 			retval = V2XSE_SUCCESS;
 		}
 	}
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_DELETEBAECCPRIVATEKEY);
 	return retval;
 }
 
@@ -818,6 +851,8 @@ int32_t v2xSe_getBaEccPublicKey
 	hsm_key_type_t keyType;
 	int32_t retval = V2XSE_FAILURE;
 
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_GETBAECCPUBLICKEY);
+
 	if (!setupDefaultStatusCode(pHsmStatusCode) &&
 			!enforceActivatedState(pHsmStatusCode, &retval) &&
 			(pCurveId != NULL) &&
@@ -833,7 +868,7 @@ int32_t v2xSe_getBaEccPublicKey
 			if (!keyType) {
 				*pHsmStatusCode = V2XSE_WRONG_DATA;
 			} else if (getHsmPubKey(keyHandle, keyType,
-					v2xSe_getKeyLenFromCurveID(curveId),
+					keyLenFromCurveID(curveId),
 					(uint8_t *)pPublicKeyPlain)) {
 				*pHsmStatusCode = V2XSE_WRONG_DATA;
 			} else {
@@ -845,6 +880,7 @@ int32_t v2xSe_getBaEccPublicKey
 			}
 		}
 	}
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_GETBAECCPUBLICKEY);
 	return retval;
 }
 
@@ -892,6 +928,8 @@ int32_t v2xSe_deriveRtEccKeyPair
 	int32_t keyModified = 0;
 	int32_t keyCreated = 0;
 	hsm_err_t hsmret;
+
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_DERIVERTECCKEYPAIR);
 
 	do {
 		if (setupDefaultStatusCode(pHsmStatusCode) ||
@@ -976,7 +1014,9 @@ int32_t v2xSe_deriveRtEccKeyPair
 			args.output_size = V2XSE_256_EC_PUB_KEY;
 		}
 		args.key_type = keyType;
+		TRACE_HSM_CALL(PROFILE_ID_HSM_BUTTERFLY_KEY_EXPANSION);
 		hsmret = hsm_butterfly_key_expansion(hsmKeyMgmtHandle, &args);
+		TRACE_HSM_RETURN(PROFILE_ID_HSM_BUTTERFLY_KEY_EXPANSION);
 		if (hsmret)
 			break;
 		keyCreated = 1;
@@ -1007,5 +1047,6 @@ int32_t v2xSe_deriveRtEccKeyPair
 				*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 		}
 	}
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_DERIVERTECCKEYPAIR);
 	return retval;
 }

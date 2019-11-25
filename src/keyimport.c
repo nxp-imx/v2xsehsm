@@ -103,7 +103,9 @@ static int32_t importHsmKey(uint32_t *pKeyHandle, hsm_key_type_t keyType,
 	}
 	import_args.input_data = pKeyData;
 
+	TRACE_HSM_CALL(PROFILE_ID_HSM_MANAGE_KEY);
 	hsmret = hsm_manage_key(hsmKeyMgmtHandle, &import_args);
+	TRACE_HSM_RETURN(PROFILE_ID_HSM_MANAGE_KEY);
 	return hsmret;
 }
 
@@ -137,6 +139,8 @@ int32_t v2xSe_getKek(
 	int32_t retval = V2XSE_FAILURE;
 	int32_t hsmret;
 
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_GETKEKPUBLICKEY);
+
 	if (!setupDefaultStatusCode(pHsmStatusCode) &&
 			!enforceActivatedState(pHsmStatusCode, &retval) &&
 			(kekType <= KEK_TYPE_COMMON) &&
@@ -153,14 +157,17 @@ int32_t v2xSe_getKek(
 			args.flags |= HSM_OP_EXPORT_ROOT_KEK_FLAGS_UNIQUE_KEK;
 		else if (kekType == KEK_TYPE_COMMON)
 			args.flags |= HSM_OP_EXPORT_ROOT_KEK_FLAGS_COMMON_KEK;
+		TRACE_HSM_CALL(PROFILE_ID_HSM_EXPORT_ROOT_KEY_ENCRYPTION_KEY);
 		hsmret = hsm_export_root_key_encryption_key(hsmSessionHandle,
 									&args);
+		TRACE_HSM_RETURN(PROFILE_ID_HSM_EXPORT_ROOT_KEY_ENCRYPTION_KEY);
 		if (!hsmret) {
 			retval = V2XSE_SUCCESS;
 			*pHsmStatusCode = V2XSE_NO_ERROR;
 			*pKekLength = args.root_kek_size;
 		}
 	}
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_GETKEKPUBLICKEY);
 	return retval;
 }
 
@@ -194,6 +201,8 @@ int32_t v2xSe_injectMaEccPrivateKey(
 	uint32_t keyHandle;
 	TypeCurveId_t storedCurveId;
 	int32_t keyCreated = 0;
+
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_INJECTMAECCPRIVATEKEY);
 
 	if (!setupDefaultStatusCode(pHsmStatusCode) &&
 			!enforceActivatedState(pHsmStatusCode, &retval) &&
@@ -233,7 +242,7 @@ int32_t v2xSe_injectMaEccPrivateKey(
 				break;
 			}
 			if (getHsmPubKey(keyHandle, keyType,
-					v2xSe_getKeyLenFromCurveID(curveId),
+					keyLenFromCurveID(curveId),
 						(uint8_t *)pPublicKeyPlain)) {
 				*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 				break;
@@ -253,6 +262,7 @@ int32_t v2xSe_injectMaEccPrivateKey(
 		}
 	}
 
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_INJECTMAECCPRIVATEKEY);
 	return retval;
 }
 
@@ -289,6 +299,8 @@ int32_t v2xSe_injectRtEccPrivateKey(
 	TypeCurveId_t storedCurveId;
 	int32_t keyModified = 0;
 	int32_t keyCreated = 0;
+
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_INJECTRTECCPRIVATEKEY);
 
 	do {
 		if (setupDefaultStatusCode(pHsmStatusCode) ||
@@ -342,7 +354,7 @@ int32_t v2xSe_injectRtEccPrivateKey(
 			break;
 		}
 		if (getHsmPubKey(keyHandle, keyType,
-				v2xSe_getKeyLenFromCurveID(curveId),
+				keyLenFromCurveID(curveId),
 				(uint8_t *)pPublicKeyPlain)) {
 			break;
 		}
@@ -361,6 +373,7 @@ int32_t v2xSe_injectRtEccPrivateKey(
 		}
 	}
 
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_INJECTRTECCPRIVATEKEY);
 	return retval;
 }
 
@@ -397,6 +410,8 @@ int32_t v2xSe_injectBaEccPrivateKey(
 	TypeCurveId_t storedCurveId;
 	int32_t keyModified = 0;
 	int32_t keyCreated = 0;
+
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_INJECTBAECCPRIVATEKEY);
 
 	do {
 		if (setupDefaultStatusCode(pHsmStatusCode) ||
@@ -450,7 +465,7 @@ int32_t v2xSe_injectBaEccPrivateKey(
 			break;
 		}
 		if (getHsmPubKey(keyHandle, keyType,
-				v2xSe_getKeyLenFromCurveID(curveId),
+				keyLenFromCurveID(curveId),
 				(uint8_t *)pPublicKeyPlain)) {
 			break;
 		}
@@ -469,5 +484,6 @@ int32_t v2xSe_injectBaEccPrivateKey(
 		}
 	}
 
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_INJECTBAECCPRIVATEKEY);
 	return retval;
 }

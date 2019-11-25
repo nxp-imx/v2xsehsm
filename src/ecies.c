@@ -131,7 +131,9 @@ static hsm_err_t doHsmDecryption(uint32_t keyHandle, hsm_key_type_t keyType,
 	args.output_size = HSM_ECIES_MESSAGE_SIZE;
 	args.mac_size = pEciesData->macLen;
 	args.key_type = keyType;
+	TRACE_HSM_CALL(PROFILE_ID_HSM_ECIES_DECRYPTION);
 	retVal = hsm_ecies_decryption(hsmCipherHandle, &args);
+	TRACE_HSM_RETURN(PROFILE_ID_HSM_ECIES_DECRYPTION);
 	if (!retVal)
 		*pMsgLen = args.output_size;
 	return retVal;
@@ -162,6 +164,9 @@ int32_t v2xSe_encryptUsingEcies (TypeEncryptEcies_t *pEciesData,
 	hsm_key_type_t keyType;
 	uint8_t hsm_key[V2XSE_384_EC_PUB_KEY];
 	int32_t retval = V2XSE_FAILURE;
+	hsm_err_t hsmret;
+
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_ENCRYPTUSINGECIES);
 
 	if (!setupDefaultStatusCode(pHsmStatusCode) &&
 			!enforceActivatedState(pHsmStatusCode, &retval) &&
@@ -187,12 +192,14 @@ int32_t v2xSe_encryptUsingEcies (TypeEncryptEcies_t *pEciesData,
 		}
 		args.output = pVctData->data;
 		args.input_size = pEciesData->msgLen;
-		args.pub_key_size = v2xSe_getKeyLenFromCurveID(
-							pEciesData->curveId);
+		args.pub_key_size = keyLenFromCurveID(pEciesData->curveId);
 		args.mac_size = pEciesData->macLen;
 		args.out_size = HSM_ECIES_VECTOR_SIZE;
 		args.key_type = keyType;
-		if (hsm_ecies_encryption(hsmSessionHandle, &args)) {
+		TRACE_HSM_CALL(PROFILE_ID_HSM_ECIES_ENCRYPTION);
+		hsmret = hsm_ecies_encryption(hsmSessionHandle, &args);
+		TRACE_HSM_RETURN(PROFILE_ID_HSM_ECIES_ENCRYPTION);
+		if (hsmret) {
 			*pHsmStatusCode = V2XSE_WRONG_DATA;
 		} else {
 			*pVctLen = args.out_size;
@@ -200,6 +207,7 @@ int32_t v2xSe_encryptUsingEcies (TypeEncryptEcies_t *pEciesData,
 			retval = V2XSE_SUCCESS;
 		}
 	}
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_ENCRYPTUSINGECIES);
 	return retval;
 }
 
@@ -230,6 +238,8 @@ int32_t v2xSe_decryptUsingRtEcies (TypeRtKeyId_t rtKeyId,
 	TypeCurveId_t curveId;
 	int32_t retval = V2XSE_FAILURE;
 
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_DECRYPYUSINGRTECIES);
+
 	if (!setupDefaultStatusCode(pHsmStatusCode) &&
 			!enforceActivatedState(pHsmStatusCode, &retval) &&
 			(v2xsePhase == V2XSE_NORMAL_OPERATING_PHASE) &&
@@ -250,6 +260,7 @@ int32_t v2xSe_decryptUsingRtEcies (TypeRtKeyId_t rtKeyId,
 			retval = V2XSE_SUCCESS;
 		}
 	}
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_DECRYPYUSINGRTECIES);
 	return retval;
 }
 
@@ -281,6 +292,8 @@ int32_t v2xSe_decryptUsingMaEcies
 	TypeCurveId_t curveId;
 	int32_t retval = V2XSE_FAILURE;
 
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_DECRYPTUSINGMAECIES);
+
 	if (!setupDefaultStatusCode(pHsmStatusCode) &&
 			!enforceActivatedState(pHsmStatusCode, &retval) &&
 			(v2xsePhase == V2XSE_NORMAL_OPERATING_PHASE) &&
@@ -298,6 +311,7 @@ int32_t v2xSe_decryptUsingMaEcies
 			retval = V2XSE_SUCCESS;
 		}
 	}
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_DECRYPTUSINGMAECIES);
 	return retval;
 }
 
@@ -331,6 +345,8 @@ int32_t v2xSe_decryptUsingBaEcies
 	TypeCurveId_t curveId;
 	int32_t retval = V2XSE_FAILURE;
 
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_DECRYPTUSINGBAECIES);
+
 	if (!setupDefaultStatusCode(pHsmStatusCode) &&
 			!enforceActivatedState(pHsmStatusCode, &retval) &&
 			(v2xsePhase == V2XSE_NORMAL_OPERATING_PHASE) &&
@@ -351,5 +367,6 @@ int32_t v2xSe_decryptUsingBaEcies
 			retval = V2XSE_SUCCESS;
 		}
 	}
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_DECRYPTUSINGBAECIES);
 	return retval;
 }

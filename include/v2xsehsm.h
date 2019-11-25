@@ -44,6 +44,7 @@
 #ifndef V2XSEHSM_H
 #define V2XSEHSM_H
 
+#include "trace.h"
 #include "v2xSe.h"
 #include "hsm/hsm_api.h"
 #include "hsmMISSING.h"
@@ -230,6 +231,8 @@ int32_t enforceInitState(int32_t *pApiRetVal);
 int32_t enforceNotInitState(int32_t *pApiRetVal);
 int32_t enforceActivatedState(TypeSW_t *pStatusCode, int32_t *pApiRetVal);
 int32_t enforceSecurityLevel5(TypeSW_t *pStatusCode);
+int32_t keyLenFromCurveID(TypeCurveId_t curveID);
+int32_t sigLenFromHashLen(TypeHashLength_t hashLength);
 hsm_key_group_t getKeyGroup(keyUsage_t keyUsage, TypeRtKeyId_t keyId);
 int32_t deleteRtKey(TypeRtKeyId_t rtKeyId);
 int32_t deleteBaKey(TypeBaseKeyId_t baKeyId);

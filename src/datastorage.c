@@ -67,6 +67,8 @@ int32_t v2xSe_storeData(TypeGsDataIndex_t index, TypeLen_t length,
 {
 	int32_t retval = V2XSE_FAILURE;
 
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_STOREDATA);
+
 	if (!setupDefaultStatusCode(pHsmStatusCode) &&
 			!enforceActivatedState(pHsmStatusCode, &retval)) {
 
@@ -85,6 +87,7 @@ int32_t v2xSe_storeData(TypeGsDataIndex_t index, TypeLen_t length,
 			retval = V2XSE_SUCCESS;
 		}
 	}
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_STOREDATA);
 	return retval;
 }
 
@@ -107,6 +110,8 @@ int32_t v2xSe_getData(TypeGsDataIndex_t index, TypeLen_t *pLength,
 {
 	int32_t retval = V2XSE_FAILURE;
 
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_GETDATA);
+
 	if (!setupDefaultStatusCode(pHsmStatusCode) &&
 			!enforceActivatedState(pHsmStatusCode, &retval)) {
 
@@ -124,6 +129,7 @@ int32_t v2xSe_getData(TypeGsDataIndex_t index, TypeLen_t *pLength,
 			retval = V2XSE_SUCCESS;
 		}
 	}
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_GETDATA);
 	return retval;
 }
 
@@ -143,6 +149,8 @@ int32_t v2xSe_deleteData(TypeGsDataIndex_t index, TypeSW_t *pHsmStatusCode)
 {
 	int32_t retval = V2XSE_FAILURE;
 
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_DELETEDATA);
+
 	if (!setupDefaultStatusCode(pHsmStatusCode) &&
 			!enforceActivatedState(pHsmStatusCode, &retval)) {
 
@@ -158,6 +166,7 @@ int32_t v2xSe_deleteData(TypeGsDataIndex_t index, TypeSW_t *pHsmStatusCode)
 			retval = V2XSE_SUCCESS;
 		}
 	}
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_DELETEDATA);
 	return retval;
 }
 
@@ -180,6 +189,7 @@ int32_t v2xSe_getRemainingNvm (uint32_t *pSize, TypeSW_t *pHsmStatusCode)
 {
 	int32_t retval = V2XSE_FAILURE;
 
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_GETREMAININGNVM);
 	if (!setupDefaultStatusCode(pHsmStatusCode) &&
 				!enforceNotInitState(&retval) &&
 				(pSize != NULL)) {
@@ -190,5 +200,6 @@ int32_t v2xSe_getRemainingNvm (uint32_t *pSize, TypeSW_t *pHsmStatusCode)
 		*pHsmStatusCode = V2XSE_NO_ERROR;
 		retval = V2XSE_SUCCESS;
 	}
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_GETREMAININGNVM);
 	return retval;
 }

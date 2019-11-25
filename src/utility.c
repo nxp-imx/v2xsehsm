@@ -144,6 +144,8 @@ int32_t v2xSe_getAppletVersion
 {
 	int32_t retval = V2XSE_FAILURE;
 
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_GETAPPLETVERSION);
+
 	if (!setupDefaultStatusCode(pHsmStatusCode) &&
 			!enforceActivatedState(pHsmStatusCode, &retval) &&
 			(pVersion != NULL)) {
@@ -162,6 +164,7 @@ int32_t v2xSe_getAppletVersion
 			retval = V2XSE_SUCCESS;
 		}
 	}
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_GETAPPLETVERSION);
 	return retval;
 }
 
@@ -184,6 +187,8 @@ int32_t v2xSe_getSeInfo
 )
 {
 	int32_t retval = V2XSE_FAILURE;
+
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_GETSEINFO);
 
 	if (!setupDefaultStatusCode(pHsmStatusCode) &&
 			!enforceActivatedState(pHsmStatusCode, &retval) &&
@@ -226,6 +231,7 @@ int32_t v2xSe_getSeInfo
 		*pHsmStatusCode = V2XSE_NO_ERROR;
 		retval = V2XSE_SUCCESS;
 	}
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_GETSEINFO);
 	return retval;
 }
 
@@ -248,6 +254,8 @@ int32_t v2xSe_getCryptoLibVersion
 {
 	int32_t retval = V2XSE_FAILURE;
 
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_GETCRYPTOLIBVERSION);
+
 	if (pVersion) {
 		pVersion->data[0] = VERSION_MAJOR;
 		pVersion->data[1] = VERSION_MINOR;
@@ -255,6 +263,7 @@ int32_t v2xSe_getCryptoLibVersion
 		retval = V2XSE_SUCCESS;
 	}
 
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_GETCRYPTOLIBVERSION);
 	return retval;
 }
 
@@ -276,6 +285,8 @@ int32_t v2xSe_getPlatformInfo(TypeSW_t *pHsmStatusCode,
 {
 	int32_t retval = V2XSE_FAILURE;
 
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_GETPLATFORMINFO);
+
 	if (!setupDefaultStatusCode(pHsmStatusCode) &&
 				!enforceNotInitState(&retval) &&
 				(pPlatformIdentifier != NULL)) {
@@ -285,6 +296,7 @@ int32_t v2xSe_getPlatformInfo(TypeSW_t *pHsmStatusCode,
 		*pHsmStatusCode = V2XSE_NO_ERROR;
 		retval = V2XSE_SUCCESS;
 	}
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_GETPLATFORMINFO);
 	return retval;
 }
 
@@ -306,6 +318,8 @@ int32_t v2xSe_getPlatformConfig(TypeSW_t *pHsmStatusCode,
 {
 	int32_t retval = V2XSE_FAILURE;
 
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_GETPLATFORMCONFIG);
+
 	if (!setupDefaultStatusCode(pHsmStatusCode) &&
 				!enforceNotInitState(&retval) &&
 				(pPlatformConfig != NULL)) {
@@ -317,6 +331,7 @@ int32_t v2xSe_getPlatformConfig(TypeSW_t *pHsmStatusCode,
 		*pHsmStatusCode = V2XSE_NO_ERROR;
 		retval = V2XSE_SUCCESS;
 	}
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_GETPLATFORMCONFIG);
 	return retval;
 }
 
@@ -338,6 +353,8 @@ int32_t v2xSe_getChipInfo(TypeSW_t *pHsmStatusCode,
 {
 	int32_t retval = V2XSE_FAILURE;
 
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_GETCHIPINFO);
+
 	if (!setupDefaultStatusCode(pHsmStatusCode) &&
 				!enforceNotInitState(&retval) &&
 				(pChipInfo != NULL)) {
@@ -346,6 +363,7 @@ int32_t v2xSe_getChipInfo(TypeSW_t *pHsmStatusCode,
 		*pHsmStatusCode = V2XSE_NO_ERROR;
 		retval = V2XSE_SUCCESS;
 	}
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_GETCHIPINFO);
 	return retval;
 }
 
@@ -367,6 +385,8 @@ int32_t v2xSe_getAttackLog(TypeSW_t *pHsmStatusCode,
 {
 	int32_t retval = V2XSE_FAILURE;
 
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_GETATTACKLOG);
+
 	if (!setupDefaultStatusCode(pHsmStatusCode) &&
 				!enforceNotInitState(&retval) &&
 				(pAttackLog != NULL)) {
@@ -375,6 +395,7 @@ int32_t v2xSe_getAttackLog(TypeSW_t *pHsmStatusCode,
 		*pHsmStatusCode = V2XSE_NO_ERROR;
 		retval = V2XSE_SUCCESS;
 	}
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_GETATTACKLOG);
 	return retval;
 }
 
@@ -390,7 +411,7 @@ int32_t v2xSe_getAttackLog(TypeSW_t *pHsmStatusCode,
  * @return key length, or V2XSE_FAILURE in case of error
  *
  */
-int32_t v2xSe_getKeyLenFromCurveID(TypeCurveId_t curveID)
+int32_t keyLenFromCurveID(TypeCurveId_t curveID)
 {
 	int32_t lengthVal;
 
@@ -416,6 +437,31 @@ int32_t v2xSe_getKeyLenFromCurveID(TypeCurveId_t curveID)
 
 /**
  *
+ * @brief External API function to get key length from curveId
+ *
+ * This  function returns the key length that corresponds to the specified
+ * curveId.  It just calls the helper function, which is a separate function
+ * to allow API profiling.
+ *
+ * @param curveID curveId value to query
+ *
+ * @return key length, or V2XSE_FAILURE in case of error
+ *
+ */
+int32_t v2xSe_getKeyLenFromCurveID(TypeCurveId_t curveID)
+{
+	int32_t lengthVal;
+
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_GETKEYLENFROMCURVEID);
+
+	lengthVal = keyLenFromCurveID(curveID);
+
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_GETKEYLENFROMCURVEID);
+	return lengthVal;
+}
+
+/**
+ *
  * @brief Get signature length from hash length
  *
  * This function returns the signature length used to sign a hash of the
@@ -426,7 +472,7 @@ int32_t v2xSe_getKeyLenFromCurveID(TypeCurveId_t curveID)
  * @return length of signature, or V2XSE_FAILURE on error
  *
  */
-int32_t v2xSe_getSigLenFromHashLen(TypeHashLength_t hashLength)
+int32_t sigLenFromHashLen(TypeHashLength_t hashLength)
 {
 	int32_t sigLen;
 
@@ -446,6 +492,31 @@ int32_t v2xSe_getSigLenFromHashLen(TypeHashLength_t hashLength)
 
 /**
  *
+ * @brief External API function to get signature length from hash length
+ *
+ * This function returns the signature length used to sign a hash of the
+ * specified length. It just calls the helper function, which is a separate
+ * function to allow API profiling.
+ *
+ * @param hashLength hash length to sign
+ *
+ * @return length of signature, or V2XSE_FAILURE on error
+ *
+ */
+int32_t v2xSe_getSigLenFromHashLen(TypeHashLength_t hashLength)
+{
+	int32_t sigLen;
+
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_GETSIGLENFROMHASHLEN);
+
+	sigLen = sigLenFromHashLen(hashLength);
+
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_GETSIGLENFROMHASHLEN);
+	return sigLen;
+}
+
+/**
+ *
  * @brief Invoke garbage collector
  *
  * This function invokes the JavaCard garbage collector on an SE.  As this
@@ -460,6 +531,8 @@ int32_t v2xSe_invokeGarbageCollector(TypeSW_t *pHsmStatusCode)
 {
 	int32_t retval = V2XSE_FAILURE;
 
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_INVOKEGARBAGECOLLECTOR);
+
 	if (!setupDefaultStatusCode(pHsmStatusCode) &&
 			!enforceActivatedState(pHsmStatusCode, &retval) &&
 			(v2xsePhase == V2XSE_NORMAL_OPERATING_PHASE)) {
@@ -467,5 +540,6 @@ int32_t v2xSe_invokeGarbageCollector(TypeSW_t *pHsmStatusCode)
 		*pHsmStatusCode = V2XSE_NO_ERROR;
 		retval = V2XSE_SUCCESS;
 	}
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_INVOKEGARBAGECOLLECTOR);
 	return retval;
 }

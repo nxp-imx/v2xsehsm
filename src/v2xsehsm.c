@@ -116,32 +116,15 @@ int32_t v2xSe_connect(void)
 {
 	int32_t retval = V2XSE_FAILURE;
 
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_CONNECT);
+
 	if (!enforceInitState(&retval)) {
 		v2xseState = V2XSE_STATE_CONNECTED;
 		retval = V2XSE_SUCCESS;
 	}
 
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_CONNECT);
 	return retval;
-}
-
-/**
- *
- * @brief Activate V2X opertions using default security level
- *
- * This function activates V2X operations using the default security level.
- * It simply calls v2xSe_activate specifying e_channelSecLevel_1 for security
- * level.
-
- * @param appletId Applet(s) to activate: US or EU, and optionally GS
- * @param pHsmStatusCode pointer to location to write extended result code
- *
- * @return V2XSE_SUCCESS if no error, non-zero on error
- *
- */
-int32_t v2xSe_activate(appletSelection_t appletId, TypeSW_t *pHsmStatusCode)
-{
-	return v2xSe_activateWithSecurityLevel(appletId, e_channelSecLevel_1,
-						pHsmStatusCode);
 }
 
 /**
@@ -161,7 +144,7 @@ int32_t v2xSe_activate(appletSelection_t appletId, TypeSW_t *pHsmStatusCode)
  * @return V2XSE_SUCCESS if no error, non-zero on error
  *
  */
-int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId,
+int32_t activateV2x(appletSelection_t appletId,
 		channelSecLevel_t securityLevel, TypeSW_t *pHsmStatusCode)
 {
 	open_session_args_t session_args;
@@ -172,6 +155,7 @@ int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId,
 	open_svc_sign_gen_args_t sig_gen_args;
 	int32_t retval = V2XSE_FAILURE;
 	uint32_t justCreatedKeystore = 0;
+	hsm_err_t hsmret;
 
 	if (!setupDefaultStatusCode(pHsmStatusCode) &&
 				!enforceInitState(&retval)) {
@@ -200,12 +184,19 @@ int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId,
 			memset(&session_args, 0, sizeof(session_args));
 			session_args.session_priority = HSM_SESSION_PRIORITY;
 			session_args.operating_mode = HSM_OPERATING_MODE;
-			if (hsm_open_session(&session_args, &hsmSessionHandle))
+			TRACE_HSM_CALL(PROFILE_ID_HSM_OPEN_SESSION);
+			hsmret = hsm_open_session(&session_args,
+							&hsmSessionHandle);
+			TRACE_HSM_RETURN(PROFILE_ID_HSM_OPEN_SESSION);
+			if (hsmret)
 				break;
 
 			memset(&rng_open_args, 0, sizeof(rng_open_args));
-			if (hsm_open_rng_service(hsmSessionHandle,
-						&rng_open_args, &hsmRngHandle))
+			TRACE_HSM_CALL(PROFILE_ID_HSM_OPEN_RNG_SERVICE);
+			hsmret = hsm_open_rng_service(hsmSessionHandle,
+						&rng_open_args, &hsmRngHandle);
+			TRACE_HSM_RETURN(PROFILE_ID_HSM_OPEN_RNG_SERVICE);
+			if (hsmret)
 				break;
 
 			/* Assume keystore exists, try to open */
@@ -215,8 +206,11 @@ int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId,
 			key_store_args.authentication_nonce =
 						MAGIC_KEYSTORE_NONCE;
 			key_store_args.flags = HSM_SVC_KEY_STORE_FLAGS_UPDATE;
-			if (hsm_open_key_store_service(hsmSessionHandle,
-					&key_store_args, &hsmKeyStoreHandle)) {
+			TRACE_HSM_CALL(PROFILE_ID_HSM_OPEN_KEY_STORE_SERVICE);
+			hsmret = hsm_open_key_store_service(hsmSessionHandle,
+					&key_store_args, &hsmKeyStoreHandle);
+			TRACE_HSM_RETURN(PROFILE_ID_HSM_OPEN_KEY_STORE_SERVICE);
+			if (hsmret) {
 				/*
 				 * Failure to open, try to create
 				 *  - re-initialize argument structure in case
@@ -233,16 +227,27 @@ int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId,
 						MAX_KEYSTORE_UPDATES;
 				key_store_args.flags =
 						HSM_SVC_KEY_STORE_FLAGS_CREATE;
-				if (hsm_open_key_store_service(hsmSessionHandle,
-						&key_store_args,
-						&hsmKeyStoreHandle))
+				TRACE_HSM_CALL(
+					PROFILE_ID_HSM_OPEN_KEY_STORE_SERVICE);
+				hsmret = hsm_open_key_store_service(
+					hsmSessionHandle, &key_store_args,
+							&hsmKeyStoreHandle);
+				TRACE_HSM_RETURN(
+					PROFILE_ID_HSM_OPEN_KEY_STORE_SERVICE);
+				if (hsmret)
 					break;
 				justCreatedKeystore = 1;
 			}
 
 			memset(&key_mgmt_args, 0, sizeof(key_mgmt_args));
-			if (hsm_open_key_management_service(hsmKeyStoreHandle,
-					&key_mgmt_args, &hsmKeyMgmtHandle))
+			TRACE_HSM_CALL(
+				PROFILE_ID_HSM_OPEN_KEY_MANAGEMENT_SERVICE);
+			hsmret = hsm_open_key_management_service(
+					hsmKeyStoreHandle, &key_mgmt_args,
+							&hsmKeyMgmtHandle);
+			TRACE_HSM_RETURN(
+				PROFILE_ID_HSM_OPEN_KEY_MANAGEMENT_SERVICE);
+			if (hsmret)
 				break;
 
 			if (justCreatedKeystore) {
@@ -264,7 +269,11 @@ int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId,
 				args.key_group = MA_KEY;
 				args.key_type = HSM_KEY_TYPE_ECDSA_NIST_P256;
 				args.out_key = dummyPubKey;
-				if (hsm_generate_key(hsmKeyMgmtHandle, &args))
+				TRACE_HSM_CALL(PROFILE_ID_HSM_GENERATE_KEY);
+				hsmret = hsm_generate_key(hsmKeyMgmtHandle,
+									&args);
+				TRACE_HSM_RETURN(PROFILE_ID_HSM_GENERATE_KEY);
+				if (hsmret)
 					break;
 			}
 
@@ -273,15 +282,22 @@ int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId,
 			activatedSigScheme = 0;
 
 			memset(&cipher_args, 0, sizeof(cipher_args));
-			if (hsm_open_cipher_service(hsmKeyStoreHandle,
-					&cipher_args, &hsmCipherHandle))
+			TRACE_HSM_CALL(PROFILE_ID_HSM_OPEN_CIPHER_SERVICE);
+			hsmret = hsm_open_cipher_service(hsmKeyStoreHandle,
+					&cipher_args, &hsmCipherHandle);
+			TRACE_HSM_RETURN(PROFILE_ID_HSM_OPEN_CIPHER_SERVICE);
+			if (hsmret)
 				break;
 
 			memset(&sig_gen_args, 0, sizeof(sig_gen_args));
-			if (hsm_open_signature_generation_service(
-						hsmKeyStoreHandle,
-						&sig_gen_args,
-						&hsmSigGenHandle))
+			TRACE_HSM_CALL(
+			    PROFILE_ID_HSM_OPEN_SIGNATURE_GENERATION_SERVICE);
+			hsmret = hsm_open_signature_generation_service(
+					hsmKeyStoreHandle, &sig_gen_args,
+							&hsmSigGenHandle);
+			TRACE_HSM_RETURN(
+			    PROFILE_ID_HSM_OPEN_SIGNATURE_GENERATION_SERVICE);
+			if (hsmret)
 				break;
 
 			v2xseState = V2XSE_STATE_ACTIVATED;
@@ -296,38 +312,135 @@ int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId,
 
 /**
  *
+ * @brief Activate V2X opertions using specified security level
+ * @ingroup devicemanagement
+ *
+ * This function activates V2X operations using the specified security level.
+ * It calls the activateV2x helper function.
+
+ * @param appletId Applet(s) to activate: US or EU, and optionally GS
+ * @param securityLevel Security level for emulated SXF1800
+ * @param pHsmStatusCode pointer to location to write extended result code
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
+int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId,
+		channelSecLevel_t securityLevel, TypeSW_t *pHsmStatusCode)
+{
+	int32_t retval;
+
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_ACTIVATEWITHSECURITYLEVEL);
+
+	retval = activateV2x(appletId, securityLevel, pHsmStatusCode);
+
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_ACTIVATEWITHSECURITYLEVEL);
+	return retval;
+}
+
+/**
+ *
+ * @brief Activate V2X opertions using default security level
+ *
+ * This function activates V2X operations using the default security level.
+ * It calls the activateV2x helper function specifying e_channelSecLevel_1
+ * for security level.
+
+ * @param appletId Applet(s) to activate: US or EU, and optionally GS
+ * @param pHsmStatusCode pointer to location to write extended result code
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
+int32_t v2xSe_activate(appletSelection_t appletId, TypeSW_t *pHsmStatusCode)
+{
+	int32_t retval;
+
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_ACTIVATE);
+
+	retval = activateV2x(appletId, e_channelSecLevel_1, pHsmStatusCode);
+
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_ACTIVATE);
+	return retval;
+}
+
+/**
+ *
  * @brief Resets the connection to the emulated SXF1800
  *
  * This function resets the emulated SXF1800.  This is performed by closing
  * closing the session to the HSM if it is active and setting the v2xseState to
- * idle.  By closing the HSM session, all previously opened HSM services are
- * automatically closed.  All variables required for activated state cannot
- * be accessed from init state, and will be initialized when activated state
- * is enabled again.
+ * idle. All variables required for activated state cannot be accessed from
+ * init state, and will be initialized when activated state is enabled again.
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
+int32_t resetV2x(void)
+{
+	int32_t retval = V2XSE_SUCCESS;
+	hsm_err_t hsmret;
+
+	if (v2xseState == V2XSE_STATE_ACTIVATED) {
+		TRACE_HSM_CALL(
+			PROFILE_ID_HSM_CLOSE_SIGNATURE_GENERATION_SERVICE);
+		hsmret = hsm_close_signature_generation_service(
+							hsmSigGenHandle);
+		TRACE_HSM_RETURN(
+			PROFILE_ID_HSM_CLOSE_SIGNATURE_GENERATION_SERVICE);
+		if (hsmret)
+			retval = V2XSE_FAILURE;
+		TRACE_HSM_CALL(PROFILE_ID_HSM_CLOSE_CIPHER_SERVICE);
+		hsmret = hsm_close_cipher_service(hsmCipherHandle);
+		TRACE_HSM_RETURN(PROFILE_ID_HSM_CLOSE_CIPHER_SERVICE);
+		if (hsmret)
+			retval = V2XSE_FAILURE;
+		TRACE_HSM_CALL(PROFILE_ID_HSM_CLOSE_KEY_MANAGEMENT_SERVICE);
+		hsmret = hsm_close_key_management_service(hsmKeyMgmtHandle);
+		TRACE_HSM_RETURN(PROFILE_ID_HSM_CLOSE_KEY_MANAGEMENT_SERVICE);
+		if (hsmret)
+			retval = V2XSE_FAILURE;
+		TRACE_HSM_CALL(PROFILE_ID_HSM_CLOSE_KEY_STORE_SERVICE);
+		hsmret = hsm_close_key_store_service(hsmKeyStoreHandle);
+		TRACE_HSM_RETURN(PROFILE_ID_HSM_CLOSE_KEY_STORE_SERVICE);
+		if (hsmret)
+			retval = V2XSE_FAILURE;
+		TRACE_HSM_CALL(PROFILE_ID_HSM_CLOSE_RNG_SERVICE);
+		hsmret = hsm_close_rng_service(hsmRngHandle);
+		TRACE_HSM_RETURN(PROFILE_ID_HSM_CLOSE_RNG_SERVICE);
+		if (hsmret)
+			retval = V2XSE_FAILURE;
+		TRACE_HSM_CALL(PROFILE_ID_HSM_CLOSE_SESSION);
+		hsmret = hsm_close_session(hsmSessionHandle);
+		TRACE_HSM_RETURN(PROFILE_ID_HSM_CLOSE_SESSION);
+		if (hsmret)
+			retval = V2XSE_FAILURE;
+	}
+	v2xseState = V2XSE_STATE_INIT;
+
+	return retval;
+}
+
+
+/**
+ *
+ * @brief Resets the connection to the emulated SXF1800
+ * @ingroup devicemanagement
+ *
+ * Calls the helper function resetV2x.
  *
  * @return V2XSE_SUCCESS if no error, non-zero on error
  *
  */
 int32_t v2xSe_reset(void)
 {
-	int32_t retval = V2XSE_SUCCESS;
+	int32_t retval;
 
-	if (v2xseState == V2XSE_STATE_ACTIVATED) {
-		if (hsm_close_signature_generation_service(hsmSigGenHandle))
-			retval = V2XSE_FAILURE;
-		if (hsm_close_cipher_service(hsmCipherHandle))
-			retval = V2XSE_FAILURE;
-		if (hsm_close_key_management_service(hsmKeyMgmtHandle))
-			retval = V2XSE_FAILURE;
-		if (hsm_close_key_store_service(hsmKeyStoreHandle))
-			retval = V2XSE_FAILURE;
-		if (hsm_close_rng_service(hsmRngHandle))
-			retval = V2XSE_FAILURE;
-		if (hsm_close_session(hsmSessionHandle))
-			retval = V2XSE_FAILURE;
-	}
-	v2xseState = V2XSE_STATE_INIT;
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_RESET);
 
+	retval = resetV2x();
+
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_RESET);
 	return retval;
 }
 
@@ -338,7 +451,7 @@ int32_t v2xSe_reset(void)
  * This function deactivates the emulated SXF1800.  The only functional
  * difference from v2xSe_reset is that it cannot be called from init state.
  * To avoid code duplication, this function will simply check if the current
- * state is not init, and if so call v2xSe_reset.
+ * state is not init, and if so call resetV2x.
  *
  * @return V2XSE_SUCCESS if no error, non-zero on error
  *
@@ -347,11 +460,14 @@ int32_t v2xSe_deactivate(void)
 {
 	int32_t retval;
 
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_DEACTIVATE);
+
 	if (v2xseState == V2XSE_STATE_INIT)
 		retval = V2XSE_FAILURE_INIT;
 	else
-		retval = v2xSe_reset();
+		retval = resetV2x();
 
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_DEACTIVATE);
 	return retval;
 }
 
@@ -360,15 +476,24 @@ int32_t v2xSe_deactivate(void)
  * @brief Disconnects the emulated SXF1800
  *
  * This function disconnects the emulated SXF1800, which has no
- * functional difference in this system to deactivate, so the v2xSe_deactivate
- * function is directly called to avoid code duplication.
+ * functional difference in this system to deactivate.
  *
  * @return V2XSE_SUCCESS if no error, non-zero on error
  *
  */
 int32_t v2xSe_disconnect(void)
 {
-	return v2xSe_deactivate();
+	int32_t retval = V2XSE_SUCCESS;
+
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_DISCONNECT);
+
+	if (v2xseState == V2XSE_STATE_INIT)
+		retval = V2XSE_FAILURE_INIT;
+	else
+		retval = resetV2x();
+
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_DISCONNECT);
+	return retval;
 }
 
 /**
@@ -394,6 +519,9 @@ int32_t v2xSe_getRandomNumber
 {
 	op_get_random_args_t args;
 	int32_t retval = V2XSE_FAILURE;
+	hsm_err_t hsmret;
+
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_GETRANDOMNUMBER);
 
 	if (!setupDefaultStatusCode(pHsmStatusCode) &&
 			!enforceActivatedState(pHsmStatusCode, &retval) &&
@@ -404,12 +532,16 @@ int32_t v2xSe_getRandomNumber
 		} else {
 			args.output = pRandomNumber->data;
 			args.random_size = length;
-			if (!hsm_get_random(hsmRngHandle, &args)) {
+			TRACE_HSM_CALL(PROFILE_ID_HSM_GET_RANDOM);
+			hsmret = hsm_get_random(hsmRngHandle, &args);
+			TRACE_HSM_RETURN(PROFILE_ID_HSM_GET_RANDOM);
+			if (!hsmret) {
 				*pHsmStatusCode = V2XSE_NO_ERROR;
 				retval = V2XSE_SUCCESS;
 			}
 		}
 	}
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_GETRANDOMNUMBER);
 	return retval;
 }
 
@@ -432,9 +564,12 @@ int32_t v2xSe_getRandomNumber
 int32_t v2xSe_sendReceive(uint8_t *pTxBuf, uint16_t txLen,  uint16_t *pRxLen,
 				uint8_t *pRxBuf,TypeSW_t *pHsmStatusCode)
 {
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_SENDRECEIVE);
+
 	if (pHsmStatusCode)
 		*pHsmStatusCode = V2XSE_FUNC_NOT_SUPPORTED;
 
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_SENDRECEIVE);
 	return V2XSE_FAILURE;
 }
 
@@ -457,6 +592,8 @@ int32_t v2xSe_endKeyInjection (TypeSW_t *pHsmStatusCode)
 {
 	int32_t retval = V2XSE_FAILURE;
 
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_ENDKEYINJECTION);
+
 	if (!setupDefaultStatusCode(pHsmStatusCode) &&
 			!enforceSecurityLevel5(pHsmStatusCode) &&
 			!enforceActivatedState(pHsmStatusCode, &retval)) {
@@ -474,6 +611,7 @@ int32_t v2xSe_endKeyInjection (TypeSW_t *pHsmStatusCode)
 			}
 		}
 	}
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_ENDKEYINJECTION);
 	return retval;
 }
 
@@ -497,6 +635,8 @@ int32_t v2xSe_getSePhase (uint8_t *pPhaseInfo, TypeSW_t *pHsmStatusCode)
 	int32_t retval = V2XSE_FAILURE;
 
 
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_GETSEPHASE);
+
 	if (!setupDefaultStatusCode(pHsmStatusCode) &&
 			!enforceSecurityLevel5(pHsmStatusCode) &&
 			!enforceActivatedState(pHsmStatusCode, &retval) &&
@@ -505,6 +645,7 @@ int32_t v2xSe_getSePhase (uint8_t *pPhaseInfo, TypeSW_t *pHsmStatusCode)
 		*pHsmStatusCode = V2XSE_NO_ERROR;
 		retval = V2XSE_SUCCESS;
 	}
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_GETSEPHASE);
 	return retval;
 }
 
