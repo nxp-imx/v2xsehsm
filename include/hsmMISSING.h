@@ -1,6 +1,6 @@
 
 /*
- * Copyright 2019 NXP
+ * Copyright 2019-2020 NXP
  */
 
 /*
@@ -48,10 +48,5 @@
 #define SINGLE_KEYSTORE
 /** Flag to indicate BrainpoolT1 not yet supported - code uses R1 instead */
 #define NO_BP_T1
-/**
- * Flag to indicate that keys cannot be deleted
- *  - will cause buildup of keystore keys over time
- */
-#define NO_KEY_DELETION
 
 #endif

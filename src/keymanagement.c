@@ -1,6 +1,6 @@
 
 /*
- * Copyright 2019 NXP
+ * Copyright 2019-2020 NXP
  */
 
 /*
@@ -169,23 +169,25 @@ static int32_t getHsmPubKey(uint32_t keyHandle, hsm_key_type_t keyType,
  * This function deletes a ECC private key from the hsm key store.
  *
  * @param keyHandle hsm handle for private key to delete
+ * @param keyType type of key to delete
+ * @param usage key usage of key to delete (rt or ba)
  *
  * @return V2XSE_SUCCESS if no error, non-zero on error
  *
  */
-static int32_t deleteHsmKey(uint32_t keyHandle, hsm_key_type_t keyType)
+static int32_t deleteHsmKey(uint32_t keyHandle, hsm_key_type_t keyType,
+							keyUsage_t usage)
 {
-#ifndef NO_KEY_DELETION
 	op_manage_key_args_t del_args;
 
 	memset(&del_args, 0, sizeof(del_args));
 	del_args.key_identifier = &keyHandle;
 	del_args.flags = HSM_OP_MANAGE_KEY_FLAGS_DELETE;
+	/* Always use strict update - need to modify for closed part */
+	del_args.flags |= HSM_OP_KEY_GENERATION_FLAGS_STRICT_OPERATION;
 	del_args.key_type = keyType;
+	del_args.key_group = usage;
 	return hsm_manage_key(hsmKeyMgmtHandle, &del_args);
-#else
-	return V2XSE_SUCCESS;
-#endif
 }
 
 /**
@@ -207,7 +209,7 @@ static int32_t deleteRtKey(TypeRtKeyId_t rtKeyId)
 	uint32_t keyHandle = rtKeyHandle[rtKeyId];
 
 	rtKeyHandle[rtKeyId] = 0;
-	if (deleteHsmKey(keyHandle, convertCurveId(rtCurveId[rtKeyId])))
+	if (deleteHsmKey(keyHandle, convertCurveId(rtCurveId[rtKeyId]), RT_KEY))
 		return V2XSE_FAILURE;
 	if (nvm_delete_array_data(RT_CURVEID_NAME, rtKeyId))
 		return V2XSE_FAILURE;
@@ -236,7 +238,7 @@ static int32_t deleteBaKey(TypeBaseKeyId_t baKeyId)
 	uint32_t keyHandle = baKeyHandle[baKeyId];
 
 	baKeyHandle[baKeyId] = 0;
-	if (deleteHsmKey(keyHandle, convertCurveId(baCurveId[baKeyId])))
+	if (deleteHsmKey(keyHandle, convertCurveId(baCurveId[baKeyId]), BA_KEY))
 		return V2XSE_FAILURE;
 	if (nvm_delete_array_data(BA_CURVEID_NAME, baKeyId))
 		return V2XSE_FAILURE;
