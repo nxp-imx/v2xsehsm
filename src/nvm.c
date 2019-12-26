@@ -213,7 +213,7 @@ int nvm_update_var(char *name, uint8_t *data, TypeLen_t size)
  * @return 0 if OK, -1 in case of ERROR
  *
  */
-static int nvm_delete_var(char *name)
+int nvm_delete_var(char *name)
 {
 	int retval;
 	char filename[MAX_FILENAME_SIZE];
