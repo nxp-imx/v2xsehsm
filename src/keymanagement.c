@@ -107,15 +107,14 @@ static int32_t genHsmKey(uint32_t *pKeyHandle, hsm_key_type_t keyType,
 	memset(&args, 0, sizeof(args));
 	args.key_identifier = pKeyHandle;
 	args.out_size = pubKeySize;
-	if (action == UPDATE_KEY) {
+	if (action == UPDATE_KEY)
 		args.flags = HSM_OP_KEY_GENERATION_FLAGS_UPDATE;
-	} else { /* CREATE_KEY */
+	else /* CREATE_KEY */
 		args.flags = HSM_OP_KEY_GENERATION_FLAGS_CREATE;
-		/* For now map each key usage to a different group */
-		args.key_group = usage;
-	}
 	/* Always use strict update - need to modify for closed part */
 	args.flags |= HSM_OP_KEY_GENERATION_FLAGS_STRICT_OPERATION;
+	/* For now map each key usage to a different group */
+	args.key_group = usage;
 	switch (usage) {
 	case RT_KEY:
 		/* RT key does not need any flags set */
@@ -855,14 +854,14 @@ int32_t v2xSe_deriveRtEccKeyPair
 	args.expansion_function_value_size = V2XSE_INT256_SIZE;
 	args.hash_value_size = V2XSE_INT256_SIZE;
 	args.pr_reconstruction_value_size = V2XSE_INT256_SIZE;
-	if (rtKeyHandle[rtKeyId]) {
+	if (rtKeyHandle[rtKeyId])
 		args.flags = HSM_OP_BUTTERFLY_KEY_FLAGS_UPDATE;
-	} else {
+	else
 		args.flags = HSM_OP_BUTTERFLY_KEY_FLAGS_CREATE;
-		args.key_group = RT_KEY;
-	}
 	/* Always use strict update - need to modify for closed part */
 	args.flags |= HSM_OP_BUTTERFLY_KEY_FLAGS_STRICT_OPERATION;
+	/* For now map each key usage to a different group */
+	args.key_group = RT_KEY;
 	/* Params provided to this API correspond to implicit certificate */
 	args.flags |= HSM_OP_BUTTERFLY_KEY_FLAGS_IMPLICIT_CERTIF;
 	args.dest_key_identifier = &outputRtKeyHandle;
