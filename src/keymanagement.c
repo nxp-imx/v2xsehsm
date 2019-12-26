@@ -838,7 +838,13 @@ int32_t v2xSe_deriveRtEccKeyPair
 	/* Delete rt key if it already exists and is of different type */
 	if (!nvm_retrieve_rt_key_handle(rtKeyId, &outputRtKeyHandle,
 							&storedRtCurveId)) {
-		if (storedRtCurveId != inputBaCurveId) {
+		/*
+		 * HSM PRC2 has a bug where the update overwrites the base key
+		 * instead of the rt key.  For the moment delete key even if
+		 * same type, to avoid this bug.
+		 */
+		/* if (storedRtCurveId != inputBaCurveId) { */
+		if (1) {
 			if (deleteRtKey(rtKeyId)) {
 				*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 				return V2XSE_FAILURE;
