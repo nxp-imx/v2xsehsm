@@ -44,8 +44,6 @@
 #ifndef HSMMISSING_H
 #define HSMMISSING_H
 
-/** Flag single keystore supported, EU & US use same id/nonce */
-#define SINGLE_KEYSTORE
 /** Flag to indicate BrainpoolT1 not yet supported - code uses R1 instead */
 #define NO_BP_T1
 

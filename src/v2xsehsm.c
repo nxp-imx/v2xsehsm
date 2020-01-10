@@ -171,8 +171,6 @@ int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId,
 	open_svc_cipher_args_t cipher_args;
 	open_svc_sign_gen_args_t sig_gen_args;
 	int32_t retval = V2XSE_FAILURE;
-	uint32_t keystore_identifier;
-	uint32_t key_store_nonce;
 	uint32_t justCreatedKeystore = 0;
 
 	if (!setupDefaultStatusCode(pHsmStatusCode) &&
@@ -181,23 +179,9 @@ int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId,
 		do {
 			if ((appletId == e_US_AND_GS) || (appletId == e_US)) {
 				appletVarStoragePath = usVarStorage;
-#ifdef SINGLE_KEYSTORE
-		/* Workaround for single keystore support in current hsm */
-		/*  - both apps use EU keystore defines			 */
-				keystore_identifier =
-						MAGIC_KEYSTORE_IDENTIFIER_EU;
-				key_store_nonce = MAGIC_KEYSTORE_NONCE_EU;
-#else
-				keystore_identifier =
-						MAGIC_KEYSTORE_IDENTIFIER_US;
-				key_store_nonce = MAGIC_KEYSTORE_NONCE_US;
-#endif
 			} else if ((appletId == e_EU_AND_GS) ||
 							(appletId == e_EU)) {
 				appletVarStoragePath = euVarStorage;
-				keystore_identifier =
-						MAGIC_KEYSTORE_IDENTIFIER_EU;
-				key_store_nonce = MAGIC_KEYSTORE_NONCE_EU;
 			} else {
 				*pHsmStatusCode = V2XSE_APP_MISSING;
 				break;
@@ -227,9 +211,9 @@ int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId,
 			/* Assume keystore exists, try to open */
 			memset(&key_store_args, 0, sizeof(key_store_args));
 			key_store_args.key_store_identifier =
-						keystore_identifier;
+						MAGIC_KEYSTORE_IDENTIFIER;
 			key_store_args.authentication_nonce =
-						key_store_nonce;
+						MAGIC_KEYSTORE_NONCE;
 			key_store_args.flags = HSM_SVC_KEY_STORE_FLAGS_UPDATE;
 			if (hsm_open_key_store_service(hsmSessionHandle,
 					&key_store_args, &hsmKeyStoreHandle)) {
@@ -242,9 +226,9 @@ int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId,
 				memset(&key_store_args, 0,
 						sizeof(key_store_args));
 				key_store_args.key_store_identifier =
-						keystore_identifier;
+						MAGIC_KEYSTORE_IDENTIFIER;
 				key_store_args.authentication_nonce =
-						key_store_nonce;
+						MAGIC_KEYSTORE_NONCE;
 				key_store_args.max_updates_number =
 						MAX_KEYSTORE_UPDATES;
 				key_store_args.flags =

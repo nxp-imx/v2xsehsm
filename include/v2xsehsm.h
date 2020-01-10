@@ -71,7 +71,7 @@
 #define EU_NVM_VAR_PATH COMMON_STORAGE_PATH"/EU/"
 
 /** Number of slots for generic data and key storage */
-#define NUM_STORAGE_SLOTS	100
+#define NUM_STORAGE_SLOTS	12800
 
 extern uint8_t	v2xseState;
 extern appletSelection_t v2xseAppletId;
@@ -99,16 +99,43 @@ extern hsm_signature_scheme_id_t activatedSigScheme;
 
 extern const uint8_t serialNumber[V2XSE_SERIAL_NUMBER];
 
-/** Keystore identifier for US applet keystore */
-#define MAGIC_KEYSTORE_IDENTIFIER_US	0x13196687
-/** Keystore nonce for US applet keystore */
-#define MAGIC_KEYSTORE_NONCE_US	0xFA32D21E
-/** Keystore identifier for EU applet keystore */
-#define MAGIC_KEYSTORE_IDENTIFIER_EU	0x87131966
-/** Keystore nonce for EU applet keystore */
-#define MAGIC_KEYSTORE_NONCE_EU	0x75A8CC6D
+/** Keystore identifier */
+#define MAGIC_KEYSTORE_IDENTIFIER	0x87131966
+/** Keystore nonce */
+#define MAGIC_KEYSTORE_NONCE		0x75A8CC6D
 /** Number of expected keystore updates in product lifetime - set to max */
 #define MAX_KEYSTORE_UPDATES		0
+/*
+ * Keystore layout (groups):
+ * 0: EU & US MA keys
+ * 1 to 128: EU RT keys
+ * 129 to 256: EU BA keys
+ * 257 to 384: US RT keys
+ * 385 to 512: US BA keys
+ * 512 to 1023: Generic data (not yet implemented in keystore)
+ */
+/** Keystore group used for MA keys */
+#define MA_KEY_GROUP		0
+/** Keystore group offset for EU RT keys */
+#define EU_RT_GROUP_OFFSET	1
+/** Keystore group offset for EU BA keys */
+#define EU_BA_GROUP_OFFSET	129
+/** Keystore group offset for US RT keys */
+#define US_RT_GROUP_OFFSET	257
+/** Keystore group offset for US BA keys */
+#define US_BA_GROUP_OFFSET	385
+/** Keystore group offset for generic data storage */
+#define DATA_GROUP_OFFSET	513
+/** Number of RT/BA key groups */
+#define KEYGROUP_SIZE		128
+/** First EU key group */
+#define EU_KEYGROUP_START	1
+/** First US key group */
+#define US_KEYGROUP_START	257
+/** Offset from RT to BA key groups */
+#define BA_KEYGROUP_OFFSET	128
+/** Number of keys per group */
+#define KEYS_PER_GROUP		100
 
 /** Priority of session opened with HSM */
 #define HSM_SESSION_PRIORITY	0

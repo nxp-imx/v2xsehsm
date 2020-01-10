@@ -82,6 +82,46 @@ static void convertPublicKeyToV2xseApi(hsm_key_type_t keyType,
 
 /**
  *
+ * @brief Calculate HSM secure storage group to use for given key
+ *
+ * The HSM stores keys in groups of 100 keys, with 1024 groups being
+ * available.  This adaptation layer selects the group to use based on
+ * the key ID from the API and the key usage, using the following mapping:
+ * 0: EU & US MA keys
+ * 1 to 128: EU RT keys
+ * 129 to 256: EU BA keys
+ * 257 to 384: US RT keys
+ * 385 to 512: US BA keys
+ * 512 to 1023: Generic data (not yet implemented in keystore)
+ *
+ * @param keyUsage type of key, used to calculate the offset
+ * @param keyId key Id, used to select which group of 100 keys
+ *
+ * @return key group to use
+ *
+ */
+static hsm_key_group_t getKeyGroup(keyUsage_t keyUsage, TypeRtKeyId_t keyId)
+{
+	hsm_key_group_t keyGroup;
+
+	/* Starting group based on applet, US or EU */
+	if ((v2xseAppletId == e_US) || (v2xseAppletId == e_US_AND_GS))
+		keyGroup = US_KEYGROUP_START;
+	else
+		keyGroup = EU_KEYGROUP_START;
+
+	/* Add BA key offset if base key */
+	if (keyUsage == BA_KEY)
+		keyGroup += BA_KEYGROUP_OFFSET;
+
+	/* Add further offset based on keyId, 100 keys per group */
+	keyGroup += (keyId / KEYS_PER_GROUP);
+
+	return keyGroup;
+}
+
+/**
+ *
  * @brief Generate hsm ECC key pair
  *
  * This function generates an ECC key pair in the hsm key store.  It may
@@ -94,13 +134,14 @@ static void convertPublicKeyToV2xseApi(hsm_key_type_t keyType,
  * @param pPubKey location to write public key
  * @param action indicates whether to create or update key
  * @param usage indicates required key usage (rt, ba or ma)
+ * @param group key group used by HSM for secure storage
  *
  * @return V2XSE_SUCCESS if no error, non-zero on error
  *
  */
 static int32_t genHsmKey(uint32_t *pKeyHandle, hsm_key_type_t keyType,
 		uint16_t pubKeySize, uint8_t *pPubKey, genKeyAction_t action,
-		keyUsage_t usage)
+		keyUsage_t usage, hsm_key_group_t group)
 {
 	op_generate_key_args_t args;
 
@@ -113,8 +154,7 @@ static int32_t genHsmKey(uint32_t *pKeyHandle, hsm_key_type_t keyType,
 		args.flags = HSM_OP_KEY_GENERATION_FLAGS_CREATE;
 	/* Always use strict update - need to modify for closed part */
 	args.flags |= HSM_OP_KEY_GENERATION_FLAGS_STRICT_OPERATION;
-	/* For now map each key usage to a different group */
-	args.key_group = usage;
+	args.key_group = group;
 	switch (usage) {
 	case RT_KEY:
 		/* RT key does not need any flags set */
@@ -169,13 +209,13 @@ static int32_t getHsmPubKey(uint32_t keyHandle, hsm_key_type_t keyType,
  *
  * @param keyHandle hsm handle for private key to delete
  * @param keyType type of key to delete
- * @param usage key usage of key to delete (rt or ba)
+ * @param group key group used by HSM for secure storage
  *
  * @return V2XSE_SUCCESS if no error, non-zero on error
  *
  */
 static int32_t deleteHsmKey(uint32_t keyHandle, hsm_key_type_t keyType,
-							keyUsage_t usage)
+							 hsm_key_group_t group)
 {
 	op_manage_key_args_t del_args;
 
@@ -185,7 +225,7 @@ static int32_t deleteHsmKey(uint32_t keyHandle, hsm_key_type_t keyType,
 	/* Always use strict update - need to modify for closed part */
 	del_args.flags |= HSM_OP_KEY_GENERATION_FLAGS_STRICT_OPERATION;
 	del_args.key_type = keyType;
-	del_args.key_group = usage;
+	del_args.key_group = group;
 	return hsm_manage_key(hsmKeyMgmtHandle, &del_args);
 }
 
@@ -211,7 +251,7 @@ static int32_t deleteRtKey(TypeRtKeyId_t rtKeyId)
 	rtKeyHandle[rtKeyId] = 0;
 
 	if (!deleteHsmKey(keyHandle, convertCurveId(rtCurveId[rtKeyId]),
-								RT_KEY) &&
+					getKeyGroup(RT_KEY, rtKeyId)) &&
 			!nvm_delete_array_data(RT_CURVEID_NAME, rtKeyId) &&
 			!nvm_delete_array_data(RT_KEYHANDLE_NAME, rtKeyId))
 		retval = V2XSE_SUCCESS;
@@ -240,7 +280,7 @@ static int32_t deleteBaKey(TypeBaseKeyId_t baKeyId)
 
 	baKeyHandle[baKeyId] = 0;
 	if (!deleteHsmKey(keyHandle, convertCurveId(baCurveId[baKeyId]),
-								BA_KEY) &&
+					getKeyGroup(BA_KEY, baKeyId)) &&
 			!nvm_delete_array_data(BA_CURVEID_NAME, baKeyId) &&
 			!nvm_delete_array_data(BA_KEYHANDLE_NAME, baKeyId))
 		retval = V2XSE_SUCCESS;
@@ -292,7 +332,7 @@ int32_t v2xSe_generateMaEccKeyPair
 		} else if (genHsmKey(&keyHandle, keyType,
 				v2xSe_getKeyLenFromCurveID(curveId),
 				(uint8_t *)pPublicKeyPlain, CREATE_KEY,
-								MA_KEY)) {
+						MA_KEY, MA_KEY_GROUP)) {
 			*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 		} else if (nvm_update_var(MA_CURVEID_NAME, (uint8_t *)&curveId,
 							sizeof(curveId))) {
@@ -429,7 +469,8 @@ int32_t v2xSe_generateRtEccKeyPair
 					(uint8_t *)pPublicKeyPlain,
 					rtKeyHandle[rtKeyId] ? UPDATE_KEY :
 							CREATE_KEY,
-					RT_KEY)) {
+					RT_KEY,
+					getKeyGroup(RT_KEY, rtKeyId))) {
 				*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 				break;
 			}
@@ -625,7 +666,8 @@ int32_t v2xSe_generateBaEccKeyPair
 					(uint8_t *)pPublicKeyPlain,
 					baKeyHandle[baseKeyId] ?
 						UPDATE_KEY : CREATE_KEY,
-					BA_KEY)) {
+					BA_KEY,
+					getKeyGroup(BA_KEY, baseKeyId))) {
 				*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 				break;
 			}
@@ -870,7 +912,7 @@ int32_t v2xSe_deriveRtEccKeyPair
 			/* Always use strict update - WA for current code */
 			args.flags |=
 				HSM_OP_BUTTERFLY_KEY_FLAGS_STRICT_OPERATION;
-			args.key_group = RT_KEY;
+			args.key_group = getKeyGroup(RT_KEY, rtKeyId);
 			/* Params correspond to implicit certificate */
 			args.flags |=
 				HSM_OP_BUTTERFLY_KEY_FLAGS_IMPLICIT_CERTIF;
