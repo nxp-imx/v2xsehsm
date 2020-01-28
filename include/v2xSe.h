@@ -1,6 +1,6 @@
 
 /*
- * Copyright 2019 NXP
+ * Copyright 2019-2020 NXP
  */
 
 /*
@@ -567,4 +567,24 @@ int32_t v2xSe_invokeGarbageCollector(TypeSW_t *pHsmStatusCode);
 int32_t v2xSe_getRemainingNvm(uint32_t *pSize, TypeSW_t *pHsmStatusCode);
 int32_t v2xSe_endKeyInjection(TypeSW_t *pHsmStatusCode);
 int32_t v2xSe_getSePhase(uint8_t *pPhaseInfo, TypeSW_t *pHsmStatusCode);
+
+int32_t v2xSe_getKek(uint16_t keyType, uint8_t *pSignedMessage,
+	uint16_t signedMessageLength, uint8_t *pKekPublicKey,
+	uint16_t *pKekLength, TypeSW_t *pHsmStatusCode);
+/** Flag to use KEK that is unique per device */
+#define KEK_TYPE_UNIQUE	(0u)
+/** Flag to use KEK that is common for all devices */
+#define KEK_TYPE_COMMON	(1u)
+int32_t v2xSe_injectMaEccPrivateKey(TypeCurveId_t curveId,
+	TypeSW_t *pHsmStatusCode, TypePublicKey_t *pPublicKeyPlain,
+	uint8_t *pKeyData, uint16_t keyDataSize, uint16_t kekType);
+int32_t v2xSe_injectRtEccPrivateKey(TypeRtKeyId_t rtKeyId,
+	TypeCurveId_t curveId, TypeSW_t *pHsmStatusCode,
+	TypePublicKey_t *pPublicKeyPlain, uint8_t *pKeyData,
+	uint16_t keyDataSize, uint16_t kekType);
+int32_t v2xSe_injectBaEccPrivateKey(TypeBaseKeyId_t baseKeyId,
+	TypeCurveId_t curveId, TypeSW_t *pHsmStatusCode,
+	TypePublicKey_t *pPublicKeyPlain, uint8_t *pKeyData,
+	uint16_t keyDataSize, uint16_t kekType);
+
 #endif

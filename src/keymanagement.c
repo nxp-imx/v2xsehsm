@@ -63,7 +63,7 @@
  * @param pPublicKeyPlain location of the generated public key
  *
  */
-static void convertPublicKeyToV2xseApi(hsm_key_type_t keyType,
+void convertPublicKeyToV2xseApi(hsm_key_type_t keyType,
 					TypePublicKey_t *pPublicKeyPlain)
 {
 	hsmPubKey256_t *hsmApiPtr = (hsmPubKey256_t*)pPublicKeyPlain;
@@ -100,7 +100,7 @@ static void convertPublicKeyToV2xseApi(hsm_key_type_t keyType,
  * @return key group to use
  *
  */
-static hsm_key_group_t getKeyGroup(keyUsage_t keyUsage, TypeRtKeyId_t keyId)
+hsm_key_group_t getKeyGroup(keyUsage_t keyUsage, TypeRtKeyId_t keyId)
 {
 	hsm_key_group_t keyGroup;
 
@@ -155,17 +155,19 @@ static int32_t genHsmKey(uint32_t *pKeyHandle, hsm_key_type_t keyType,
 	/* Always use strict update - need to modify for closed part */
 	args.flags |= HSM_OP_KEY_GENERATION_FLAGS_STRICT_OPERATION;
 	args.key_group = group;
+	/* All keys persistent */
+	args.key_info = HSM_KEY_INFO_PERSISTENT;
 	switch (usage) {
 	case RT_KEY:
-		/* RT key does not need any flags set */
+		/* RT key does not need any extra flags set */
 		break;
 	case BA_KEY:
 		/* BA keys can be used for butterfly */
-		args.key_info = HSM_KEY_INFO_MASTER;
+		args.key_info |= HSM_KEY_INFO_MASTER;
 		break;
 	case MA_KEY:
 		/* MA key cannot be modified */
-		args.key_info = HSM_KEY_INFO_PERMANENT;
+		args.key_info |= HSM_KEY_INFO_PERMANENT;
 		break;
 	}
 	args.key_type = keyType;
@@ -188,7 +190,7 @@ static int32_t genHsmKey(uint32_t *pKeyHandle, hsm_key_type_t keyType,
  * @return V2XSE_SUCCESS if no error, non-zero on error
  *
  */
-static int32_t getHsmPubKey(uint32_t keyHandle, hsm_key_type_t keyType,
+int32_t getHsmPubKey(uint32_t keyHandle, hsm_key_type_t keyType,
 		uint16_t pubKeySize, uint8_t *pPubKey)
 {
 	hsm_op_pub_key_recovery_args_t args;
@@ -214,8 +216,8 @@ static int32_t getHsmPubKey(uint32_t keyHandle, hsm_key_type_t keyType,
  * @return V2XSE_SUCCESS if no error, non-zero on error
  *
  */
-static int32_t deleteHsmKey(uint32_t keyHandle, hsm_key_type_t keyType,
-							 hsm_key_group_t group)
+int32_t deleteHsmKey(uint32_t keyHandle, hsm_key_type_t keyType,
+							hsm_key_group_t group)
 {
 	op_manage_key_args_t del_args;
 
@@ -243,7 +245,7 @@ static int32_t deleteHsmKey(uint32_t keyHandle, hsm_key_type_t keyType,
  * @return V2XSE_SUCCESS if no error, non-zero on error
  *
  */
-static int32_t deleteRtKey(TypeRtKeyId_t rtKeyId)
+int32_t deleteRtKey(TypeRtKeyId_t rtKeyId)
 {
 	int32_t retval = V2XSE_SUCCESS;
 	uint32_t keyHandle = rtKeyHandle[rtKeyId];
@@ -276,7 +278,7 @@ static int32_t deleteRtKey(TypeRtKeyId_t rtKeyId)
  *
  */
 
-static int32_t deleteBaKey(TypeBaseKeyId_t baKeyId)
+int32_t deleteBaKey(TypeBaseKeyId_t baKeyId)
 {
 	int32_t retval = V2XSE_SUCCESS;
 	uint32_t keyHandle = baKeyHandle[baKeyId];

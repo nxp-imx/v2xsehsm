@@ -147,14 +147,6 @@ extern const uint8_t serialNumber[V2XSE_SERIAL_NUMBER];
 /** Required size for ECIES vector for hsm */
 #define HSM_ECIES_VECTOR_SIZE	96
 
-hsm_key_type_t convertCurveId(TypeCurveId_t curveId);
-int is256bitCurve(hsm_key_type_t keyType);
-int32_t setupDefaultStatusCode(TypeSW_t *pStatusCode);
-int32_t enforceInitState(int32_t *pApiRetVal);
-int32_t enforceNotInitState(int32_t *pApiRetVal);
-int32_t enforceActivatedState(TypeSW_t *pStatusCode, int32_t *pApiRetVal);
-int32_t enforceSecurityLevel5(TypeSW_t *pStatusCode);
-
 /**
  * This structure describes the format that the hsm uses to encode
  * public keys for 256 bit curves
@@ -230,5 +222,22 @@ typedef enum {
 	CREATE_KEY,
 	UPDATE_KEY
 } genKeyAction_t;
+
+hsm_key_type_t convertCurveId(TypeCurveId_t curveId);
+int is256bitCurve(hsm_key_type_t keyType);
+int32_t setupDefaultStatusCode(TypeSW_t *pStatusCode);
+int32_t enforceInitState(int32_t *pApiRetVal);
+int32_t enforceNotInitState(int32_t *pApiRetVal);
+int32_t enforceActivatedState(TypeSW_t *pStatusCode, int32_t *pApiRetVal);
+int32_t enforceSecurityLevel5(TypeSW_t *pStatusCode);
+hsm_key_group_t getKeyGroup(keyUsage_t keyUsage, TypeRtKeyId_t keyId);
+int32_t deleteRtKey(TypeRtKeyId_t rtKeyId);
+int32_t deleteBaKey(TypeBaseKeyId_t baKeyId);
+int32_t deleteHsmKey(uint32_t keyHandle, hsm_key_type_t keyType,
+						hsm_key_group_t group);
+int32_t getHsmPubKey(uint32_t keyHandle, hsm_key_type_t keyType,
+		uint16_t pubKeySize, uint8_t *pPubKey);
+void convertPublicKeyToV2xseApi(hsm_key_type_t keyType,
+					TypePublicKey_t *pPublicKeyPlain);
 
 #endif

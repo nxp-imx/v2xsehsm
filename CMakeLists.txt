@@ -24,6 +24,7 @@ add_library (v2xCrypto SHARED
 	src/ecies.c
 	src/datastorage.c
 	src/utility.c
+	src/keyimport.c
 	)
 
 target_link_libraries(v2xCrypto
