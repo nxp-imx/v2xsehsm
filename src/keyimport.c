@@ -135,7 +135,7 @@ int32_t v2xSe_getKek(
 	uint16_t *pKekLength,
 	TypeSW_t *pHsmStatusCode)
 {
-	hsm_op_export_root_kek_args_t args;
+	op_export_root_kek_args_t args;
 	int32_t retval = V2XSE_FAILURE;
 	int32_t hsmret;
 

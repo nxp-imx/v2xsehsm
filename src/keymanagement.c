@@ -197,7 +197,7 @@ static int32_t genHsmKey(uint32_t *pKeyHandle, hsm_key_type_t keyType,
 int32_t getHsmPubKey(uint32_t keyHandle, hsm_key_type_t keyType,
 		uint16_t pubKeySize, uint8_t *pPubKey)
 {
-	hsm_op_pub_key_recovery_args_t args;
+	op_pub_key_recovery_args_t args;
 	hsm_err_t hsmret;
 
 	memset(&args, 0, sizeof(args));

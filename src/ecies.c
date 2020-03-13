@@ -112,7 +112,7 @@ static hsm_err_t doHsmDecryption(uint32_t keyHandle, hsm_key_type_t keyType,
 			TypeDecryptEcies_t *pEciesData,
 			TypeLen_t *pMsgLen, TypePlainText_t *pMsgData)
 {
-	hsm_op_ecies_dec_args_t args;
+	op_ecies_dec_args_t args;
 	hsm_err_t retVal;
 
 	memset(&args, 0, sizeof(args));
@@ -161,7 +161,7 @@ int32_t v2xSe_encryptUsingEcies (TypeEncryptEcies_t *pEciesData,
 					TypeLen_t *pVctLen,
 					TypeVCTData_t *pVctData )
 {
-	hsm_op_ecies_enc_args_t args;
+	op_ecies_enc_args_t args;
 	hsm_key_type_t keyType;
 	uint8_t hsm_key[V2XSE_384_EC_PUB_KEY];
 	int32_t retval = V2XSE_FAILURE;
