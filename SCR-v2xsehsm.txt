@@ -6,5 +6,5 @@ License File:                BSD-3-Clause.txt
 Package Category:            Security
 Type of Content:             Source code
 Description and comments:    Dynamic library to implement V2X SE API with i.MX's internal HSM
-Release Location:            CAF (TBD)
+Release Location:            NXP.com
 Origin:                      NXP (BSD-3-Clause)
