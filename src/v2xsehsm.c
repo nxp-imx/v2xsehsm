@@ -206,7 +206,7 @@ int32_t activateV2x(appletSelection_t appletId,
 						MAGIC_KEYSTORE_IDENTIFIER;
 			key_store_args.authentication_nonce =
 						MAGIC_KEYSTORE_NONCE;
-			key_store_args.flags = HSM_SVC_KEY_STORE_FLAGS_UPDATE;
+			key_store_args.flags = 0;
 			TRACE_HSM_CALL(PROFILE_ID_HSM_OPEN_KEY_STORE_SERVICE);
 			hsmret = hsm_open_key_store_service(hsmSessionHandle,
 					&key_store_args, &hsmKeyStoreHandle);
