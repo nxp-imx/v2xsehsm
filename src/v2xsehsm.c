@@ -85,7 +85,7 @@ hsm_hdl_t hsmCipherHandle;
 hsm_hdl_t hsmSigGenHandle;
 
 /* NVM vars, initialized from filesystem on activate */
-/** Phase of emulated SXF1800, can be key injection or normal phase */
+/** Phase inherited from SXF1800, only 'normal operating' for adaptation layer */
 uint8_t	v2xsePhase;
 
 /* NVM Key handles, initialized as zero, read from fs when first used */
@@ -576,10 +576,9 @@ int32_t v2xSe_sendReceive(uint8_t *pTxBuf, uint16_t txLen,  uint16_t *pRxLen,
  * @brief End key injection phase
  * @ingroup keyinjection
  *
- * This function ends key injection phase for the selected applet.  For the
- * moment this simply involves updating a variable in NVM.  This function
- * will need to be updated when a more secure method to end key injection
- * phase has been implemented on the HSM.
+ * This function ends key injection phase for the selected applet.
+ * This function has no meaning for the HSM implementation and must return
+ * an error.
  *
  * @param pHsmStatusCode pointer to location to write extended result code
  *
@@ -592,22 +591,9 @@ int32_t v2xSe_endKeyInjection (TypeSW_t *pHsmStatusCode)
 
 	TRACE_API_ENTRY(PROFILE_ID_V2XSE_ENDKEYINJECTION);
 
-	if (!setupDefaultStatusCode(pHsmStatusCode) &&
-			!enforceActivatedState(pHsmStatusCode, &retval)) {
+	if (pHsmStatusCode)
+		*pHsmStatusCode = V2XSE_FUNC_NOT_SUPPORTED;
 
-		if (v2xsePhase != V2XSE_KEY_INJECTION_PHASE) {
-			*pHsmStatusCode = V2XSE_FUNC_NOT_SUPPORTED;
-		} else {
-			v2xsePhase = V2XSE_NORMAL_OPERATING_PHASE;
-			if (nvm_update_var(V2XSE_PHASE_NAME, &v2xsePhase,
-							sizeof(v2xsePhase))) {
-				*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
-			} else {
-				*pHsmStatusCode = V2XSE_NO_ERROR;
-				retval = V2XSE_SUCCESS;
-			}
-		}
-	}
 	TRACE_API_EXIT(PROFILE_ID_V2XSE_ENDKEYINJECTION);
 	return retval;
 }

@@ -206,7 +206,6 @@ int32_t v2xSe_injectMaEccPrivateKey(
 
 	if (!setupDefaultStatusCode(pHsmStatusCode) &&
 			!enforceActivatedState(pHsmStatusCode, &retval) &&
-			(v2xsePhase == V2XSE_KEY_INJECTION_PHASE) &&
 			(pPublicKeyPlain != NULL) &&
 			(pKeyData != NULL)) {
 
@@ -306,7 +305,6 @@ int32_t v2xSe_injectRtEccPrivateKey(
 		if (setupDefaultStatusCode(pHsmStatusCode) ||
 				enforceActivatedState(pHsmStatusCode,
 								&retval) ||
-				(v2xsePhase != V2XSE_KEY_INJECTION_PHASE) ||
 				(pPublicKeyPlain == NULL) ||
 				(pKeyData == NULL)) {
 			break;
@@ -417,7 +415,6 @@ int32_t v2xSe_injectBaEccPrivateKey(
 		if (setupDefaultStatusCode(pHsmStatusCode) ||
 				enforceActivatedState(pHsmStatusCode,
 								&retval) ||
-				(v2xsePhase != V2XSE_KEY_INJECTION_PHASE) ||
 				(pPublicKeyPlain == NULL) ||
 				(pKeyData == NULL)) {
 			break;

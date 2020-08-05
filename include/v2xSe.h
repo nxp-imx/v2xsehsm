@@ -214,7 +214,7 @@
 /** Minimum size of generic data */
 #define V2XSE_MIN_DATA_SIZE_GSA 1u
 
-/** Key injection phase */
+/** Key injection phase - unused in adaptation layer */
 #define V2XSE_KEY_INJECTION_PHASE	0u
 /** Normal operating phase */
 #define V2XSE_NORMAL_OPERATING_PHASE	1u

@@ -789,7 +789,7 @@ int32_t nvm_init(void)
 		if (!phaseValid) {
 			/* If phase not valid, clear all data & create phase */
 			if (!nvm_clear()) {
-				v2xsePhase = V2XSE_KEY_INJECTION_PHASE;
+				v2xsePhase = V2XSE_NORMAL_OPERATING_PHASE;
 				if (!nvm_update_var(V2XSE_PHASE_NAME,
 						&v2xsePhase,
 							sizeof(v2xsePhase)))
