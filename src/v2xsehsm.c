@@ -60,6 +60,8 @@ const char* appletVarStoragePath;
 const char usVarStorage[] = US_NVM_VAR_PATH;
 /** Fixed path to NVM storage for EU applet */
 const char euVarStorage[] = EU_NVM_VAR_PATH;
+/** Fixed path to NVM storage for CN applet */
+const char cnVarStorage[] = CN_NVM_VAR_PATH;
 
 /** Handle of key pre-loaded for low latency signature generation */
 uint32_t activatedKeyHandle;
@@ -130,7 +132,7 @@ int32_t v2xSe_connect(void)
 
 /**
  *
- * @brief Activate V2X opertions
+ * @brief Activate V2X operations
  *
  * This function activates V2X operations.
  * The appletId is stored in global variable for later use.
@@ -138,7 +140,7 @@ int32_t v2xSe_connect(void)
  * the filesystem.  A session is opened with the HSM, and all services
  * that can be used are also opened.  The v2xseState is set to activated.
  *
- * @param appletId Applet(s) to activate: US or EU, and optionally GS
+ * @param appletId Applet(s) to activate: US, EU or CN, and optionally GS
  * @param pHsmStatusCode pointer to location to write extended result code
  *
  * @return V2XSE_SUCCESS if no error, non-zero on error
@@ -166,6 +168,9 @@ int32_t activateV2x(appletSelection_t appletId,
 			} else if ((appletId == e_EU_AND_GS) ||
 							(appletId == e_EU)) {
 				appletVarStoragePath = euVarStorage;
+			} else if ((appletId == e_CN_AND_GS) ||
+							(appletId == e_CN)) {
+				appletVarStoragePath = cnVarStorage;
 			} else {
 				*pHsmStatusCode = V2XSE_APP_MISSING;
 				break;
@@ -314,7 +319,7 @@ int32_t activateV2x(appletSelection_t appletId,
  * It is not supported for the HSM adaptation layer and shall always return an
  * error.
  *
- * @param appletId Applet(s) to activate: US or EU, and optionally GS
+ * @param appletId Applet(s) to activate: US, EU or CN, and optionally GS
  * @param securityLevel Security level for emulated SXF1800
  * @param pHsmStatusCode pointer to location to write extended result code
  *
@@ -342,7 +347,7 @@ int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId,
  * It calls the activateV2x helper function specifying e_channelSecLevel_1
  * for security level.
 
- * @param appletId Applet(s) to activate: US or EU, and optionally GS
+ * @param appletId Applet(s) to activate: US, EU or CN, and optionally GS
  * @param pHsmStatusCode pointer to location to write extended result code
  *
  * @return V2XSE_SUCCESS if no error, non-zero on error

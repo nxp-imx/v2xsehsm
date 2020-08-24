@@ -462,7 +462,11 @@ typedef enum
 	/** Query V2X applet version */
 	e_V2X,
 	/** Query generic storage applet version */
-	e_GS
+	e_GS,
+	/** Select CN instance of V2X applet during activation */
+	e_CN,
+	/** Select CN V2X and data storage applets during activation */
+	e_CN_AND_GS
 } appletSelection_t;
 
 /**

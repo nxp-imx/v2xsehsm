@@ -74,7 +74,8 @@ int32_t v2xSe_storeData(TypeGsDataIndex_t index, TypeLen_t length,
 			!enforceActivatedState(pHsmStatusCode, &retval)) {
 
 		if ((v2xseAppletId != e_EU_AND_GS) &&
-					(v2xseAppletId != e_US_AND_GS)) {
+			(v2xseAppletId != e_US_AND_GS) &&
+			(v2xseAppletId != e_CN_AND_GS)) {
 			*pHsmStatusCode = V2XSE_INS_NOT_SUPPORTED;
 		} else if (!pData || (length < V2XSE_MIN_DATA_SIZE_GSA) ||
 				(length > V2XSE_MAX_DATA_SIZE_GSA) ||
@@ -118,7 +119,8 @@ int32_t v2xSe_getData(TypeGsDataIndex_t index, TypeLen_t *pLength,
 			!enforceActivatedState(pHsmStatusCode, &retval)) {
 
 		if ((v2xseAppletId != e_EU_AND_GS) &&
-					(v2xseAppletId != e_US_AND_GS)) {
+			(v2xseAppletId != e_US_AND_GS) &&
+			(v2xseAppletId != e_CN_AND_GS)) {
 			*pHsmStatusCode = V2XSE_INS_NOT_SUPPORTED;
 		} else if (!pData || (!pLength) ||
 					(index > (NUM_STORAGE_SLOTS-1))) {
@@ -158,7 +160,8 @@ int32_t v2xSe_deleteData(TypeGsDataIndex_t index, TypeSW_t *pHsmStatusCode)
 			!enforceActivatedState(pHsmStatusCode, &retval)) {
 
 		if ((v2xseAppletId != e_EU_AND_GS) &&
-			(v2xseAppletId != e_US_AND_GS)) {
+			(v2xseAppletId != e_US_AND_GS) &&
+			(v2xseAppletId != e_CN_AND_GS)) {
 			*pHsmStatusCode = V2XSE_INS_NOT_SUPPORTED;
 		} else if (index > (NUM_STORAGE_SLOTS-1)) {
 			*pHsmStatusCode = V2XSE_WRONG_DATA;

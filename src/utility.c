@@ -155,7 +155,8 @@ int32_t v2xSe_getAppletVersion
 			*pHsmStatusCode = V2XSE_WRONG_DATA;
 		} else if ((appletType == e_GS) &&
 				((v2xseAppletId == e_EU) ||
-				(v2xseAppletId == e_US))) {
+				(v2xseAppletId == e_US) ||
+				(v2xseAppletId == e_CN))) {
 			*pHsmStatusCode = V2XSE_INS_NOT_SUPPORTED;
 		} else {
 			pVersion->data[0] = VERSION_MAJOR;
@@ -221,11 +222,15 @@ int32_t v2xSe_getSeInfo
 			pInfo->rtKeyDerivation = 0;
 
 		/* ECIES support indicator */
-		pInfo->eciesSupport = 1;
+		if ((v2xseAppletId == e_CN_AND_GS) || (v2xseAppletId == e_CN))
+			pInfo->eciesSupport = 0;
+		else
+			pInfo->eciesSupport = 1;
 
 		/* Maximum number of data slots supported by GS applet */
 		if ((v2xseAppletId == e_EU_AND_GS) ||
-						(v2xseAppletId == e_US_AND_GS))
+					(v2xseAppletId == e_US_AND_GS) ||
+					(v2xseAppletId == e_CN_AND_GS))
 			pInfo->maxDataSlots = NUM_STORAGE_SLOTS;
 		else
 			pInfo->maxDataSlots = 0;

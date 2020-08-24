@@ -87,12 +87,14 @@ void convertPublicKeyToV2xseApi(hsm_key_type_t keyType,
  * The HSM stores keys in groups of 100 keys, with 1024 groups being
  * available.  This adaptation layer selects the group to use based on
  * the key ID from the API and the key usage, using the following mapping:
- * 0: EU & US MA keys
+ * 0: EU, US & CN MA keys
  * 1 to 128: EU RT keys
  * 129 to 256: EU BA keys
  * 257 to 384: US RT keys
  * 385 to 512: US BA keys
- * 512 to 1023: Generic data (not yet implemented in keystore)
+ * 513 to 640: CN RT keys
+ * 641 to 768: CN BA keys
+ * 769 to 1023: Generic data (not yet implemented in keystore)
  *
  * @param keyUsage type of key, used to calculate the offset
  * @param keyId key Id, used to select which group of 100 keys
@@ -104,11 +106,13 @@ hsm_key_group_t getKeyGroup(keyUsage_t keyUsage, TypeRtKeyId_t keyId)
 {
 	hsm_key_group_t keyGroup;
 
-	/* Starting group based on applet, US or EU */
+	/* Starting group based on applet, US, EU or CN */
 	if ((v2xseAppletId == e_US) || (v2xseAppletId == e_US_AND_GS))
 		keyGroup = US_KEYGROUP_START;
-	else
+	else if ((v2xseAppletId == e_EU) || (v2xseAppletId == e_EU_AND_GS))
 		keyGroup = EU_KEYGROUP_START;
+	else
+		keyGroup = CN_KEYGROUP_START;
 
 	/* Add BA key offset if base key */
 	if (keyUsage == BA_KEY)

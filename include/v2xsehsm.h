@@ -61,6 +61,8 @@
 #define V2XSE_APP_US	0
 /** EU V2X applet selected */
 #define V2XSE_APP_EU	1
+/** CN V2X applet selected */
+#define V2XSE_APP_CN	2
 
 /** Filesystem path to store nvm data */
 #define COMMON_STORAGE_PATH "/etc/v2x_hsm_adaptation/"
@@ -70,6 +72,8 @@
 #define US_NVM_VAR_PATH COMMON_STORAGE_PATH"/US/"
 /** Filesystem path to store data for EU applet */
 #define EU_NVM_VAR_PATH COMMON_STORAGE_PATH"/EU/"
+/** Filesystem path to store data for CN applet */
+#define CN_NVM_VAR_PATH COMMON_STORAGE_PATH"/CN/"
 
 /** Number of slots for generic data and key storage */
 #define NUM_STORAGE_SLOTS	12800
@@ -108,12 +112,14 @@ extern const uint8_t serialNumber[V2XSE_SERIAL_NUMBER];
 #define MAX_KEYSTORE_UPDATES		0
 /*
  * Keystore layout (groups):
- * 0: EU & US MA keys
+ * 0: EU, US & CN MA keys
  * 1 to 128: EU RT keys
  * 129 to 256: EU BA keys
  * 257 to 384: US RT keys
  * 385 to 512: US BA keys
- * 512 to 1023: Generic data (not yet implemented in keystore)
+ * 513 to 640: CN RT keys
+ * 641 to 768: CN BA keys
+ * 769 to 1023: Generic data (not yet implemented in keystore)
  */
 /** Keystore group used for MA keys */
 #define MA_KEY_GROUP		0
@@ -125,14 +131,20 @@ extern const uint8_t serialNumber[V2XSE_SERIAL_NUMBER];
 #define US_RT_GROUP_OFFSET	257
 /** Keystore group offset for US BA keys */
 #define US_BA_GROUP_OFFSET	385
+/** Keystore group offset for CN RT keys */
+#define CN_RT_GROUP_OFFSET  513
+/** Keystore group offset for CN BA keys */
+#define CN_BA_GROUP_OFFSET  641
 /** Keystore group offset for generic data storage */
-#define DATA_GROUP_OFFSET	513
+#define DATA_GROUP_OFFSET	769
 /** Number of RT/BA key groups */
 #define KEYGROUP_SIZE		128
 /** First EU key group */
 #define EU_KEYGROUP_START	1
 /** First US key group */
 #define US_KEYGROUP_START	257
+/** First CN key group */
+#define CN_KEYGROUP_START   513
 /** Offset from RT to BA key groups */
 #define BA_KEYGROUP_OFFSET	128
 /** Number of keys per group */
