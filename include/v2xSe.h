@@ -138,6 +138,8 @@
 #define V2XSE_CURVE_BP384R1	4u
 /** Brainpool T1 384 ECC */
 #define V2XSE_CURVE_BP384T1	5u
+/** SM2 256 ECC */
+#define V2XSE_CURVE_SM2_256	64u
 
 /** Do not copy public key on return */
 #define V2XSE_RSP_WITHOUT_PUBKEY	0u

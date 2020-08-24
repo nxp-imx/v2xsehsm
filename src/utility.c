@@ -88,6 +88,9 @@ hsm_key_type_t convertCurveId(TypeCurveId_t curveId)
 			keyType = HSM_KEY_TYPE_ECDSA_BRAINPOOL_T1_384;
 #endif
 			break;
+		case V2XSE_CURVE_SM2_256:
+			keyType = HSM_KEY_TYPE_DSA_SM2_FP_256;
+			break;
 		default:
 			keyType = 0;
 	}
@@ -115,6 +118,8 @@ int32_t is256bitCurve(hsm_key_type_t keyType)
 		case HSM_KEY_TYPE_ECDSA_NIST_P256:
 		case HSM_KEY_TYPE_ECDSA_BRAINPOOL_R1_256:
 		case HSM_KEY_TYPE_ECDSA_BRAINPOOL_T1_256:
+		case HSM_KEY_TYPE_DSA_SM2_FP_256:
+		case HSM_SIGNATURE_SCHEME_DSA_SM2_FP_256_SM3:
 			retval = 1;
 	}
 	return retval;
@@ -432,6 +437,7 @@ int32_t keyLenFromCurveID(TypeCurveId_t curveID)
 		case V2XSE_CURVE_NISTP256:
 		case V2XSE_CURVE_BP256R1:
 		case V2XSE_CURVE_BP256T1:
+		case V2XSE_CURVE_SM2_256:
 			lengthVal = V2XSE_256_EC_PUB_KEY;
 			break;
 

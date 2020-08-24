@@ -167,6 +167,9 @@ int32_t v2xSe_createMaSign
 			*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 		} else {
 			sig_scheme = convertCurveId(curveId);
+			if (sig_scheme == HSM_KEY_TYPE_DSA_SM2_FP_256) {
+				sig_scheme = HSM_SIGNATURE_SCHEME_DSA_SM2_FP_256_SM3;
+			}
 			if (!sig_scheme) {
 				*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 			} else {
@@ -230,7 +233,7 @@ int32_t v2xSe_activateRtKeyForSigning
 {
 	uint32_t keyHandle;
 	TypeCurveId_t curveId;
-	hsm_signature_scheme_id_t sigScheme;
+	hsm_signature_scheme_id_t sig_scheme;
 	int32_t retval = V2XSE_FAILURE;
 
 	TRACE_API_ENTRY(PROFILE_ID_V2XSE_ACTIVATERTKEYFORSIGNING);
@@ -249,12 +252,15 @@ int32_t v2xSe_activateRtKeyForSigning
 								&curveId)) {
 			*pHsmStatusCode = V2XSE_WRONG_DATA;
 		} else {
-			sigScheme = convertCurveId(curveId);
-			if (!sigScheme) {
+			sig_scheme = convertCurveId(curveId);
+			if (sig_scheme == HSM_KEY_TYPE_DSA_SM2_FP_256) {
+				sig_scheme = HSM_SIGNATURE_SCHEME_DSA_SM2_FP_256_SM3;
+			}
+			if (!sig_scheme) {
 				*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 			} else {
 				activatedKeyHandle = keyHandle;
-				activatedSigScheme = sigScheme;
+				activatedSigScheme = sig_scheme;
 				*pHsmStatusCode = V2XSE_NO_ERROR;
 				retval = V2XSE_SUCCESS;
 			}
@@ -375,6 +381,9 @@ int32_t v2xSe_createRtSign
 			*pHsmStatusCode = V2XSE_WRONG_DATA;
 		} else {
 			sig_scheme = convertCurveId(curveId);
+			if (sig_scheme == HSM_KEY_TYPE_DSA_SM2_FP_256) {
+				sig_scheme = HSM_SIGNATURE_SCHEME_DSA_SM2_FP_256_SM3;
+			}
 			if (!sig_scheme) {
 				*pHsmStatusCode = V2XSE_WRONG_DATA;
 			} else if (!is256bitCurve(sig_scheme)) {
@@ -440,6 +449,9 @@ int32_t v2xSe_createBaSign
 			*pHsmStatusCode = V2XSE_WRONG_DATA;
 		} else {
 			sig_scheme = convertCurveId(curveId);
+			if (sig_scheme == HSM_KEY_TYPE_DSA_SM2_FP_256) {
+				sig_scheme = HSM_SIGNATURE_SCHEME_DSA_SM2_FP_256_SM3;
+			}
 			if (!sig_scheme) {
 				*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 			} else {
