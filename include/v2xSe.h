@@ -216,6 +216,12 @@
 /** Minimum size of generic data */
 #define V2XSE_MIN_DATA_SIZE_GSA 1u
 
+/** Size in bytes of SM2 identifier */
+#define V2XSE_SM2_ID_SIZE 16u
+
+/** Size in bytes of SM2 ZA */
+#define V2XSE_SM2_ZA_SIZE 32u
+
 /** Key injection phase - unused in adaptation layer */
 #define V2XSE_KEY_INJECTION_PHASE	0u
 /** Normal operating phase */
@@ -322,6 +328,20 @@ typedef struct
 	/** Plain text data */
 	uint8_t data[V2XSE_MAX_MSG_SIZE];
 } TypePlainText_t;
+
+/** This structure holds SM2 identifier */
+typedef struct
+{
+	/** SM2 identifier data */
+	uint8_t data[V2XSE_SM2_ID_SIZE];
+} TypeSM2Identifier_t;
+
+/** This structure holds SM2 ZA */
+typedef struct
+{
+	/** SM2 ZA data */
+	uint8_t data[V2XSE_SM2_ZA_SIZE];
+} TypeSM2ZA_t;
 
 /** This structure holds parameters for ECIES-Encrypt functions */
 typedef struct
@@ -593,4 +613,6 @@ int32_t v2xSe_injectBaEccPrivateKey(TypeBaseKeyId_t baseKeyId,
 	TypePublicKey_t *pPublicKeyPlain, uint8_t *pKeyData,
 	uint16_t keyDataSize, uint16_t kekType);
 
+int32_t v2xSe_sm2_get_z(TypePublicKey_t pubKey, TypeSM2Identifier_t sm2_id,
+	TypeSM2ZA_t *sm2_za);
 #endif

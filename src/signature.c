@@ -479,3 +479,61 @@ int32_t v2xSe_createBaSign
 	TRACE_API_EXIT(PROFILE_ID_V2XSE_CREATEBASIGN);
 	return retval;
 }
+
+
+/**
+ *
+ * @brief Calculate ZA identity string for SM2 signatures
+ * @ingroup signature
+ *
+ * This function calculates the ZA identity string that must be prepended to a message
+ * prior to SM2 signing.
+ *
+ * @param pubKey public key used in the ZA calculation
+ * @param sm2_id indentifier used in the ZA calculation
+ * @param sm2_za pointer to location to write calculated ZA
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
+int32_t v2xSe_sm2_get_z
+(
+    TypePublicKey_t pubKey,
+    TypeSM2Identifier_t sm2_id,
+	TypeSM2ZA_t *sm2_za
+)
+{
+	hsm_err_t hsmret;
+	int32_t retval = V2XSE_FAILURE;
+	op_sm2_get_z_args_t get_z_args;
+	uint8_t sm2_pubk[V2XSE_256_EC_PUB_KEY];
+
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_SM2_GET_Z);
+
+	/* Copy public key to a x[32], y[32] structure */
+	memcpy(sm2_pubk, &(pubKey.x[0]), V2XSE_256_EC_PUB_KEY_XY_SIZE);
+	memcpy(sm2_pubk + V2XSE_256_EC_PUB_KEY_XY_SIZE,
+			&(pubKey.y[0]),
+			V2XSE_256_EC_PUB_KEY_XY_SIZE);
+
+	do {
+		get_z_args.public_key = sm2_pubk;
+		get_z_args.identifier = sm2_id.data;
+		get_z_args.z_value = (uint8_t *)sm2_za;
+		get_z_args.public_key_size = V2XSE_256_EC_PUB_KEY;
+		get_z_args.id_size = V2XSE_SM2_ID_SIZE;
+		get_z_args.z_size = V2XSE_SM2_ZA_SIZE;
+		get_z_args.key_type = HSM_KEY_TYPE_DSA_SM2_FP_256;
+		get_z_args.flags = 0;
+
+		hsmret = hsm_sm2_get_z(hsmSessionHandle, &get_z_args);
+		if (hsmret)
+			break;
+
+		retval = V2XSE_SUCCESS;
+	} while (0);
+
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_SM2_GET_Z);
+
+	return retval;
+}

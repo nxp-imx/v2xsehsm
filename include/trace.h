@@ -149,6 +149,8 @@
 #define PROFILE_ID_V2XSE_INJECTRTECCPRIVATEKEY			0x012D
 /** Profiling ID for v2xSe_injectBaEccPrivateKey */
 #define PROFILE_ID_V2XSE_INJECTBAECCPRIVATEKEY			0x012E
+/** Prodiling ID for v2xSe_sm2_get_z */
+#define PROFILE_ID_V2XSE_SM2_GET_Z				0x0137
 
 /* Profiling IDs for HSM API calls: format 0x02xx */
 
