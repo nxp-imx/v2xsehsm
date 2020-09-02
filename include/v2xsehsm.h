@@ -230,7 +230,6 @@ int32_t setupDefaultStatusCode(TypeSW_t *pStatusCode);
 int32_t enforceInitState(int32_t *pApiRetVal);
 int32_t enforceNotInitState(int32_t *pApiRetVal);
 int32_t enforceActivatedState(TypeSW_t *pStatusCode, int32_t *pApiRetVal);
-int32_t enforceSecurityLevel5(TypeSW_t *pStatusCode);
 int32_t keyLenFromCurveID(TypeCurveId_t curveID);
 int32_t sigLenFromHashLen(TypeHashLength_t hashLength);
 hsm_key_group_t getKeyGroup(keyUsage_t keyUsage, TypeRtKeyId_t keyId);

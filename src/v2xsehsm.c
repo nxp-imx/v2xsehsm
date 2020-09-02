@@ -48,7 +48,7 @@
 /** State of emulated SXF1800, can be INIT, CONNECTED or ACTIVATED */
 uint8_t	v2xseState = V2XSE_STATE_INIT;
 
-/** Security level of emulated SXF1800, can be 1 - 5 */
+/** Security level of emulated SXF1800, unused for HSM adaptation layer */
 channelSecLevel_t v2xseSecurityLevel;
 
 /** AppletId of emulated SXF1800: e_EU, e_US, e_EU_AND_GS or e_US_AND_GS */
@@ -132,21 +132,20 @@ int32_t v2xSe_connect(void)
  *
  * @brief Activate V2X opertions
  *
- * This function activates V2X operations using the specified security level.
- * The appletId and securtyLevel are stored in global variables for later
- * use.  Non-volatile variables for the chosen applet are initialized from
+ * This function activates V2X operations.
+ * The appletId is stored in global variable for later use.
+ * Non-volatile variables for the chosen applet are initialized from
  * the filesystem.  A session is opened with the HSM, and all services
  * that can be used are also opened.  The v2xseState is set to activated.
  *
  * @param appletId Applet(s) to activate: US or EU, and optionally GS
- * @param securityLevel Security level for emulated SXF1800
  * @param pHsmStatusCode pointer to location to write extended result code
  *
  * @return V2XSE_SUCCESS if no error, non-zero on error
  *
  */
 int32_t activateV2x(appletSelection_t appletId,
-		channelSecLevel_t securityLevel, TypeSW_t *pHsmStatusCode)
+		TypeSW_t *pHsmStatusCode)
 {
 	open_session_args_t session_args;
 	open_svc_rng_args_t rng_open_args;
@@ -169,13 +168,6 @@ int32_t activateV2x(appletSelection_t appletId,
 				appletVarStoragePath = euVarStorage;
 			} else {
 				*pHsmStatusCode = V2XSE_APP_MISSING;
-				break;
-			}
-
-			if ((securityLevel < e_channelSecLevel_1) ||
-					(securityLevel > e_channelSecLevel_5)
-									) {
-				*pHsmStatusCode = V2XSE_WRONG_DATA;
 				break;
 			}
 
@@ -303,7 +295,6 @@ int32_t activateV2x(appletSelection_t appletId,
 
 			v2xseState = V2XSE_STATE_ACTIVATED;
 			v2xseAppletId = appletId;
-			v2xseSecurityLevel = securityLevel;
 			*pHsmStatusCode = V2XSE_NO_ERROR;
 			retval = V2XSE_SUCCESS;
 		} while (0);
@@ -317,8 +308,9 @@ int32_t activateV2x(appletSelection_t appletId,
  * @ingroup devicemanagement
  *
  * This function activates V2X operations using the specified security level.
- * It calls the activateV2x helper function.
-
+ * It is not supported for the HSM adaptation layer and shall always return an
+ * error.
+ *
  * @param appletId Applet(s) to activate: US or EU, and optionally GS
  * @param securityLevel Security level for emulated SXF1800
  * @param pHsmStatusCode pointer to location to write extended result code
@@ -329,14 +321,13 @@ int32_t activateV2x(appletSelection_t appletId,
 int32_t v2xSe_activateWithSecurityLevel(appletSelection_t appletId,
 		channelSecLevel_t securityLevel, TypeSW_t *pHsmStatusCode)
 {
-	int32_t retval;
-
 	TRACE_API_ENTRY(PROFILE_ID_V2XSE_ACTIVATEWITHSECURITYLEVEL);
 
-	retval = activateV2x(appletId, securityLevel, pHsmStatusCode);
+	if (pHsmStatusCode)
+		*pHsmStatusCode = V2XSE_FUNC_NOT_SUPPORTED;
 
 	TRACE_API_EXIT(PROFILE_ID_V2XSE_ACTIVATEWITHSECURITYLEVEL);
-	return retval;
+	return V2XSE_FAILURE;
 }
 
 /**
@@ -360,7 +351,7 @@ int32_t v2xSe_activate(appletSelection_t appletId, TypeSW_t *pHsmStatusCode)
 
 	TRACE_API_ENTRY(PROFILE_ID_V2XSE_ACTIVATE);
 
-	retval = activateV2x(appletId, e_channelSecLevel_1, pHsmStatusCode);
+	retval = activateV2x(appletId, pHsmStatusCode);
 
 	TRACE_API_EXIT(PROFILE_ID_V2XSE_ACTIVATE);
 	return retval;
@@ -602,7 +593,6 @@ int32_t v2xSe_endKeyInjection (TypeSW_t *pHsmStatusCode)
 	TRACE_API_ENTRY(PROFILE_ID_V2XSE_ENDKEYINJECTION);
 
 	if (!setupDefaultStatusCode(pHsmStatusCode) &&
-			!enforceSecurityLevel5(pHsmStatusCode) &&
 			!enforceActivatedState(pHsmStatusCode, &retval)) {
 
 		if (v2xsePhase != V2XSE_KEY_INJECTION_PHASE) {
@@ -629,8 +619,8 @@ int32_t v2xSe_endKeyInjection (TypeSW_t *pHsmStatusCode)
  *
  * This function retrieves the phase (key injection or normal operating) for
  * the current applet.  For the moment this simply involves querying a variable
- * in NVM.  This function will need to be updated when a more secure method to
- * handle key injection phase has been implemented on the HSM.
+ * in NVM.  This function is not secure for the HSM implementation since the
+ * concept of security level does not exist.
  *
  * @param pPhaseInfo pointer to location to write the current phase
  * @param pHsmStatusCode pointer to location to write extended result code
@@ -646,7 +636,6 @@ int32_t v2xSe_getSePhase (uint8_t *pPhaseInfo, TypeSW_t *pHsmStatusCode)
 	TRACE_API_ENTRY(PROFILE_ID_V2XSE_GETSEPHASE);
 
 	if (!setupDefaultStatusCode(pHsmStatusCode) &&
-			!enforceSecurityLevel5(pHsmStatusCode) &&
 			!enforceActivatedState(pHsmStatusCode, &retval) &&
 			(pPhaseInfo != NULL)) {
 		*pPhaseInfo = v2xsePhase;
@@ -763,30 +752,6 @@ int32_t enforceActivatedState(TypeSW_t *pStatusCode, int32_t *pApiRetVal)
 		*pApiRetVal = V2XSE_DEVICE_NOT_CONNECTED;
 		break;
 	}
-
-	return localret;
-}
-
-/**
- *
- * @brief Utility function to verify system is at security level 5
- *
- * This function verifies that the system is at security level 5, and in case
- * of error it sets the status code appropriately.
- *
- * @param pStatusCode status code pointer to check
- *
- * @return 0 if OK, -1 in case of ERROR
- *
- */
-int32_t enforceSecurityLevel5(TypeSW_t *pStatusCode)
-{
-	int32_t localret = -1;
-
-	if (v2xseSecurityLevel != e_channelSecLevel_5)
-		*pStatusCode = V2XSE_SECURITY_STATUS_NOT_SATISFIED;
-	else
-		localret = 0;
 
 	return localret;
 }
