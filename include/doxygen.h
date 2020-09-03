@@ -79,4 +79,7 @@
  *
  * @defgroup keyimport Key Import (hsm specific)
  * @brief Key import functions (hsm specific).
+ *
+ * @defgroup cipher CIPHER Encryption/Decryption
+ * @brief CIPHER encryption and decryption functions.
  */

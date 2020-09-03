@@ -26,6 +26,7 @@ add_library (v2xCrypto SHARED
 	src/utility.c
 	src/keyimport.c
 	src/trace.c
+	src/cipher.c
 	)
 
 target_link_libraries(v2xCrypto

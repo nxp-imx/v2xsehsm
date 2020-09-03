@@ -153,6 +153,10 @@
 #define PROFILE_ID_V2XSE_GENERATERTSYMMETRICKEY			0x012F
 /** Profiling ID for v2xSe_deleteRtRtSymmetricKey */
 #define PROFILE_ID_V2XSE_DELETERTSYMMETRICKEY			0x0130
+/** Profiling ID for v2xSe_encryptUsingRtCipher */
+#define PROFILE_ID_V2XSE_ENCRYPTUSINGRTCIPHER			0x0131
+/** Profiling ID for v2xSe_decryptUsingRtCipher */
+#define PROFILE_ID_V2XSE_DECRYPYUSINGRTCIPHER			0x0132
 /** Prodiling ID for v2xSe_sm2_get_z */
 #define PROFILE_ID_V2XSE_SM2_GET_Z				0x0137
 

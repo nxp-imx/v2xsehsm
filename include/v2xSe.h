@@ -150,6 +150,17 @@
 /** SM4 128 SYMMETRIC KEY */
 #define V2XSE_SYMMK_SM4_128	104u
 
+/** AES ECB */
+#define V2XSE_ALGO_AES_ECB 0u
+/** AES CBC */
+#define V2XSE_ALGO_AES_CBC 1u
+/** AES CCM */
+#define V2XSE_ALGO_AES_CCM 2u
+/** SM4 ECB */
+#define V2XSE_ALGO_SM4_ECB 3u
+/** SM4 CBC */
+#define V2XSE_ALGO_SM4_CBC 4u
+
 /** Do not copy public key on return */
 #define V2XSE_RSP_WITHOUT_PUBKEY	0u
 /** Copy public key on return */
@@ -209,9 +220,9 @@
 /** Size in bytes of attack log */
 #define V2XSE_ATTACK_LOG		1419u
 
-/** Maximum encrypted data size in bytes for ECIES */
+/** Maximum encrypted data size in bytes for ECIES and CIPHER */
 #define V2XSE_MAX_VCT_DATA_SIZE		169u
-/** Maximum plain text data size in bytes for ECIES */
+/** Maximum plain text data size in bytes for ECIES and CIPHER */
 #define V2XSE_MAX_MSG_SIZE		97u
 /** Maximum KDF P1 parameter size in bytes for ECIES */
 #define V2XSE_MAX_KDF_PARAMP1_SIZE	32u
@@ -239,6 +250,10 @@
 /** Unused in adaptation layer - added for legacy compilation */
 #define V2XSE_MAX_TX_RX_SIZE		261
 
+/** Size in bytes of cipher initialization vector */
+#define V2XSE_MAX_IV_SIZE 16u
+
+
 /******************************************************************************
  * TYPE DEFINITIONS
  ******************************************************************************/
@@ -260,6 +275,9 @@ typedef uint8_t TypeCurveId_t;
 
 /** Symmetric key type identifier */
 typedef uint8_t TypeSymmetricKeyId_t;
+
+/** Cipher algo type */
+typedef uint8_t TypeAlgoId_t;
 
 /** Nvm slot for base key */
 typedef uint16_t TypeBaseKeyId_t;
@@ -416,6 +434,44 @@ typedef struct
 	TypeVCTData_t *  pVctData;
 } TypeDecryptEcies_t;
 
+/** This structure holds parameters for CIPHER-Encrypt functions */
+typedef struct
+{
+	/** Cipher initialization vector data */
+	uint8_t iv[V2XSE_MAX_IV_SIZE];
+
+	/** Length of initialization vector */
+	TypeLen_t  ivLen;
+
+	/** Algo to be used for the cipher operation */
+	TypeAlgoId_t  algoId;
+
+	/** Length of message to be encrypted */
+	TypeLen_t  msgLen;
+
+	/** Message data to encrypt */
+	TypePlainText_t *pMsgData;
+} TypeEncryptCipher_t;
+
+/** This structure holds parameters for CIPHER-Decrypt functions */
+typedef struct
+{
+	/** Cipher initialization vector data */
+	uint8_t iv[V2XSE_MAX_IV_SIZE];
+
+	/** Length of initialization vector */
+	TypeLen_t  ivLen;
+
+	/** Algo to be used for the cipher operation */
+	TypeAlgoId_t  algoId;
+
+	/** Length of encrypted data */
+	TypeLen_t  vctLen;
+
+	/** Encrypted data */
+	TypeVCTData_t *pVctData;
+} TypeDecryptCipher_t;
+
 /** This structure holds information of supported features of SE */
 typedef struct
 {
@@ -445,6 +501,9 @@ typedef struct
 
 	/** Maximum number of data slots supported by Generic storage applet */
 	uint16_t maxDataSlots;
+
+	/** Cipher support indicator */
+	uint8_t cipherSupport;
 } TypeInformation_t;
 
 /** This structure holds the Platform identification information */
@@ -631,4 +690,11 @@ int32_t v2xSe_injectBaEccPrivateKey(TypeBaseKeyId_t baseKeyId,
 
 int32_t v2xSe_sm2_get_z(TypePublicKey_t pubKey, TypeSM2Identifier_t sm2_id,
 	TypeSM2ZA_t *sm2_za);
+
+int32_t v2xSe_encryptUsingRtCipher(TypeRtKeyId_t rtKeyId,
+	TypeEncryptCipher_t *pCipherData, TypeSW_t *pHsmStatusCode,
+	TypeLen_t *pVctLen, TypeVCTData_t *pVctData);
+int32_t v2xSe_decryptUsingRtCipher(TypeRtKeyId_t rtKeyId,
+	TypeDecryptCipher_t *pCipherData, TypeSW_t *pHsmStatusCode,
+	TypeLen_t *pMsgLen, TypePlainText_t *pMsgData);
 #endif

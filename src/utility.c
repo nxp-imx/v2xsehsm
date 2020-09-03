@@ -268,6 +268,12 @@ int32_t v2xSe_getSeInfo
 		else
 			pInfo->maxDataSlots = 0;
 
+		/* CIPHER support indicator */
+		if ((v2xseAppletId == e_CN_AND_GS) || (v2xseAppletId == e_CN))
+			pInfo->cipherSupport = 1;
+		else
+			pInfo->cipherSupport = 0;
+
 		*pHsmStatusCode = V2XSE_NO_ERROR;
 		retval = V2XSE_SUCCESS;
 	}
@@ -591,4 +597,44 @@ int32_t v2xSe_invokeGarbageCollector(TypeSW_t *pHsmStatusCode)
 	}
 	TRACE_API_EXIT(PROFILE_ID_V2XSE_INVOKEGARBAGECOLLECTOR);
 	return retval;
+}
+
+/**
+ *
+ * @brief Convert algoId to cipher_one_go_algo
+ *
+ * This function converts the algoId value from the V2XSE API to the
+ * corresponding cipher algo value for the HSM API.  Returns zero if the
+ * algoId is invalid, all valid values are non-zero.
+ *
+ * @param algoId Cipher algo type in V2X SE API format
+ *
+ * @return cipher_one_go_algo in HSM API format, or 0xFF if ERROR
+ *
+ */
+hsm_op_cipher_one_go_algo_t convertAlgoId(TypeAlgoId_t algoId)
+{
+	hsm_op_cipher_one_go_algo_t cipher_one_go_algo;
+
+	switch (algoId) {
+		case V2XSE_ALGO_AES_ECB:
+			cipher_one_go_algo = HSM_CIPHER_ONE_GO_ALGO_AES_ECB;
+			break;
+		case V2XSE_ALGO_AES_CBC:
+			cipher_one_go_algo = HSM_CIPHER_ONE_GO_ALGO_AES_CBC;
+			break;
+		case V2XSE_ALGO_AES_CCM:
+			cipher_one_go_algo = HSM_CIPHER_ONE_GO_ALGO_AES_CCM;
+			break;
+		case V2XSE_ALGO_SM4_ECB:
+			cipher_one_go_algo = HSM_CIPHER_ONE_GO_ALGO_SM4_ECB;
+			break;
+		case V2XSE_ALGO_SM4_CBC:
+			cipher_one_go_algo = HSM_CIPHER_ONE_GO_ALGO_SM4_CBC;
+			break;
+		default:
+			cipher_one_go_algo = 0xFF;
+	}
+
+	return cipher_one_go_algo;
 }

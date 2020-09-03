@@ -254,5 +254,6 @@ int32_t getHsmPubKey(uint32_t keyHandle, hsm_key_type_t keyType,
 		uint16_t pubKeySize, uint8_t *pPubKey);
 void convertPublicKeyToV2xseApi(hsm_key_type_t keyType,
 					TypePublicKey_t *pPublicKeyPlain);
+hsm_op_cipher_one_go_algo_t convertAlgoId(TypeAlgoId_t algoId);
 
 #endif
