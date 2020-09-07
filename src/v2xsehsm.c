@@ -97,7 +97,7 @@ uint32_t maKeyHandle;
 TypeCurveId_t maCurveId;
 /** Runtime key handle */
 uint32_t rtKeyHandle[NUM_STORAGE_SLOTS];
-/** Runtime key curve id */
+/** Runtime key curve (or symmetric key) id */
 TypeCurveId_t rtCurveId[NUM_STORAGE_SLOTS];
 /** Base key handle */
 uint32_t baKeyHandle[NUM_STORAGE_SLOTS];

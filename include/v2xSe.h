@@ -141,6 +141,15 @@
 /** SM2 256 ECC */
 #define V2XSE_CURVE_SM2_256	64u
 
+/** AES 128 SYMMETRIC KEY */
+#define V2XSE_SYMMK_AES_128	100u
+/** AES 192 SYMMETRIC KEY */
+#define V2XSE_SYMMK_AES_192	101u
+/** AES 256 SYMMETRIC KEY */
+#define V2XSE_SYMMK_AES_256	103u
+/** SM4 128 SYMMETRIC KEY */
+#define V2XSE_SYMMK_SM4_128	104u
+
 /** Do not copy public key on return */
 #define V2XSE_RSP_WITHOUT_PUBKEY	0u
 /** Copy public key on return */
@@ -248,6 +257,9 @@ typedef uint8_t TypeLowlatencyIndicator_t;
 
 /** ECC curve identifier */
 typedef uint8_t TypeCurveId_t;
+
+/** Symmetric key type identifier */
+typedef uint8_t TypeSymmetricKeyId_t;
 
 /** Nvm slot for base key */
 typedef uint16_t TypeBaseKeyId_t;
@@ -552,6 +564,10 @@ int32_t v2xSe_deriveRtEccKeyPair(TypeBaseKeyId_t baseKeyId,
         TypeRtKeyId_t rtKeyId, TypePubKeyOut_t returnPubKey,
         TypeSW_t *pHsmStatusCode, TypeCurveId_t *pCurveID,
         TypePublicKey_t *pPublicKeyPlain);
+int32_t v2xSe_generateRtSymmetricKey(TypeRtKeyId_t rtKeyId,
+        TypeSymmetricKeyId_t symmetricKeyId, TypeSW_t *pHsmStatusCode);
+int32_t v2xSe_deleteRtSymmetricKey(TypeRtKeyId_t rtKeyId,
+        TypeSW_t *pHsmStatusCode);
 int32_t v2xSe_activateRtKeyForSigning(TypeRtKeyId_t rtKeyId,
         TypeSW_t *pHsmStatusCode);
 int32_t v2xSe_getAppletVersion(appletSelection_t appletType,

@@ -1063,3 +1063,150 @@ int32_t v2xSe_deriveRtEccKeyPair
 	TRACE_API_EXIT(PROFILE_ID_V2XSE_DERIVERTECCKEYPAIR);
 	return retval;
 }
+
+/**
+ *
+ * @brief Generate Runtime symmetric key
+ * @ingroup keymanagement
+ *
+ * This function instructs the system to randomly generate a Runtime symmetric
+ * key in the specified slot for the current applet.  If a runtime
+ * key exists in the specified slot, it will be overwritten.  The HSM is
+ * used to generate a new symmetric key, and the handle and symmetricKeyId of the
+ * new key is stored in NVM.  The slot number is used as the index into
+ * a table storing runtime key handles.  The symmetric key is stored by the
+ * HSM in the key store for the current applet.
+ *
+ * @param rtKeyId slot number for the generated runtime symmetric key
+ * @param symmetricKeyId The key type to be used to generate the symmetric key
+ * @param pHsmStatusCode pointer to location to write extended result code
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
+int32_t v2xSe_generateRtSymmetricKey
+(
+    TypeRtKeyId_t rtKeyId,
+    TypeSymmetricKeyId_t symmetricKeyId,
+    TypeSW_t *pHsmStatusCode
+)
+{
+	hsm_key_type_t keyType;
+	uint32_t keyHandle;
+	TypeSymmetricKeyId_t storedSymmetricKeyId;
+	int32_t retval = V2XSE_FAILURE;
+	int32_t keyModified = 0;
+	int32_t keyCreated = 0;
+
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_GENERATERTECCKEYPAIR);
+
+	do {
+		if (setupDefaultStatusCode(pHsmStatusCode) ||
+				enforceActivatedState(pHsmStatusCode, &retval) ||
+				(v2xsePhase != V2XSE_NORMAL_OPERATING_PHASE)) {
+			break;
+		}
+
+		if (rtKeyId >= NUM_STORAGE_SLOTS) {
+			*pHsmStatusCode = V2XSE_WRONG_DATA;
+			break;
+		}
+
+		keyType = convertSymmetricKeyId(symmetricKeyId);
+		if (!keyType) {
+			*pHsmStatusCode = V2XSE_WRONG_DATA;
+			break;
+		}
+		if (!nvm_retrieve_rt_key_handle(rtKeyId, &keyHandle,
+						&storedSymmetricKeyId)) {
+			keyModified = 1;
+			/* Check if can overwrite */
+			if (symmetricKeyId != storedSymmetricKeyId) {
+				/* Different type, must delete */
+				if (deleteRtKey(rtKeyId))
+					break;
+			}
+		}
+		if (genHsmKey(&keyHandle, keyType,
+				0, NULL,
+				rtKeyHandle[rtKeyId] ? UPDATE_KEY :
+						CREATE_KEY,
+				RT_KEY,
+				getKeyGroup(RT_KEY, rtKeyId))) {
+			break;
+		}
+		keyCreated = 1;
+		if (nvm_update_array_data(RT_CURVEID_NAME, rtKeyId,
+				(uint8_t *)&symmetricKeyId,
+				sizeof(symmetricKeyId))) {
+			break;
+		}
+		if (nvm_update_array_data(RT_KEYHANDLE_NAME, rtKeyId,
+					(uint8_t *)&keyHandle,
+						sizeof(keyHandle))) {
+			break;
+		}
+		rtKeyHandle[rtKeyId] = keyHandle;
+		rtCurveId[rtKeyId] = symmetricKeyId;
+		*pHsmStatusCode = V2XSE_NO_ERROR;
+		retval = V2XSE_SUCCESS;
+	} while (0);
+	if (retval != V2XSE_SUCCESS) {
+		if (keyModified || keyCreated) {
+			deleteRtKey(rtKeyId);
+			/* Flag no change only if previous key not modified */
+			if (!keyModified)
+				*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
+		}
+	}
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_GENERATERTSYMMETRICKEY);
+	return retval;
+}
+
+/**
+ *
+ * @brief Delete runtime symmetric key
+ * @ingroup keymanagement
+ *
+ * This function deletes the symmetric key from the specified slot.
+ * The corresponding key is deleted from the HSM key store, the
+ * key handle is removed from memory and nvm, and the symmetricKeyId is removed
+ * from nvm.
+ *
+ * @param rtKeyId slot number of the runtime key to delete
+ * @param pHsmStatusCode pointer to location to write extended result code
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
+int32_t v2xSe_deleteRtSymmetricKey
+(
+    TypeRtKeyId_t rtKeyId,
+    TypeSW_t *pHsmStatusCode
+)
+{
+	uint32_t keyHandle;
+	TypeSymmetricKeyId_t storedSymmetricKeyId;
+	int32_t retval = V2XSE_FAILURE;
+
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_DELETERTSYMMETRICKEY);
+
+	if (!setupDefaultStatusCode(pHsmStatusCode) &&
+			!enforceActivatedState(pHsmStatusCode, &retval) &&
+			(v2xsePhase == V2XSE_NORMAL_OPERATING_PHASE)) {
+
+		if (rtKeyId >= NUM_STORAGE_SLOTS) {
+			*pHsmStatusCode = V2XSE_WRONG_DATA;
+		} else if (nvm_retrieve_rt_key_handle(rtKeyId, &keyHandle,
+							&storedSymmetricKeyId)) {
+			*pHsmStatusCode = V2XSE_WRONG_DATA;
+		} else if (deleteRtKey(rtKeyId)) {
+			*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
+		} else {
+			*pHsmStatusCode = V2XSE_NO_ERROR;
+			retval = V2XSE_SUCCESS;
+		}
+	}
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_DELETERTSYMMETRICKEY);
+	return retval;
+}

@@ -46,6 +46,33 @@
 
 /**
  *
+ * @brief Convert symmetricKeyID to keyType
+ *
+ * This function converts the symmetricKeyId value from the V2XSE API to the
+ * corresponding keyType value for the HSM API.  Returns zero if the
+ * symmetricKeyId is invalid, all valid values are non-zero.
+ *
+ * @param symmetricKeyId type in V2X SE API format
+ *
+ * @return keyType in HSM API format, or 0 if ERROR
+ *
+ */
+hsm_key_type_t convertSymmetricKeyId(TypeSymmetricKeyId_t symmetricKeyId)
+{
+	hsm_key_type_t keyType;
+
+	switch (symmetricKeyId) {
+		case V2XSE_SYMMK_SM4_128:
+			keyType = HSM_KEY_TYPE_SM4_128;
+			break;
+		default:
+			keyType = 0;
+	}
+	return keyType;
+}
+
+/**
+ *
  * @brief Convert curveId to keyType
  *
  * This function converts the curveId value from the V2XSE API to the
@@ -61,7 +88,7 @@ hsm_key_type_t convertCurveId(TypeCurveId_t curveId)
 {
 	hsm_key_type_t keyType;
 
-	switch(curveId) {
+	switch (curveId) {
 		case V2XSE_CURVE_NISTP256:
 			keyType = HSM_KEY_TYPE_ECDSA_NIST_P256;
 			break;
@@ -92,7 +119,8 @@ hsm_key_type_t convertCurveId(TypeCurveId_t curveId)
 			keyType = HSM_KEY_TYPE_DSA_SM2_FP_256;
 			break;
 		default:
-			keyType = 0;
+			/* unknown curve, convert possible symmetric key id */
+			keyType = convertSymmetricKeyId((TypeSymmetricKeyId_t)curveId);
 	}
 	return keyType;
 }
@@ -432,7 +460,7 @@ int32_t keyLenFromCurveID(TypeCurveId_t curveID)
 {
 	int32_t lengthVal;
 
-	switch(curveID)
+	switch (curveID)
 	{
 		case V2XSE_CURVE_NISTP256:
 		case V2XSE_CURVE_BP256R1:
@@ -495,7 +523,7 @@ int32_t sigLenFromHashLen(TypeHashLength_t hashLength)
 {
 	int32_t sigLen;
 
-	switch(hashLength)
+	switch (hashLength)
 	{
 		case V2XSE_256_EC_HASH_SIZE:
 			sigLen = V2XSE_256_EC_COMP_SIGN;

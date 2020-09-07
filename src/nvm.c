@@ -555,23 +555,23 @@ int32_t nvm_retrieve_ma_key_handle(uint32_t *handle, TypeCurveId_t *id)
 
 /**
  *
- * @brief Retrieve key handle and curveId for an RT key
+ * @brief Retrieve key handle and curveId/symmetricKeyId for an RT key
  *
  * This function retrives a runtime key handle in the specified slot.  If the
  * value in memory is non-zero, then the handle has already been loaded from
  * NVM and is returned immediately.  Otherwise the key handle is loaded from
- * NVM, if present. An error is flagged if the key handle or curveId are
- * not in NVM, or the curveId is invalid.
+ * NVM, if present. An error is flagged if the key handle or curveId/
+ * symmetricKeyId  are not in NVM, or the curveId/symmetricKeyId  is invalid.
  *
  * @param index slot containing requested RT key
  * @param handle Pointer to location where RT key handle will be written
- * @param id Pointer to location where RT curveId will be written
+ * @param id Pointer to location where RT curveId/symmetricKeyId will be written
  *
  * @return 0 if OK, -1 in case of ERROR
  *
  */
 int32_t nvm_retrieve_rt_key_handle(TypeRtKeyId_t index, uint32_t *handle,
-							TypeCurveId_t *id)
+							uint8_t *id)
 {
 	int32_t retval = -1;
 
@@ -584,15 +584,16 @@ int32_t nvm_retrieve_rt_key_handle(TypeRtKeyId_t index, uint32_t *handle,
 		/*
 		 * Key not in memory, check if in NVM and load if it is.
 		 * Verify that curveId is valid, may have been changed in fs.
-		 * This is done by calling convertCurveId and verifying that it
-		 * returns a non-zero (ie valid) keyid - the returned keyid
+		 * This is done by calling convertCurveId for ECC curves - or
+		 * convertSymmetricKeyId for symmetric keys - and verifying that
+		 * it returns a non-zero (ie valid) keyid - the returned keyid
 		 * value is not used.
 		 */
 		if (!nvm_load_array_data(RT_KEYHANDLE_NAME, index,
 					(uint8_t *)handle, sizeof(*handle)) &&
 				!nvm_load_array_data(RT_CURVEID_NAME, index,
 					id, sizeof(*id)) &&
-				convertCurveId(*id)) {
+				(convertCurveId(*id) || convertSymmetricKeyId(*id))) {
 			/* Save values for fast reply next time */
 			rtKeyHandle[index] = *handle;
 			rtCurveId[index] = *id;

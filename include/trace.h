@@ -149,6 +149,10 @@
 #define PROFILE_ID_V2XSE_INJECTRTECCPRIVATEKEY			0x012D
 /** Profiling ID for v2xSe_injectBaEccPrivateKey */
 #define PROFILE_ID_V2XSE_INJECTBAECCPRIVATEKEY			0x012E
+/** Profiling ID for v2xSe_generateRtSymmetricKey */
+#define PROFILE_ID_V2XSE_GENERATERTSYMMETRICKEY			0x012F
+/** Profiling ID for v2xSe_deleteRtRtSymmetricKey */
+#define PROFILE_ID_V2XSE_DELETERTSYMMETRICKEY			0x0130
 /** Prodiling ID for v2xSe_sm2_get_z */
 #define PROFILE_ID_V2XSE_SM2_GET_Z				0x0137
 

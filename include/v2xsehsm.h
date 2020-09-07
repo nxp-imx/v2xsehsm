@@ -236,6 +236,7 @@ typedef enum {
 	UPDATE_KEY
 } genKeyAction_t;
 
+hsm_key_type_t convertSymmetricKeyId(TypeSymmetricKeyId_t symmetricKeyId);
 hsm_key_type_t convertCurveId(TypeCurveId_t curveId);
 int32_t is256bitCurve(hsm_key_type_t keyType);
 int32_t setupDefaultStatusCode(TypeSW_t *pStatusCode);
