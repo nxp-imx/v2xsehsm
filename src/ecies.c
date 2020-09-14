@@ -47,52 +47,6 @@
 
 /**
  *
- * @brief Convert public key from v2xse to hsm API format
- *
- * This function converts a public key from v2xse to hsm API format.
- * The hsm API format is as follows:
- *  - for 256 bit curve: x in bits 0 - 31, y in bits 32 - 63
- *  - for 384 bit curve: x in bits 0 - 47, y in bits 48 - 95
- * The v2xse API format is as follows for all curve sizes:
- *  - x in bits 0 - 47, y in bits 48 - 95
- *  - in case of 256 bit curves, bits 32 - 47 of x and y unused
- * The v2xSe format key comes directly from the API caller, the
- * new key is placed in a separate buffer.  It is possible to modify
- * the original buffer to the new format, but this creates a side effect
- * that the key passed by the caller is modified - which can cause hard
- * to debug issues if the caller expects to store a copy of the key and
- * use it multiple times.
- * Conversion is only required for 256 bit keys.  Unused bits are not
- * cleared in case output buffer is allocated for size of hsm key (i.e.
- * no unused bits).
- *
- * @param keyType The ECC curve used to generate the public key
- * @param pPublicKeyPlain location of the public key in v2xSe API format
- * @param hsm_key location of buffer to place public key in hsm API format
- *
- */
-static void convertPublicKeyToHsmApi(hsm_key_type_t keyType,
-			TypePublicKey_t *pPublicKeyPlain, uint8_t *hsm_key)
-{
-	if (is256bitCurve(keyType)) {
-		hsmPubKey256_t *hsmApiPtr = (hsmPubKey256_t *)hsm_key;
-
-		memcpy(hsmApiPtr->x, pPublicKeyPlain->x,
-				sizeof(hsmApiPtr->y));
-		memcpy(hsmApiPtr->y, pPublicKeyPlain->y,
-				sizeof(hsmApiPtr->y));
-	} else {
-		hsmPubKey384_t *hsmApiPtr = (hsmPubKey384_t *)hsm_key;
-
-		memcpy(hsmApiPtr->x, pPublicKeyPlain->x,
-				sizeof(hsmApiPtr->y));
-		memcpy(hsmApiPtr->y, pPublicKeyPlain->y,
-				sizeof(hsmApiPtr->y));
-	}
-}
-
-/**
- *
  * @brief Perform ECIES decryption using hsm
  *
  * This function performs ECIES decryption using the hsm.  It takes parameters
@@ -108,7 +62,7 @@ static void convertPublicKeyToHsmApi(hsm_key_type_t keyType,
  * @return V2XSE_SUCCESS if no error, non-zero on error
  *
  */
-static hsm_err_t doHsmDecryption(uint32_t keyHandle, hsm_key_type_t keyType,
+static hsm_err_t doHsmEciesDecryption(uint32_t keyHandle, hsm_key_type_t keyType,
 			TypeDecryptEcies_t *pEciesData,
 			TypeLen_t *pMsgLen, TypePlainText_t *pMsgData)
 {
@@ -254,7 +208,7 @@ int32_t v2xSe_decryptUsingRtEcies (TypeRtKeyId_t rtKeyId,
 		} else if (nvm_retrieve_rt_key_handle(rtKeyId, &keyHandle,
 								&curveId)) {
 			*pHsmStatusCode = V2XSE_WRONG_DATA;
-		} else if (doHsmDecryption(keyHandle, convertCurveId(curveId),
+		} else if (doHsmEciesDecryption(keyHandle, convertCurveId(curveId),
 					pEciesData, pMsgLen, pMsgData)) {
 			*pHsmStatusCode = V2XSE_WRONG_DATA;
 		} else {
@@ -306,7 +260,7 @@ int32_t v2xSe_decryptUsingMaEcies
 
 		if (nvm_retrieve_ma_key_handle(&keyHandle, &curveId)) {
 			*pHsmStatusCode = V2XSE_WRONG_DATA;
-		} else if (doHsmDecryption(keyHandle, convertCurveId(curveId),
+		} else if (doHsmEciesDecryption(keyHandle, convertCurveId(curveId),
 					pEciesData, pMsgLen, pMsgData)) {
 			*pHsmStatusCode = V2XSE_WRONG_DATA;
 		} else {
@@ -363,7 +317,7 @@ int32_t v2xSe_decryptUsingBaEcies
 		} else if (nvm_retrieve_ba_key_handle(baseKeyId, &keyHandle,
 								&curveId)) {
 			*pHsmStatusCode = V2XSE_WRONG_DATA;
-		} else if (doHsmDecryption(keyHandle, convertCurveId(curveId),
+		} else if (doHsmEciesDecryption(keyHandle, convertCurveId(curveId),
 					pEciesData, pMsgLen, pMsgData)) {
 			*pHsmStatusCode = V2XSE_WRONG_DATA;
 		} else {

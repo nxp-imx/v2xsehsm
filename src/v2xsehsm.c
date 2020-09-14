@@ -85,6 +85,8 @@ hsm_hdl_t hsmKeyMgmtHandle;
 hsm_hdl_t hsmCipherHandle;
 /** Handle for HSM signature generation service */
 hsm_hdl_t hsmSigGenHandle;
+/** Handle for SM2 ECES service */
+hsm_hdl_t hsmSm2EcesHandle = 0L;
 
 /* NVM vars, initialized from filesystem on activate */
 /** Phase inherited from SXF1800, only 'normal operating' for adaptation layer */
@@ -155,6 +157,7 @@ int32_t activateV2x(appletSelection_t appletId,
 	open_svc_key_management_args_t key_mgmt_args;
 	open_svc_cipher_args_t cipher_args;
 	open_svc_sign_gen_args_t sig_gen_args;
+	open_svc_sm2_eces_args_t sm2_eces_args;
 	int32_t retval = V2XSE_FAILURE;
 	uint32_t justCreatedKeystore = 0;
 	hsm_err_t hsmret;
@@ -301,6 +304,16 @@ int32_t activateV2x(appletSelection_t appletId,
 			if (hsmret)
 				break;
 
+			if ((appletId == e_CN_AND_GS) || (appletId == e_CN)) {
+				memset(&sm2_eces_args, 0, sizeof(sm2_eces_args));
+				TRACE_HSM_CALL(PROFILE_ID_HSM_OPEN_SM2_ECES_SERVICE);
+				hsmret = hsm_open_sm2_eces_service(hsmKeyStoreHandle,
+						&sm2_eces_args, &hsmSm2EcesHandle);
+				TRACE_HSM_RETURN(PROFILE_ID_HSM_OPEN_SM2_ECES_SERVICE);
+				if (hsmret)
+					break;
+			}
+
 			v2xseState = V2XSE_STATE_ACTIVATED;
 			v2xseAppletId = appletId;
 			*pHsmStatusCode = V2XSE_NO_ERROR;
@@ -383,6 +396,14 @@ int32_t resetV2x(void)
 	hsm_err_t hsmret;
 
 	if (v2xseState == V2XSE_STATE_ACTIVATED) {
+		if (hsmSm2EcesHandle != 0L) {
+			TRACE_HSM_CALL(PROFILE_ID_HSM_CLOSE_SM2_ECES_SERVICE);
+			hsmret = hsm_close_sm2_eces_service(hsmSm2EcesHandle);
+			TRACE_HSM_RETURN(PROFILE_ID_HSM_CLOSE_SM2_ECES_SERVICE);
+			hsmSm2EcesHandle = 0L;
+			if (hsmret)
+				retval = V2XSE_FAILURE;
+		}
 		TRACE_HSM_CALL(
 			PROFILE_ID_HSM_CLOSE_SIGNATURE_GENERATION_SERVICE);
 		hsmret = hsm_close_signature_generation_service(

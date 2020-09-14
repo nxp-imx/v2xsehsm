@@ -86,6 +86,7 @@ extern hsm_hdl_t hsmKeyStoreHandle;
 extern hsm_hdl_t hsmKeyMgmtHandle;
 extern hsm_hdl_t hsmCipherHandle;
 extern hsm_hdl_t hsmSigGenHandle;
+extern hsm_hdl_t hsmSm2EcesHandle;
 
 extern uint8_t	v2xsePhase;
 extern const char* appletVarStoragePath;
@@ -255,5 +256,7 @@ int32_t getHsmPubKey(uint32_t keyHandle, hsm_key_type_t keyType,
 void convertPublicKeyToV2xseApi(hsm_key_type_t keyType,
 					TypePublicKey_t *pPublicKeyPlain);
 hsm_op_cipher_one_go_algo_t convertAlgoId(TypeAlgoId_t algoId);
+void convertPublicKeyToHsmApi(hsm_key_type_t keyType,
+			TypePublicKey_t *pPublicKeyPlain, uint8_t *hsm_key);
 
 #endif

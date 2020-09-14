@@ -434,6 +434,29 @@ typedef struct
 	TypeVCTData_t *  pVctData;
 } TypeDecryptEcies_t;
 
+/** This structure holds parameters for SM2 ECES-Encrypt functions */
+typedef struct
+{
+	/** Recipient's public key used for encryption */
+	TypePublicKey_t *  pEccPublicKey;
+
+	/** Curve ID associated with public key, valid value is 6 */
+	TypeCurveId_t  curveId;
+
+	/** Length of message to be encrypted */
+	TypeLen_t  msgLen;
+
+	/** Message data to encrypt */
+	TypePlainText_t *  pMsgData;
+} TypeEncryptSm2Eces_t;
+
+/**
+ * Overhead size in bytes for SM2 ECES encryption.
+ * The encrypted buffer must be the size of the input message + this overhead,
+ * rounded up to 32 bits.
+ */
+#define SM2_PKE_OVERHEAD (97u)
+
 /** This structure holds parameters for CIPHER-Encrypt functions */
 typedef struct
 {
@@ -498,6 +521,9 @@ typedef struct
 
 	/** Active Applet Instance indicator */
 	uint8_t eciesSupport;
+
+	/** SM2 ECES support indicator */
+	uint8_t sm2EcesSupport;
 
 	/** Maximum number of data slots supported by Generic storage applet */
 	uint16_t maxDataSlots;
@@ -690,6 +716,10 @@ int32_t v2xSe_injectBaEccPrivateKey(TypeBaseKeyId_t baseKeyId,
 
 int32_t v2xSe_sm2_get_z(TypePublicKey_t pubKey, TypeSM2Identifier_t sm2_id,
 	TypeSM2ZA_t *sm2_za);
+
+int32_t v2xSe_encryptUsingSm2Eces(TypeEncryptSm2Eces_t *pSm2EcesData,
+	TypeSW_t *pHsmStatusCode,
+	TypeLen_t *pEncryptedDataSize, uint8_t *pEncryptedData);
 
 int32_t v2xSe_encryptUsingRtCipher(TypeRtKeyId_t rtKeyId,
 	TypeEncryptCipher_t *pCipherData, TypeSW_t *pHsmStatusCode,

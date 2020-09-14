@@ -21,6 +21,7 @@ add_library (v2xCrypto SHARED
 	src/nvm.c
 	src/keymanagement.c
 	src/signature.c
+	src/sm2_eces.c
 	src/ecies.c
 	src/datastorage.c
 	src/utility.c
