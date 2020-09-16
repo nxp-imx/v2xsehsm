@@ -46,6 +46,48 @@
 
 /**
  *
+ * @brief Perform SM2 ECES decryption using hsm
+ *
+ * This function performs SM2 ECES decryption using the hsm.
+ *
+ * @param keyHandle handle of the key to use for decryption
+ * @param keyType type of key for hsm to create
+ * @param pSm2EcesData pointer to decryption parameters
+ * @param pMsgLen msg size on output
+ * @param pMsgData location to write decrypted message
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ */
+static hsm_err_t doHsmSm2EcesDecryption(uint32_t keyHandle,
+		hsm_key_type_t keyType, TypeDecryptSm2Eces_t *pSm2EcesData,
+		TypeLen_t *pMsgLen, TypePlainText_t *pMsgData)
+{
+
+	op_sm2_eces_dec_args_t args;
+	hsm_err_t hsmret;
+
+	memset(&args, 0, sizeof(args));
+	args.input = pSm2EcesData->encryptedData;
+	args.output = pMsgData->data;
+	args.key_identifier = keyHandle;
+	args.input_size = pSm2EcesData->encryptedDataSize;
+	args.output_size = args.input_size - SM2_PKE_OVERHEAD;
+	args.key_type = keyType;
+	args.flags = 0;
+
+	TRACE_HSM_CALL(PROFILE_ID_HSM_SM2_ECES_DECRYPTION);
+	hsmret = hsm_sm2_eces_decryption(hsmSm2EcesHandle, &args);
+	TRACE_HSM_CALL(PROFILE_ID_HSM_SM2_ECES_DECRYPTION);
+
+	if (!hsmret)
+		*pMsgLen = args.output_size;
+
+	return hsmret;
+}
+
+
+/**
+ *
  * @brief Encrypt data using SM2 ECES
  * @ingroup sm2_eces
  *
@@ -110,6 +152,176 @@ int32_t v2xSe_encryptUsingSm2Eces(TypeEncryptSm2Eces_t *pSm2EcesData,
 		}
 	}
 	TRACE_API_EXIT(PROFILE_ID_V2XSE_ENCRYPTUSINGSM2ECES);
+
+	return retval;
+}
+
+
+/**
+ *
+ * @brief Decrypt data using SM2 ECES and runtime key
+ * @ingroup sm2_eces
+ *
+ * This function decrypts data using SM2 ECES and the specified runtime key.
+ * The data to decrypt and all other parameters needed to perform the
+ * decryption are provided by the caller.
+ *
+ * @param rtKeyId key slot of runtime key to use
+ * @param pSm2EcesData pointer to structure with data and decryption parameters
+ * @param pHsmStatusCode pointer to location to write extended result code
+ * @param pMsgLen msg buffer size on input, length of decrypted data on output
+ * @param pMsgData pointer to location to write the decrypted data
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
+int32_t v2xSe_decryptUsingRtSm2Eces(TypeRtKeyId_t rtKeyId,
+		TypeDecryptSm2Eces_t *pSm2EcesData,
+		TypeSW_t *pHsmStatusCode,
+		TypeLen_t *pMsgLen,
+		TypePlainText_t *pMsgData)
+{
+	uint32_t keyHandle;
+	TypeCurveId_t curveId;
+	int32_t retval = V2XSE_FAILURE;
+
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_DECRYPTUSINGRTSM2ECES);
+
+	if (!setupDefaultStatusCode(pHsmStatusCode) &&
+			!enforceActivatedState(pHsmStatusCode, &retval) &&
+			(v2xsePhase == V2XSE_NORMAL_OPERATING_PHASE) &&
+			(pSm2EcesData != NULL) &&
+			(pMsgLen != NULL) &&
+			(pMsgData != NULL)) {
+
+		if (rtKeyId >= NUM_STORAGE_SLOTS) {
+			*pHsmStatusCode = V2XSE_WRONG_DATA;
+		} else if (nvm_retrieve_rt_key_handle(rtKeyId, &keyHandle,
+					&curveId)) {
+			*pHsmStatusCode = V2XSE_WRONG_DATA;
+		} else if (doHsmSm2EcesDecryption(keyHandle,
+				convertCurveId(curveId), pSm2EcesData,
+				pMsgLen, pMsgData)) {
+			*pHsmStatusCode = V2XSE_WRONG_DATA;
+		} else {
+			*pHsmStatusCode = V2XSE_NO_ERROR;
+			retval = V2XSE_SUCCESS;
+		}
+	}
+
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_DECRYPTUSINGRTSM2ECES);
+
+	return retval;
+}
+
+
+/**
+ *
+ * @brief Decrypt data using SM2 ECES and module authentication key
+ * @ingroup sm2_eces
+ *
+ * This function decrypts data using SM2 ECES and the module authentication
+ * key.
+ * The data to decrypt and all other parameters needed to perform the
+ * decryption are provided by the caller.
+ *
+ * @param pSm2EcesData pointer to structure with data and decryption parameters
+ * @param pHsmStatusCode pointer to location to write extended result code
+ * @param pMsgLen msg buffer size on input, length of decrypted data on output
+ * @param pMsgData pointer to location to write the decrypted data
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
+int32_t v2xSe_decryptUsingMaSm2Eces(TypeDecryptSm2Eces_t *pSm2EcesData,
+		TypeSW_t *pHsmStatusCode,
+		TypeLen_t *pMsgLen,
+		TypePlainText_t *pMsgData)
+{
+	uint32_t keyHandle;
+	TypeCurveId_t curveId;
+	int32_t retval = V2XSE_FAILURE;
+
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_DECRYPTUSINGMASM2ECES);
+
+	if (!setupDefaultStatusCode(pHsmStatusCode) &&
+			!enforceActivatedState(pHsmStatusCode, &retval) &&
+			(v2xsePhase == V2XSE_NORMAL_OPERATING_PHASE) &&
+			(pSm2EcesData != NULL) &&
+			(pMsgLen != NULL) &&
+			(pMsgData != NULL)) {
+
+		if (nvm_retrieve_ma_key_handle(&keyHandle, &curveId)) {
+			*pHsmStatusCode = V2XSE_WRONG_DATA;
+		} else if (doHsmSm2EcesDecryption(keyHandle,
+				convertCurveId(curveId), pSm2EcesData,
+				pMsgLen, pMsgData)) {
+			*pHsmStatusCode = V2XSE_WRONG_DATA;
+		} else {
+			*pHsmStatusCode = V2XSE_NO_ERROR;
+			retval = V2XSE_SUCCESS;
+		}
+	}
+
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_DECRYPTUSINGMASM2ECES);
+
+	return retval;
+}
+
+
+/**
+ *
+ * @brief Decrypt data using SM2 ECES and base key
+ * @ingroup sm2_eces
+ *
+ * This function decrypts data using SM2 ECES and the specified base key.
+ * The data to decrypt and all other parameters needed to perform the
+ * decryption are provided by the caller.
+ *
+ * @param baseKeyId key slot of base key to use
+ * @param pSm2EcesData pointer to structure with data and decryption parameters
+ * @param pHsmStatusCode pointer to location to write extended result code
+ * @param pMsgLen msg buffer size on input, length of decrypted data on output
+ * @param pMsgData pointer to location to write the decrypted data
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
+int32_t v2xSe_decryptUsingBaSm2Eces(TypeBaseKeyId_t baseKeyId,
+		TypeDecryptSm2Eces_t *pSm2EcesData,
+		TypeSW_t *pHsmStatusCode,
+		TypeLen_t *pMsgLen,
+		TypePlainText_t *pMsgData)
+{
+	uint32_t keyHandle;
+	TypeCurveId_t curveId;
+	int32_t retval = V2XSE_FAILURE;
+
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_DECRYPTUSINGBASM2ECES);
+
+	if (!setupDefaultStatusCode(pHsmStatusCode) &&
+			!enforceActivatedState(pHsmStatusCode, &retval) &&
+			(v2xsePhase == V2XSE_NORMAL_OPERATING_PHASE) &&
+			(pSm2EcesData != NULL) &&
+			(pMsgLen != NULL) &&
+			(pMsgData != NULL)) {
+
+		if (baseKeyId >= NUM_STORAGE_SLOTS) {
+			*pHsmStatusCode = V2XSE_WRONG_DATA;
+		} else if (nvm_retrieve_ba_key_handle(baseKeyId, &keyHandle,
+					&curveId)) {
+			*pHsmStatusCode = V2XSE_WRONG_DATA;
+		} else if (doHsmSm2EcesDecryption(keyHandle,
+				convertCurveId(curveId), pSm2EcesData,
+				pMsgLen, pMsgData)) {
+			*pHsmStatusCode = V2XSE_WRONG_DATA;
+		} else {
+			*pHsmStatusCode = V2XSE_NO_ERROR;
+			retval = V2XSE_SUCCESS;
+		}
+	}
+
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_DECRYPTUSINGBASM2ECES);
 
 	return retval;
 }

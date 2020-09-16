@@ -450,6 +450,16 @@ typedef struct
 	TypePlainText_t *  pMsgData;
 } TypeEncryptSm2Eces_t;
 
+/** This structure holds parameters for SM2 ECES-Decrypt functions */
+typedef struct
+{
+	/** Length of encrypted data*/
+	TypeLen_t  encryptedDataSize;
+
+	/** Encrypted data */
+	uint8_t *  encryptedData;
+} TypeDecryptSm2Eces_t;
+
 /**
  * Overhead size in bytes for SM2 ECES encryption.
  * The encrypted buffer must be the size of the input message + this overhead,
@@ -720,6 +730,19 @@ int32_t v2xSe_sm2_get_z(TypePublicKey_t pubKey, TypeSM2Identifier_t sm2_id,
 int32_t v2xSe_encryptUsingSm2Eces(TypeEncryptSm2Eces_t *pSm2EcesData,
 	TypeSW_t *pHsmStatusCode,
 	TypeLen_t *pEncryptedDataSize, uint8_t *pEncryptedData);
+int32_t v2xSe_decryptUsingRtSm2Eces(TypeRtKeyId_t rtKeyId,
+	TypeDecryptSm2Eces_t *pSm2EcesData,
+	TypeSW_t *pHsmStatusCode,
+	TypeLen_t *pMsgLen, TypePlainText_t *pMsgData);
+int32_t v2xSe_decryptUsingMaSm2Eces(TypeDecryptSm2Eces_t *pSm2EcesData,
+	TypeSW_t *pHsmStatusCode,
+	TypeLen_t *pMsgLen,
+	TypePlainText_t *pMsgData);
+int32_t v2xSe_decryptUsingBaSm2Eces(TypeBaseKeyId_t baseKeyId,
+	TypeDecryptSm2Eces_t *pSm2EcesData,
+	TypeSW_t *pHsmStatusCode,
+	TypeLen_t *pMsgLen,
+	TypePlainText_t *pMsgData);
 
 int32_t v2xSe_encryptUsingRtCipher(TypeRtKeyId_t rtKeyId,
 	TypeEncryptCipher_t *pCipherData, TypeSW_t *pHsmStatusCode,

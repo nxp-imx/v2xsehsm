@@ -159,6 +159,12 @@
 #define PROFILE_ID_V2XSE_DECRYPYUSINGRTCIPHER			0x0132
 /** Profiling ID for v2xSe_encryptUsingSm2Eces */
 #define PROFILE_ID_V2XSE_ENCRYPTUSINGSM2ECES			0x0133
+/** Profiling ID for v2xSe_decryptUsingRtSm2Eces */
+#define PROFILE_ID_V2XSE_DECRYPTUSINGRTSM2ECES			0x0134
+/** Profiling ID for v2xSe_decryptUsingMaSm2Eces */
+#define PROFILE_ID_V2XSE_DECRYPTUSINGMASM2ECES			0x0135
+/** Profiling ID for v2xSe_decryptUsingBaSm2Eces */
+#define PROFILE_ID_V2XSE_DECRYPTUSINGBASM2ECES			0x0136
 /** Prodiling ID for v2xSe_sm2_get_z */
 #define PROFILE_ID_V2XSE_SM2_GET_Z				0x0137
 
@@ -236,6 +242,8 @@
 #define PROFILE_ID_HSM_CLOSE_SM2_ECES_SERVICE			0x0223
 /** Profiling ID for hsm_sm2_eces_encryption */
 #define PROFILE_ID_HSM_SM2_ECES_ENCRYPTION			0x0224
+/** Profiling ID for hsm_sm2_eces_encryption */
+#define PROFILE_ID_HSM_SM2_ECES_DECRYPTION			0x0225
 
 /* Profiling IDs for system calls: format 0x03xx */
 
