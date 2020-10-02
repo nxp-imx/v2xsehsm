@@ -176,11 +176,11 @@ int32_t activateV2x(appletSelection_t appletId,
 				appletVarStoragePath = cnVarStorage;
 			} else {
 				*pHsmStatusCode = V2XSE_APP_MISSING;
-				break;
+				goto exit;
 			}
 
 			if (nvm_init())
-				break;
+				goto exit;
 
 			memset(&session_args, 0, sizeof(session_args));
 
@@ -193,7 +193,7 @@ int32_t activateV2x(appletSelection_t appletId,
 							&hsmSessionHandle);
 			TRACE_HSM_RETURN(PROFILE_ID_HSM_OPEN_SESSION);
 			if (hsmret)
-				break;
+				goto exit;
 
 			memset(&rng_open_args, 0, sizeof(rng_open_args));
 			TRACE_HSM_CALL(PROFILE_ID_HSM_OPEN_RNG_SERVICE);
@@ -201,7 +201,7 @@ int32_t activateV2x(appletSelection_t appletId,
 						&rng_open_args, &hsmRngHandle);
 			TRACE_HSM_RETURN(PROFILE_ID_HSM_OPEN_RNG_SERVICE);
 			if (hsmret)
-				break;
+				goto close_session;
 
 			/* Assume keystore exists, try to open */
 			memset(&key_store_args, 0, sizeof(key_store_args));
@@ -239,7 +239,7 @@ int32_t activateV2x(appletSelection_t appletId,
 				TRACE_HSM_RETURN(
 					PROFILE_ID_HSM_OPEN_KEY_STORE_SERVICE);
 				if (hsmret)
-					break;
+					goto close_rng_service;
 				justCreatedKeystore = 1;
 			}
 
@@ -252,7 +252,7 @@ int32_t activateV2x(appletSelection_t appletId,
 			TRACE_HSM_RETURN(
 				PROFILE_ID_HSM_OPEN_KEY_MANAGEMENT_SERVICE);
 			if (hsmret)
-				break;
+				goto close_key_store_service;
 
 			if (justCreatedKeystore) {
 				/*
@@ -278,7 +278,7 @@ int32_t activateV2x(appletSelection_t appletId,
 									&args);
 				TRACE_HSM_RETURN(PROFILE_ID_HSM_GENERATE_KEY);
 				if (hsmret)
-					break;
+					goto close_key_management_service;
 			}
 
 			/* Keys just opened, no activated key/sigScheme yet */
@@ -291,7 +291,7 @@ int32_t activateV2x(appletSelection_t appletId,
 					&cipher_args, &hsmCipherHandle);
 			TRACE_HSM_RETURN(PROFILE_ID_HSM_OPEN_CIPHER_SERVICE);
 			if (hsmret)
-				break;
+				goto close_key_management_service;
 
 			memset(&sig_gen_args, 0, sizeof(sig_gen_args));
 			TRACE_HSM_CALL(
@@ -302,7 +302,7 @@ int32_t activateV2x(appletSelection_t appletId,
 			TRACE_HSM_RETURN(
 			    PROFILE_ID_HSM_OPEN_SIGNATURE_GENERATION_SERVICE);
 			if (hsmret)
-				break;
+				goto close_cipher_service;
 
 			if ((appletId == e_CN_AND_GS) || (appletId == e_CN)) {
 				memset(&sm2_eces_args, 0, sizeof(sm2_eces_args));
@@ -311,15 +311,31 @@ int32_t activateV2x(appletSelection_t appletId,
 						&sm2_eces_args, &hsmSm2EcesHandle);
 				TRACE_HSM_RETURN(PROFILE_ID_HSM_OPEN_SM2_ECES_SERVICE);
 				if (hsmret)
-					break;
+					goto close_signature_generation_service;
 			}
 
 			v2xseState = V2XSE_STATE_ACTIVATED;
 			v2xseAppletId = appletId;
 			*pHsmStatusCode = V2XSE_NO_ERROR;
 			retval = V2XSE_SUCCESS;
+			goto exit;
 		} while (0);
+
+close_signature_generation_service:
+		hsm_close_signature_generation_service(hsmSigGenHandle);
+close_cipher_service:
+		hsm_close_cipher_service(hsmCipherHandle);
+close_key_management_service:
+		hsm_close_key_management_service(hsmKeyMgmtHandle);
+close_key_store_service:
+		hsm_close_key_store_service(hsmKeyStoreHandle);
+close_rng_service:
+		hsm_close_rng_service(hsmRngHandle);
+close_session:
+		hsm_close_session(hsmSessionHandle);
 	}
+exit:
+
 	return retval;
 }
 
