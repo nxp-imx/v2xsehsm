@@ -136,7 +136,7 @@ extern const uint8_t serialNumber[V2XSE_SERIAL_NUMBER];
 /** Offset from RT to BA key groups */
 #define BA_KEYGROUP_OFFSET	128
 /** Number of keys per group */
-#define KEYS_PER_GROUP		100
+#define KEYS_PER_GROUP		71
 
 /** Priority of session opened with HSM */
 #define HSM_SESSION_PRIORITY	0
