@@ -175,8 +175,11 @@ int32_t activateV2x(appletSelection_t appletId,
 				break;
 
 			memset(&session_args, 0, sizeof(session_args));
-			session_args.session_priority = HSM_SESSION_PRIORITY;
-			session_args.operating_mode = HSM_OPERATING_MODE;
+
+			/* Use high priority HSM session, when available */
+			session_args.session_priority = HSM_OPEN_SESSION_PRIORITY_HIGH;
+			session_args.operating_mode = HSM_OPEN_SESSION_LOW_LATENCY_MASK;
+
 			TRACE_HSM_CALL(PROFILE_ID_HSM_OPEN_SESSION);
 			hsmret = hsm_open_session(&session_args,
 							&hsmSessionHandle);
