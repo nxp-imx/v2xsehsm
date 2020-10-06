@@ -708,21 +708,27 @@ int32_t v2xSe_getSePhase(uint8_t *pPhaseInfo, TypeSW_t *pHsmStatusCode);
 int32_t v2xSe_getKek(uint16_t keyType, uint8_t *pSignedMessage,
 	uint16_t signedMessageLength, uint8_t *pKekPublicKey,
 	uint16_t *pKekLength, TypeSW_t *pHsmStatusCode);
+	/*
+	 * TODO: remove references to KEK_TYPE_xxx flags and getKek() API
+	 */
 /** Flag to use KEK that is unique per device */
 #define KEK_TYPE_UNIQUE	(0u)
 /** Flag to use KEK that is common for all devices */
 #define KEK_TYPE_COMMON	(1u)
+int32_t v2xSe_createKek(uint8_t *pSignedMessage, uint16_t signedMessageLength,
+	TypePublicKey_t *pInitiatorPublicKey, TypePublicKey_t *pResponderPublicKey,
+	TypeRtKeyId_t kekId, TypeSW_t *pHsmStatusCode);
 int32_t v2xSe_injectMaEccPrivateKey(TypeCurveId_t curveId,
 	TypeSW_t *pHsmStatusCode, TypePublicKey_t *pPublicKeyPlain,
-	uint8_t *pKeyData, uint16_t keyDataSize, uint16_t kekType);
+	uint8_t *pKeyData, uint16_t keyDataSize, TypeRtKeyId_t kekId);
 int32_t v2xSe_injectRtEccPrivateKey(TypeRtKeyId_t rtKeyId,
 	TypeCurveId_t curveId, TypeSW_t *pHsmStatusCode,
 	TypePublicKey_t *pPublicKeyPlain, uint8_t *pKeyData,
-	uint16_t keyDataSize, uint16_t kekType);
+	uint16_t keyDataSize, TypeRtKeyId_t kekId);
 int32_t v2xSe_injectBaEccPrivateKey(TypeBaseKeyId_t baseKeyId,
 	TypeCurveId_t curveId, TypeSW_t *pHsmStatusCode,
 	TypePublicKey_t *pPublicKeyPlain, uint8_t *pKeyData,
-	uint16_t keyDataSize, uint16_t kekType);
+	uint16_t keyDataSize, TypeRtKeyId_t kekId);
 
 int32_t v2xSe_sm2_get_z(TypePublicKey_t pubKey, TypeSM2Identifier_t sm2_id,
 	TypeSM2ZA_t *sm2_za);

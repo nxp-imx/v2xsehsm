@@ -62,6 +62,9 @@ hsm_key_type_t convertSymmetricKeyId(TypeSymmetricKeyId_t symmetricKeyId)
 	hsm_key_type_t keyType;
 
 	switch (symmetricKeyId) {
+		case V2XSE_SYMMK_AES_256:
+			keyType = HSM_KEY_TYPE_AES_256;
+			break;
 		case V2XSE_SYMMK_SM4_128:
 			keyType = HSM_KEY_TYPE_SM4_128;
 			break;
@@ -146,6 +149,7 @@ int32_t is256bitCurve(hsm_key_type_t keyType)
 		case HSM_KEY_TYPE_ECDSA_NIST_P256:
 		case HSM_KEY_TYPE_ECDSA_BRAINPOOL_R1_256:
 		case HSM_KEY_TYPE_ECDSA_BRAINPOOL_T1_256:
+		case HSM_KEY_TYPE_AES_256:
 		case HSM_KEY_TYPE_DSA_SM2_FP_256:
 		case HSM_SIGNATURE_SCHEME_DSA_SM2_FP_256_SM3:
 			retval = 1;
