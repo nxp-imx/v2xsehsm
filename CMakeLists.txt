@@ -7,7 +7,7 @@ include(GenerateExportHeader)
 include(CMakePackageConfigHelpers)
 
 set (v2xsehsm_MAJOR 0)
-set (v2xsehsm_MINOR 2)
+set (v2xsehsm_MINOR 3)
 set (v2xsehsm_PATCH 0)
 set (v2xsehsm_VERSION ${v2xsehsm_MAJOR}.${v2xsehsm_MINOR}.${v2xsehsm_PATCH})
 
