@@ -247,6 +247,169 @@ int32_t deleteHsmKey(uint32_t keyHandle, hsm_key_type_t keyType,
 	return hsmret;
 }
 
+/*
+ * @brief Convert Key Derivation Function algorithm from v2xSe to hsm API
+ *
+ * This  function returns the KDF algo that corresponds to the
+ * specified v2xSe_algo
+ *
+ * @param v2xSe_algo algo in v2xSe API
+ *
+ * @return algo in hsm API, or -1 in case of error
+ *
+ */
+static hsm_kdf_algo_id_t getHsmKdfAlgo(TypeKdfAlgoId_t v2xSe_algo)
+{
+	hsm_kdf_algo_id_t algo;
+
+	switch (v2xSe_algo)
+	{
+		case V2XSE_KDF_ALGO_FOR_SM2:
+			algo = HSM_KDF_ALG_FOR_SM2;
+			break;
+		default:
+			algo = -1;
+			break;
+	}
+	return algo;
+}
+
+/*
+ * @brief Get key exchange scheme
+ *
+ * This  function returns the key exchange scheme that corresponds
+ * to the specified keyType
+ *
+ * @param keyType key type value to query
+ *
+ * @return key exchange scheme, or -1 in case of error
+ *
+ */
+static hsm_key_exchange_scheme_id_t getHsmKeScheme(hsm_key_type_t keyType)
+{
+	hsm_key_exchange_scheme_id_t scheme;
+
+	switch (keyType)
+	{
+		case HSM_KEY_TYPE_DSA_SM2_FP_256:
+			scheme = HSM_KE_SCHEME_SM2_FP_256;
+			break;
+
+		default:
+			scheme = -1;
+			break;
+	}
+	return scheme;
+}
+
+/*
+ * @brief Get key exchange in/out buffer length
+ *
+ * This function returns the key exchange buffer length that corresponds
+ * to the specified keyType and algo.
+ * For SM2, it is able to contain two public keys.
+ *
+ * @param algo algorithm used for the key exchange
+ * @param keyType key type used for key exchange operation
+ *
+ * @return KE buffer length, or 0 in case of error
+ *
+ */
+static int32_t getHsmKeBufLen(TypeKdfAlgoId_t algo, hsm_key_type_t keyType)
+{
+	/* only 256-bit key exchange is supported thus far */
+	int32_t pubKlen = is256bitCurve(keyType) ? V2XSE_256_EC_PUB_KEY : 0;
+	int32_t lengthVal;
+
+	switch (algo)
+	{
+		case V2XSE_KDF_ALGO_FOR_SM2:
+			lengthVal = 2 * pubKlen;
+			break;
+
+		default:
+			lengthVal = 0;
+			break;
+	}
+	return lengthVal;
+}
+
+/**
+ *
+ * @brief Create a shared key through HSM Key Exchange operation
+ *
+ * This function derives a key from the specified keys using the kdf
+ * algorithm specified in input.
+
+ * @param exchangeKeyType indicates the public key type used for the key exchange
+ * @param pkeyExchangeData pointer to specific key exchange data
+ * @param pKeInput pointer to the initiator input data used for key exchange
+ * @param pKeOutput pointer to the output where the responder public data is written
+ * @param responderKeyHandle key handle of the responder's static key
+ * @param pSharedKeyHandle pointer to the shared key handle location
+ * @param hsm_sharedKeyType type of shared key for hsm to create
+ * @param action indicates whether to create or update key
+ * @param usage indicates required key usage (rt, ba or ma)
+ * @param group key group used by HSM for secure storage
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
+static int32_t exchangeHsmKey (hsm_key_type_t exchangeKeyType,
+    TypeKeyExchange_t *pkeyExchangeData, uint8_t *pKeInput,
+    uint8_t *pKeOutput, uint32_t responderKeyHandle,
+    uint32_t *pSharedKeyHandle, hsm_key_type_t hsm_sharedKeyType,
+    genKeyAction_t action, keyUsage_t usage, hsm_key_group_t group)
+{
+	TypeKeyExchange_t *keyXchg = pkeyExchangeData;
+	op_key_exchange_args_t args;
+	hsm_err_t hsmret;
+
+	memset(&args, 0, sizeof(args));
+	args.key_identifier = responderKeyHandle;
+	args.shared_key_identifier_array = (uint8_t *)pSharedKeyHandle;
+	args.ke_input = pKeInput;
+	args.ke_output = pKeOutput;
+	args.kdf_input = keyXchg->kdfInput;
+	args.kdf_output = keyXchg->kdfOutput;
+	args.shared_key_group = group;
+	/* All keys persistent */
+	args.shared_key_info = HSM_KEY_INFO_PERSISTENT;
+	switch (usage) {
+	case RT_KEY:
+		/* RT key does not need any extra flags set */
+		break;
+	case BA_KEY:
+		/* BA keys can be used for butterfly */
+		args.shared_key_info |= HSM_KEY_INFO_MASTER;
+		break;
+	case MA_KEY:
+		/* MA key cannot be modified */
+		args.shared_key_info |= HSM_KEY_INFO_PERMANENT;
+		break;
+	}
+	args.shared_key_type = hsm_sharedKeyType;
+	args.initiator_public_data_type = exchangeKeyType;
+	args.key_exchange_scheme = getHsmKeScheme(exchangeKeyType);
+	args.kdf_algorithm = getHsmKdfAlgo(keyXchg->kdfAlgo);
+	args.ke_input_size = /* fall through */
+	args.ke_output_size = getHsmKeBufLen(keyXchg->kdfAlgo, exchangeKeyType);
+	args.shared_key_identifier_array_size = sizeof(*pSharedKeyHandle);
+	args.kdf_input_size = keyXchg->kdfInputLen;
+	args.kdf_output_size = keyXchg->kdfOutputLen;
+	if (action == UPDATE_KEY)
+		args.flags = HSM_OP_KEY_GENERATION_FLAGS_UPDATE;
+	else /* CREATE_KEY */
+		args.flags = HSM_OP_KEY_GENERATION_FLAGS_CREATE;
+	/* Always use strict update - TODO: to modify for closed part */
+	args.flags |= HSM_OP_KEY_GENERATION_FLAGS_STRICT_OPERATION;
+	args.signed_message = NULL;
+	args.signed_msg_size = 0;
+	hsmret = hsm_key_exchange(hsmKeyMgmtHandle, &args);
+
+	return hsmret;
+}
+
 /**
  *
  * @brief Delete runtime ECC key pair
@@ -411,7 +574,8 @@ int32_t v2xSe_generateMaEccKeyPair
  * using the kdf algorithm specified in input.
  * During the key exchange, there is an initiator and a responder. The former is
  * considered as the user of the HSM and the latter the HSM itself.
- * The result of this operation is the creation of a secret shared key.
+ * The result of this operation is the creation of a secret shared key, stored
+ * in the MA slot.
  *
  * NOTE: This operation is only permitted for the CN applet.
  *
@@ -440,7 +604,128 @@ int32_t v2xSe_exchangeMaPrivateKey
     TypeSW_t *pHsmStatusCode
 )
 {
-	return V2XSE_FUNC_NOT_SUPPORTED;
+	hsm_key_type_t exchangeKeyType;
+	TypeKeyTypeId_t storedKeyTypeId;
+	TypeKeyExchange_t *keyXchg = pkeyExchangeData;
+	hsm_key_type_t hsm_sharedKeyType;
+	uint32_t sharedKeyHandle;
+	uint32_t responderKeyHandle = 0;
+	int32_t keyCreated = 0;
+	int32_t retval = V2XSE_FAILURE;
+	/* temporary buffers required for HSM API */
+	uint8_t hsm_initPubKeys[2 * V2XSE_384_EC_PUB_KEY] = {0};
+	uint8_t hsm_respPubKeys[2 * V2XSE_384_EC_PUB_KEY] = {0};
+	int32_t pubKeyXchgLen = keyLenFromCurveID(initiatorCurveId);
+
+	do {
+		if (setupDefaultStatusCode(pHsmStatusCode) ||
+				enforceActivatedState(pHsmStatusCode, &retval)) {
+			break;
+		}
+		/* sanity check */
+		if (!keyXchg || !pInitiatorPublicKey ||
+				!pResponderPublicKey) {
+			*pHsmStatusCode = V2XSE_WRONG_DATA;
+			break;
+		}
+		/* current limitation: Chinese algorithm supported only */
+		if ((v2xseAppletId != e_CN_AND_GS) &&
+					(v2xseAppletId != e_CN)) {
+			*pHsmStatusCode = V2XSE_FUNC_NOT_SUPPORTED;
+			break;
+		}
+		if ((keyXchg->kdfAlgo != V2XSE_KDF_ALGO_FOR_SM2) ||
+				!keyXchg->useResponderKeyId ||
+				(initiatorCurveId != V2XSE_CURVE_SM2_256)) {
+			*pHsmStatusCode = V2XSE_WRONG_DATA;
+			break;
+		}
+
+		exchangeKeyType = convertCurveId(initiatorCurveId);
+		hsm_sharedKeyType = convertCurveId(sharedKeyTypeId);
+		if (!hsm_sharedKeyType) {
+			*pHsmStatusCode = V2XSE_WRONG_DATA;
+			break;
+		}
+		if (keyXchg->useResponderKeyId) {
+
+			if (nvm_retrieve_rt_key_handle(keyXchg->responderKeyId,
+					&responderKeyHandle, &storedKeyTypeId)) {
+				*pHsmStatusCode = V2XSE_WRONG_DATA;
+				break;
+			} else {
+				/* initiator and responder key type must match */
+				if (initiatorCurveId != storedKeyTypeId) {
+					*pHsmStatusCode = V2XSE_WRONG_DATA;
+					break;
+				}
+			}
+		}
+		if (!nvm_retrieve_ma_key_handle(&sharedKeyHandle,
+						&storedKeyTypeId)) {
+			/* MA is already assigned */
+			*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
+			break;
+		}
+		/*
+		 * initiator's public keys buffer for HSM api must be filled with:
+		 *     (static public key || ephemeral public key)
+		 */
+		convertPublicKeyToHsmApi(exchangeKeyType,
+				pInitiatorPublicKey, &hsm_initPubKeys[0]);
+		/* Set keyXchg->pInitiatorPublicKey2 contains the ephemeral pubkey */
+		if (keyXchg->pInitiatorPublicKey2)
+			convertPublicKeyToHsmApi(exchangeKeyType,
+					keyXchg->pInitiatorPublicKey2,
+					&hsm_initPubKeys[pubKeyXchgLen]);
+
+		if (exchangeHsmKey(exchangeKeyType, keyXchg, hsm_initPubKeys,
+				hsm_respPubKeys, responderKeyHandle,
+				&sharedKeyHandle, hsm_sharedKeyType,
+				CREATE_KEY, MA_KEY, MA_KEY_GROUP)) {
+			break;
+		}
+		keyCreated = 1;
+		if (nvm_update_var(MA_CURVEID_NAME,
+				(uint8_t *)&sharedKeyTypeId,
+				sizeof(sharedKeyTypeId))) {
+			*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
+			break;
+		}
+		if (nvm_update_var(MA_KEYHANDLE_NAME,
+				(uint8_t *)&sharedKeyHandle,
+				sizeof(sharedKeyHandle))) {
+			*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
+			break;
+		}
+		/*
+		 * responder's public keys buffer from HSM call got filled with:
+		 *     (static public key || ephemeral public key)
+		 */
+		memcpy(pResponderPublicKey, &hsm_respPubKeys[0], pubKeyXchgLen);
+		convertPublicKeyToV2xseApi(exchangeKeyType, pResponderPublicKey);
+		/* Set keyXchg->pResponderPublicKey2 with HSM ephemeral pubkey: */
+		if (keyXchg->pResponderPublicKey2) {
+			memcpy(keyXchg->pResponderPublicKey2,
+				&hsm_respPubKeys[pubKeyXchgLen], pubKeyXchgLen);
+			convertPublicKeyToV2xseApi(exchangeKeyType,
+				keyXchg->pResponderPublicKey2);
+		}
+		maCurveId = sharedKeyTypeId;
+		maKeyHandle = sharedKeyHandle;
+		*pHsmStatusCode = V2XSE_NO_ERROR;
+		retval = V2XSE_SUCCESS;
+	} while (0);
+
+	/* Clear key handle in case of error when creating */
+	if ((retval != V2XSE_SUCCESS) && (keyCreated)) {
+		deleteHsmKey(sharedKeyHandle, sharedKeyTypeId, MA_KEY_GROUP);
+		maKeyHandle = 0;
+		nvm_delete_var(MA_CURVEID_NAME);
+		nvm_delete_var(MA_KEYHANDLE_NAME);
+	}
+
+	return retval;
 }
 
 /**
@@ -617,7 +902,8 @@ int32_t v2xSe_generateRtEccKeyPair
  * algorithm specified in input.
  * During the key exchange, there is an initiator and a responder. The former is
  * considered as the user of the HSM and the latter the HSM itself.
- * The result of this operation is the creation of a secret shared key.
+ * The result of this operation is the creation of a secret shared key, stored
+ * in the HSM key store at the specified sharedKeyId Rt slot.
  *
  * NOTE: This operation is only permitted for the CN applet.
  *
@@ -637,7 +923,7 @@ int32_t v2xSe_generateRtEccKeyPair
  *
  * @return V2XSE_SUCCESS if no error, non-zero on error
  */
-int32_t v2xSe_exchangeRtEccPrivateKey
+int32_t v2xSe_exchangeRtPrivateKey
 (
     TypeCurveId_t initiatorCurveId,
     TypePublicKey_t *pInitiatorPublicKey,
@@ -648,7 +934,134 @@ int32_t v2xSe_exchangeRtEccPrivateKey
     TypeSW_t *pHsmStatusCode
 )
 {
-	return V2XSE_FUNC_NOT_SUPPORTED;
+	hsm_key_type_t exchangeKeyType;
+	TypeKeyTypeId_t storedKeyTypeId;
+	TypeKeyExchange_t *keyXchg = pkeyExchangeData;
+	hsm_key_type_t hsm_sharedKeyType;
+	uint32_t sharedKeyHandle;
+	uint32_t responderKeyHandle = 0;
+	int32_t keyModified = 0;
+	int32_t keyCreated = 0;
+	int32_t retval = V2XSE_FAILURE;
+	/* temporary buffers required for HSM API */
+	uint8_t hsm_initPubKeys[2 * V2XSE_384_EC_PUB_KEY] = {0};
+	uint8_t hsm_respPubKeys[2 * V2XSE_384_EC_PUB_KEY] = {0};
+	int32_t pubKeyXchgLen = keyLenFromCurveID(initiatorCurveId);
+
+	do {
+		if (setupDefaultStatusCode(pHsmStatusCode) ||
+				enforceActivatedState(pHsmStatusCode, &retval)) {
+			break;
+		}
+		/* sanity check */
+		if (!keyXchg || !pInitiatorPublicKey ||
+				!pResponderPublicKey ||
+				(sharedKeyId >= NUM_STORAGE_SLOTS)) {
+			*pHsmStatusCode = V2XSE_WRONG_DATA;
+			break;
+		}
+		/* current limitation: Chinese algorithm supported only */
+		if ((v2xseAppletId != e_CN_AND_GS) &&
+					(v2xseAppletId != e_CN)) {
+			*pHsmStatusCode = V2XSE_FUNC_NOT_SUPPORTED;
+			break;
+		}
+		if ((keyXchg->kdfAlgo != V2XSE_KDF_ALGO_FOR_SM2) ||
+				!keyXchg->useResponderKeyId ||
+				(initiatorCurveId != V2XSE_CURVE_SM2_256)) {
+			*pHsmStatusCode = V2XSE_WRONG_DATA;
+			break;
+		}
+
+		exchangeKeyType = convertCurveId(initiatorCurveId);
+		hsm_sharedKeyType = convertCurveId(sharedKeyTypeId);
+		if (!hsm_sharedKeyType) {
+			*pHsmStatusCode = V2XSE_WRONG_DATA;
+			break;
+		}
+		if (keyXchg->useResponderKeyId) {
+
+			if (nvm_retrieve_rt_key_handle(keyXchg->responderKeyId,
+					&responderKeyHandle, &storedKeyTypeId)) {
+				*pHsmStatusCode = V2XSE_WRONG_DATA;
+				break;
+			} else {
+				/* initiator and responder key type must match */
+				if (initiatorCurveId != storedKeyTypeId) {
+					*pHsmStatusCode = V2XSE_WRONG_DATA;
+					break;
+				}
+			}
+		}
+		if (!nvm_retrieve_rt_key_handle(sharedKeyId, &sharedKeyHandle,
+						&storedKeyTypeId)) {
+			keyModified = 1;
+			/* Check if can overwrite */
+			if (sharedKeyTypeId != storedKeyTypeId) {
+				/* Different type, must delete */
+				if (deleteRtKey(sharedKeyId))
+					break;
+			}
+		}
+		/*
+		 * initiator's public keys buffer for HSM api must be filled with:
+		 *     (static public key || ephemeral public key)
+		 */
+		convertPublicKeyToHsmApi(exchangeKeyType,
+				pInitiatorPublicKey, &hsm_initPubKeys[0]);
+		/* Set keyXchg->pInitiatorPublicKey2 contains the ephemeral pubkey */
+		if (keyXchg->pInitiatorPublicKey2)
+			convertPublicKeyToHsmApi(exchangeKeyType,
+					keyXchg->pInitiatorPublicKey2,
+					&hsm_initPubKeys[pubKeyXchgLen]);
+
+		if (exchangeHsmKey(exchangeKeyType, keyXchg, hsm_initPubKeys,
+				hsm_respPubKeys, responderKeyHandle,
+				&sharedKeyHandle, hsm_sharedKeyType,
+				rtKeyHandle[sharedKeyId] ? UPDATE_KEY : CREATE_KEY,
+				RT_KEY, getKeyGroup(RT_KEY, sharedKeyId))) {
+			break;
+		}
+		keyCreated = 1;
+		if (nvm_update_array_data(RT_CURVEID_NAME, sharedKeyId,
+				(uint8_t *)&sharedKeyTypeId,
+				sizeof(sharedKeyTypeId))) {
+			break;
+		}
+		if (nvm_update_array_data(RT_KEYHANDLE_NAME, sharedKeyId,
+				(uint8_t *)&sharedKeyHandle,
+				sizeof(sharedKeyHandle))) {
+			break;
+		}
+		/*
+		 * responder's public keys buffer from HSM call got filled with:
+		 *     (static public key || ephemeral public key)
+		 */
+		memcpy(pResponderPublicKey, &hsm_respPubKeys[0], pubKeyXchgLen);
+		convertPublicKeyToV2xseApi(exchangeKeyType, pResponderPublicKey);
+		/* Set keyXchg->pResponderPublicKey2 with HSM ephemeral pubkey: */
+		if (keyXchg->pResponderPublicKey2) {
+			memcpy(keyXchg->pResponderPublicKey2,
+				&hsm_respPubKeys[pubKeyXchgLen], pubKeyXchgLen);
+			convertPublicKeyToV2xseApi(exchangeKeyType,
+				keyXchg->pResponderPublicKey2);
+		}
+		rtKeyHandle[sharedKeyId] = sharedKeyHandle;
+		rtCurveId[sharedKeyId] = sharedKeyTypeId;
+		*pHsmStatusCode = V2XSE_NO_ERROR;
+		retval = V2XSE_SUCCESS;
+	} while (0);
+
+	if (retval != V2XSE_SUCCESS) {
+		if (keyModified || keyCreated) {
+			deleteRtKey(sharedKeyId);
+			/* Flag no change only if previous key not modified */
+			if (!keyModified)
+				*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
+		}
+	}
+
+	return retval;
 }
 
 /**
@@ -879,7 +1292,8 @@ int32_t v2xSe_generateBaEccKeyPair
  * algorithm specified in input.
  * During the key exchange, there is an initiator and a responder. The former is
  * considered as the user of the HSM and the latter the HSM itself.
- * The result of this operation is the creation of a secret shared key.
+ * The result of this operation is the creation of a secret shared key, stored
+ * in the HSM key store at the specified sharedKeyId Ba slot.
  *
  * NOTE: This operation is only permitted for the CN applet.
  *
@@ -910,7 +1324,134 @@ int32_t v2xSe_exchangeBaPrivateKey
     TypeSW_t *pHsmStatusCode
 )
 {
-	return V2XSE_FUNC_NOT_SUPPORTED;
+	hsm_key_type_t exchangeKeyType;
+	TypeKeyTypeId_t storedKeyTypeId;
+	TypeKeyExchange_t *keyXchg = pkeyExchangeData;
+	hsm_key_type_t hsm_sharedKeyType;
+	uint32_t sharedKeyHandle;
+	uint32_t responderKeyHandle = 0;
+	int32_t keyModified = 0;
+	int32_t keyCreated = 0;
+	int32_t retval = V2XSE_FAILURE;
+	/* temporary buffers required for HSM API */
+	uint8_t hsm_initPubKeys[2 * V2XSE_384_EC_PUB_KEY] = {0};
+	uint8_t hsm_respPubKeys[2 * V2XSE_384_EC_PUB_KEY] = {0};
+	int32_t pubKeyXchgLen = keyLenFromCurveID(initiatorCurveId);
+
+	do {
+		if (setupDefaultStatusCode(pHsmStatusCode) ||
+				enforceActivatedState(pHsmStatusCode, &retval)) {
+			break;
+		}
+		/* sanity check */
+		if (!keyXchg || !pInitiatorPublicKey ||
+				!pResponderPublicKey ||
+				(sharedKeyId >= NUM_STORAGE_SLOTS)) {
+			*pHsmStatusCode = V2XSE_WRONG_DATA;
+			break;
+		}
+		/* current limitation: Chinese algorithm supported only */
+		if ((v2xseAppletId != e_CN_AND_GS) &&
+					(v2xseAppletId != e_CN)) {
+			*pHsmStatusCode = V2XSE_FUNC_NOT_SUPPORTED;
+			break;
+		}
+		if ((keyXchg->kdfAlgo != V2XSE_KDF_ALGO_FOR_SM2) ||
+				!keyXchg->useResponderKeyId ||
+				(initiatorCurveId != V2XSE_CURVE_SM2_256)) {
+			*pHsmStatusCode = V2XSE_WRONG_DATA;
+			break;
+		}
+
+		exchangeKeyType = convertCurveId(initiatorCurveId);
+		hsm_sharedKeyType = convertCurveId(sharedKeyTypeId);
+		if (!hsm_sharedKeyType) {
+			*pHsmStatusCode = V2XSE_WRONG_DATA;
+			break;
+		}
+		if (keyXchg->useResponderKeyId) {
+
+			if (nvm_retrieve_rt_key_handle(keyXchg->responderKeyId,
+					&responderKeyHandle, &storedKeyTypeId)) {
+				*pHsmStatusCode = V2XSE_WRONG_DATA;
+				break;
+			} else {
+				/* initiator and responder key type must match */
+				if (initiatorCurveId != storedKeyTypeId) {
+					*pHsmStatusCode = V2XSE_WRONG_DATA;
+					break;
+				}
+			}
+		}
+		if (!nvm_retrieve_ba_key_handle(sharedKeyId, &sharedKeyHandle,
+						&storedKeyTypeId)) {
+			keyModified = 1;
+			/* Check if can overwrite */
+			if (sharedKeyTypeId != storedKeyTypeId) {
+				/* Different type, must delete */
+				if (deleteBaKey(sharedKeyId))
+					break;
+			}
+		}
+		/*
+		 * initiator's public keys buffer for HSM api must be filled with:
+		 *     (static public key || ephemeral public key)
+		 */
+		convertPublicKeyToHsmApi(exchangeKeyType,
+				pInitiatorPublicKey, &hsm_initPubKeys[0]);
+		/* Set keyXchg->pInitiatorPublicKey2 contains the ephemeral pubkey */
+		if (keyXchg->pInitiatorPublicKey2)
+			convertPublicKeyToHsmApi(exchangeKeyType,
+					keyXchg->pInitiatorPublicKey2,
+					&hsm_initPubKeys[pubKeyXchgLen]);
+
+		if (exchangeHsmKey(exchangeKeyType, keyXchg, hsm_initPubKeys,
+				hsm_respPubKeys, responderKeyHandle,
+				&sharedKeyHandle, hsm_sharedKeyType,
+				baKeyHandle[sharedKeyId] ? UPDATE_KEY : CREATE_KEY,
+				BA_KEY, getKeyGroup(BA_KEY, sharedKeyId))) {
+			break;
+		}
+		keyCreated = 1;
+		if (nvm_update_array_data(BA_CURVEID_NAME, sharedKeyId,
+				(uint8_t *)&sharedKeyTypeId,
+				sizeof(sharedKeyTypeId))) {
+			break;
+		}
+		if (nvm_update_array_data(BA_KEYHANDLE_NAME, sharedKeyId,
+				(uint8_t *)&sharedKeyHandle,
+				sizeof(sharedKeyHandle))) {
+			break;
+		}
+		/*
+		 * responder's public keys buffer from HSM call got filled with:
+		 *     (static public key || ephemeral public key)
+		 */
+		memcpy(pResponderPublicKey, &hsm_respPubKeys[0], pubKeyXchgLen);
+		convertPublicKeyToV2xseApi(exchangeKeyType, pResponderPublicKey);
+		/* Set keyXchg->pResponderPublicKey2 with HSM ephemeral pubkey: */
+		if (keyXchg->pResponderPublicKey2) {
+			memcpy(keyXchg->pResponderPublicKey2,
+				&hsm_respPubKeys[pubKeyXchgLen], pubKeyXchgLen);
+			convertPublicKeyToV2xseApi(exchangeKeyType,
+				keyXchg->pResponderPublicKey2);
+		}
+		baKeyHandle[sharedKeyId] = sharedKeyHandle;
+		baCurveId[sharedKeyId] = sharedKeyTypeId;
+		*pHsmStatusCode = V2XSE_NO_ERROR;
+		retval = V2XSE_SUCCESS;
+	} while (0);
+
+	if (retval != V2XSE_SUCCESS) {
+		if (keyModified || keyCreated) {
+			deleteBaKey(sharedKeyId);
+			/* Flag no change only if previous key not modified */
+			if (!keyModified)
+				*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
+		}
+	}
+
+	return retval;
 }
 
 /**
