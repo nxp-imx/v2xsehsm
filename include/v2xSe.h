@@ -161,6 +161,11 @@
 /** SM4 CBC */
 #define V2XSE_ALGO_SM4_CBC 4u
 
+/** KDF Algo for NIST SHA 256 */
+#define V2XSE_KDF_ALG_SHA_256		10u
+/** KDF Algo for SM2 */
+#define V2XSE_KDF_ALGO_FOR_SM2		20u
+
 /** Do not copy public key on return */
 #define V2XSE_RSP_WITHOUT_PUBKEY	0u
 /** Copy public key on return */
@@ -276,8 +281,16 @@ typedef uint8_t TypeCurveId_t;
 /** Symmetric key type identifier */
 typedef uint8_t TypeSymmetricKeyId_t;
 
+/** Generic key type identifier:
+ * can either represent a TypeCurveId_t or TypeSymmetricKeyId_t
+ */
+typedef uint8_t TypeKeyTypeId_t;
+
 /** Cipher algo type */
 typedef uint8_t TypeAlgoId_t;
+
+/** KDF algo type (V2XSE_KDF_ALGO_xxx) */
+typedef uint8_t TypeKdfAlgoId_t;
 
 /** Nvm slot for base key */
 typedef uint16_t TypeBaseKeyId_t;
@@ -505,6 +518,57 @@ typedef struct
 	TypeVCTData_t *pVctData;
 } TypeDecryptCipher_t;
 
+/** This structure holds parameters for the key exchange function */
+typedef struct
+{
+	/**
+	 * Initiator's second public key
+	 * For SM2 scheme, it corresponds to its ephemeral public key
+	 */
+	TypePublicKey_t *pInitiatorPublicKey2;
+
+	/**
+	 * Flag indicating whether the responder's key is provided
+	 * This flag must be true for some key exchange scheme, such as SM2.
+	 */
+	uint8_t useResponderKeyId;
+
+	/**
+	 * Slot of the responder's key to be used for the key exchange operation ;
+	 * only used when useResponderKey is true.
+	 */
+	TypeRtKeyId_t responderKeyId;
+
+	/**
+	 * Reponders's second public key
+	 * For SM2 scheme, it corresponds to its ephemeral public key
+	 */
+	TypePublicKey_t *pResponderPublicKey2;
+
+	/** Algorithm used for the KDF */
+	TypeKdfAlgoId_t kdfAlgo;
+
+	/** Length of parameter kdfInput, valid value is 128 bytes */
+	uint8_t kdfInputLen;
+
+	/**
+	 * Input parameter for the key exchange function
+	 * For SM2, it contains the concatenation of 2 (or 3) 32-byte values:
+	 * - initiator's Z value || responder's Z value || V1 (optional)
+	 */
+	uint8_t *kdfInput;
+
+	/**
+	 * Length of parameter kdfOutput
+	 * For SM2, it contains the concatenation of 2 (optional) 32-byte values:
+	 * - V1 (optional) || V2 (optional)
+	 */
+	uint8_t kdfOutputLen;
+
+	/** Output parameter for the key exchange function */
+	uint8_t *kdfOutput;
+} TypeKeyExchange_t;
+
 /** This structure holds information of supported features of SE */
 typedef struct
 {
@@ -626,6 +690,10 @@ int32_t v2xSe_deactivate(void);
 int32_t v2xSe_disconnect(void);
 int32_t v2xSe_generateMaEccKeyPair(TypeCurveId_t curveId,
         TypeSW_t *pHsmStatusCode, TypePublicKey_t *pPublicKeyPlain);
+int32_t v2xSe_exchangeMaPrivateKey(TypeCurveId_t initiatorCurveId,
+        TypePublicKey_t *pInitiatorPublicKey, TypePublicKey_t *pResponderPublicKey,
+        TypeKeyExchange_t *pkeyExchangeData, TypeKeyTypeId_t sharedKeyTypeId,
+        TypeSW_t *pHsmStatusCode);
 int32_t v2xSe_getMaEccPublicKey(TypeSW_t *pHsmStatusCode,
         TypeCurveId_t *pCurveId,TypePublicKey_t *pPublicKeyPlain);
 int32_t v2xSe_createMaSign(TypeHashLength_t hashLength, TypeHash_t *pHashValue,
@@ -633,6 +701,10 @@ int32_t v2xSe_createMaSign(TypeHashLength_t hashLength, TypeHash_t *pHashValue,
 int32_t v2xSe_generateRtEccKeyPair(TypeRtKeyId_t rtKeyId,
         TypeCurveId_t curveId, TypeSW_t *pHsmStatusCode,
         TypePublicKey_t *pPublicKeyPlain);
+int32_t v2xSe_exchangeRtPrivateKey(TypeCurveId_t initiatorCurveId,
+        TypePublicKey_t *pInitiatorPublicKey, TypePublicKey_t *pResponderPublicKey,
+        TypeKeyExchange_t *pkeyExchangeData, TypeKeyTypeId_t sharedKeyTypeId,
+        TypeRtKeyId_t sharedKeyId, TypeSW_t *pHsmStatusCode);
 int32_t v2xSe_deleteRtEccPrivateKey(TypeRtKeyId_t rtKeyId,
         TypeSW_t *pHsmStatusCode);
 int32_t v2xSe_getRtEccPublicKey(TypeRtKeyId_t rtKeyId,
@@ -646,6 +718,10 @@ int32_t v2xSe_createRtSign(TypeRtKeyId_t rtKeyId, TypeHash_t *pHashValue,
 int32_t v2xSe_generateBaEccKeyPair(TypeBaseKeyId_t baseKeyId,
         TypeCurveId_t curveId, TypeSW_t *pHsmStatusCode,
         TypePublicKey_t *pPublicKeyPlain);
+int32_t v2xSe_exchangeBaPrivateKey(TypeCurveId_t initiatorCurveId,
+        TypePublicKey_t *pInitiatorPublicKey, TypePublicKey_t *pResponderPublicKey,
+        TypeKeyExchange_t *pkeyExchangeData, TypeKeyTypeId_t sharedKeyTypeId,
+        TypeBaseKeyId_t sharedKeyId, TypeSW_t *pHsmStatusCode);
 int32_t v2xSe_deleteBaEccPrivateKey(TypeBaseKeyId_t baseKeyId,
         TypeSW_t *pHsmStatusCode);
 int32_t v2xSe_getBaEccPublicKey(TypeBaseKeyId_t baseKeyId,

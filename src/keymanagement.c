@@ -403,6 +403,48 @@ int32_t v2xSe_generateMaEccKeyPair
 
 /**
  *
+ * @brief Creates a Module Authentication secret shared key from the
+ * specified initiator's (user) and responder's (HSM) runtime keys
+ * @ingroup keymanagement
+ *
+ * This function derives a Module Authentication key from the specified keys
+ * using the kdf algorithm specified in input.
+ * During the key exchange, there is an initiator and a responder. The former is
+ * considered as the user of the HSM and the latter the HSM itself.
+ * The result of this operation is the creation of a secret shared key.
+ *
+ * NOTE: This operation is only permitted for the CN applet.
+ *
+ * @param initiatorCurveId curve ID associated with the initiator's key pair,
+ *        this value also defines the key exchange scheme ;
+ *        valid value is V2XSE_CURVE_SM2_256
+ * @param pInitiatorPublicKey initiator's public key
+ * @param pResponderPublicKey pointer to location to write the responder's
+ *        public key
+ * @param pkeyExchangeData pointer to specific data depending on scheme and
+ *        algorithm used
+ * @param sharedKeyTypeId ECC curve or Symmetric key type associated with
+ *        the shared key ;
+ *        supported range is {V2XSE_CURVE_SM2_256, V2XSE_SYMMK_SM4_128}
+ * @param pHsmStatusCode pointer to location to write extended result code
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ */
+int32_t v2xSe_exchangeMaPrivateKey
+(
+    TypeCurveId_t initiatorCurveId,
+    TypePublicKey_t *pInitiatorPublicKey,
+    TypePublicKey_t *pResponderPublicKey,
+    TypeKeyExchange_t *pkeyExchangeData,
+    TypeKeyTypeId_t sharedKeyTypeId,
+    TypeSW_t *pHsmStatusCode
+)
+{
+	return V2XSE_FUNC_NOT_SUPPORTED;
+}
+
+/**
+ *
  * @brief Get Module Authenitication public key
  * @ingroup keymanagement
  *
@@ -563,6 +605,50 @@ int32_t v2xSe_generateRtEccKeyPair
 	}
 	TRACE_API_EXIT(PROFILE_ID_V2XSE_GENERATERTECCKEYPAIR);
 	return retval;
+}
+
+/**
+ *
+ * @brief Creates a runtime secret shared key from the specified initiator's (user)
+ * and responder's (HSM) runtime keys
+ * @ingroup keymanagement
+ *
+ * This function derives a runtime key from the specified keys using the kdf
+ * algorithm specified in input.
+ * During the key exchange, there is an initiator and a responder. The former is
+ * considered as the user of the HSM and the latter the HSM itself.
+ * The result of this operation is the creation of a secret shared key.
+ *
+ * NOTE: This operation is only permitted for the CN applet.
+ *
+ * @param initiatorCurveId curve ID associated with the initiator's key pair,
+ *        this value also defines the key exchange scheme ;
+ *        valid value is V2XSE_CURVE_SM2_256
+ * @param pInitiatorPublicKey initiator's public key
+ * @param pResponderPublicKey pointer to location to write the responder's
+ *        public key
+ * @param pkeyExchangeData pointer to specific data depending on scheme and
+ *        algorithm used
+ * @param sharedKeyTypeId ECC curve or Symmetric key type associated with
+ *        the shared key ;
+ *        supported range is {V2XSE_CURVE_SM2_256, V2XSE_SYMMK_SM4_128}
+ * @param sharedKeyId slot to store the secret shared key identifier
+ * @param pHsmStatusCode pointer to location to write extended result code
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ */
+int32_t v2xSe_exchangeRtEccPrivateKey
+(
+    TypeCurveId_t initiatorCurveId,
+    TypePublicKey_t *pInitiatorPublicKey,
+    TypePublicKey_t *pResponderPublicKey,
+    TypeKeyExchange_t *pkeyExchangeData,
+    TypeKeyTypeId_t sharedKeyTypeId,
+    TypeRtKeyId_t sharedKeyId,
+    TypeSW_t *pHsmStatusCode
+)
+{
+	return V2XSE_FUNC_NOT_SUPPORTED;
 }
 
 /**
@@ -781,6 +867,50 @@ int32_t v2xSe_generateBaEccKeyPair
 	}
 	TRACE_API_EXIT(PROFILE_ID_V2XSE_GENERATEBAECCKEYPAIR);
 	return retval;
+}
+
+/**
+ *
+ * @brief Creates a base secret shared key from the specified initiator's (user)
+ * and responder's (HSM) runtime keys
+ * @ingroup keymanagement
+ *
+ * This function derives a base key from the specified keys using the kdf
+ * algorithm specified in input.
+ * During the key exchange, there is an initiator and a responder. The former is
+ * considered as the user of the HSM and the latter the HSM itself.
+ * The result of this operation is the creation of a secret shared key.
+ *
+ * NOTE: This operation is only permitted for the CN applet.
+ *
+ * @param initiatorCurveId curve ID associated with the initiator's key pair,
+ *        this value also defines the key exchange scheme ;
+ *        valid value is V2XSE_CURVE_SM2_256
+ * @param pInitiatorPublicKey initiator's public key
+ * @param pResponderPublicKey pointer to location to write the responder's
+ *        public key
+ * @param pkeyExchangeData pointer to specific data depending on scheme and
+ *        algorithm used
+ * @param sharedKeyTypeId ECC curve or Symmetric key type associated with
+ *        the shared key ;
+ *        supported range is {V2XSE_CURVE_SM2_256, V2XSE_SYMMK_SM4_128}
+ * @param sharedKeyId slot to store the secret shared key identifier
+ * @param pHsmStatusCode pointer to location to write extended result code
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ */
+int32_t v2xSe_exchangeBaPrivateKey
+(
+    TypeCurveId_t initiatorCurveId,
+    TypePublicKey_t *pInitiatorPublicKey,
+    TypePublicKey_t *pResponderPublicKey,
+    TypeKeyExchange_t *pkeyExchangeData,
+    TypeKeyTypeId_t sharedKeyTypeId,
+    TypeBaseKeyId_t sharedKeyId,
+    TypeSW_t *pHsmStatusCode
+)
+{
+	return V2XSE_FUNC_NOT_SUPPORTED;
 }
 
 /**
