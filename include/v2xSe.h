@@ -705,16 +705,6 @@ int32_t v2xSe_getRemainingNvm(uint32_t *pSize, TypeSW_t *pHsmStatusCode);
 int32_t v2xSe_endKeyInjection(TypeSW_t *pHsmStatusCode);
 int32_t v2xSe_getSePhase(uint8_t *pPhaseInfo, TypeSW_t *pHsmStatusCode);
 
-int32_t v2xSe_getKek(uint16_t keyType, uint8_t *pSignedMessage,
-	uint16_t signedMessageLength, uint8_t *pKekPublicKey,
-	uint16_t *pKekLength, TypeSW_t *pHsmStatusCode);
-	/*
-	 * TODO: remove references to KEK_TYPE_xxx flags and getKek() API
-	 */
-/** Flag to use KEK that is unique per device */
-#define KEK_TYPE_UNIQUE	(0u)
-/** Flag to use KEK that is common for all devices */
-#define KEK_TYPE_COMMON	(1u)
 int32_t v2xSe_createKek(uint8_t *pSignedMessage, uint16_t signedMessageLength,
 	TypePublicKey_t *pInitiatorPublicKey, TypePublicKey_t *pResponderPublicKey,
 	TypeRtKeyId_t kekId, TypeSW_t *pHsmStatusCode);
