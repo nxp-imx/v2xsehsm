@@ -99,11 +99,7 @@ hsm_key_type_t convertCurveId(TypeCurveId_t curveId)
 			keyType = HSM_KEY_TYPE_ECDSA_BRAINPOOL_R1_256;
 			break;
 		case V2XSE_CURVE_BP256T1:
-#ifdef NO_BP_T1
-			keyType = HSM_KEY_TYPE_ECDSA_BRAINPOOL_R1_256;
-#else
 			keyType = HSM_KEY_TYPE_ECDSA_BRAINPOOL_T1_256;
-#endif
 			break;
 		case V2XSE_CURVE_NISTP384:
 			keyType = HSM_KEY_TYPE_ECDSA_NIST_P384;
@@ -112,11 +108,7 @@ hsm_key_type_t convertCurveId(TypeCurveId_t curveId)
 			keyType = HSM_KEY_TYPE_ECDSA_BRAINPOOL_R1_384;
 			break;
 		case V2XSE_CURVE_BP384T1:
-#ifdef NO_BP_T1
-			keyType = HSM_KEY_TYPE_ECDSA_BRAINPOOL_R1_384;
-#else
 			keyType = HSM_KEY_TYPE_ECDSA_BRAINPOOL_T1_384;
-#endif
 			break;
 		case V2XSE_CURVE_SM2_256:
 			keyType = HSM_KEY_TYPE_DSA_SM2_FP_256;

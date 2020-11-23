@@ -47,7 +47,6 @@
 #include "trace.h"
 #include "v2xSe.h"
 #include "hsm/hsm_api.h"
-#include "hsmMISSING.h"
 #include "version.h"
 
 /** Init state: not connected to SE */
