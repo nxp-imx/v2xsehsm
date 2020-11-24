@@ -217,6 +217,8 @@ int32_t v2xSe_createKek(
 	int32_t keyCreated = 0;
 	int32_t retval = V2XSE_FAILURE;
 
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_CREATEKEK);
+
 	do {
 		if (setupDefaultStatusCode(pHsmStatusCode) ||
 				enforceActivatedState(pHsmStatusCode, &retval)) {
@@ -275,7 +277,9 @@ int32_t v2xSe_createKek(
 
 		args.signed_message = pSignedMessage;
 		args.signed_msg_size = signedMessageLength;
+		TRACE_HSM_CALL(PROFILE_ID_HSM_KEY_EXCHANGE);
 		hsmret = hsm_key_exchange(hsmKeyMgmtHandle, &args);
+		TRACE_HSM_RETURN(PROFILE_ID_HSM_KEY_EXCHANGE);
 		if (hsmret) {
 			break;
 		}
@@ -306,6 +310,7 @@ int32_t v2xSe_createKek(
 		}
 	}
 
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_CREATEKEK);
 	return retval;
 }
 
