@@ -169,6 +169,12 @@
 #define PROFILE_ID_V2XSE_SM2_GET_Z				0x0137
 /** Prodiling ID for v2xSe_createKek */
 #define PROFILE_ID_V2XSE_CREATEKEK				0x0138
+/** Prodiling ID for v2xSe_exchangeMaPrivateKey */
+#define PROFILE_ID_V2XSE_EXCHANGEMAPRIVATEKEY			0x0139
+/** Prodiling ID for v2xSe_exchangeRtPrivateKey */
+#define PROFILE_ID_V2XSE_EXCHANGERTPRIVATEKEY			0x013A
+/** Prodiling ID for v2xSe_exchangeBaPrivateKey */
+#define PROFILE_ID_V2XSE_EXCHANGEBAPRIVATEKEY			0x013B
 
 /* Profiling IDs for HSM API calls: format 0x02xx */
 

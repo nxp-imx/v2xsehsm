@@ -405,7 +405,9 @@ static int32_t exchangeHsmKey (hsm_key_type_t exchangeKeyType,
 	args.flags |= HSM_OP_KEY_GENERATION_FLAGS_STRICT_OPERATION;
 	args.signed_message = NULL;
 	args.signed_msg_size = 0;
+	TRACE_HSM_CALL(PROFILE_ID_HSM_KEY_EXCHANGE);
 	hsmret = hsm_key_exchange(hsmKeyMgmtHandle, &args);
+	TRACE_HSM_RETURN(PROFILE_ID_HSM_KEY_EXCHANGE);
 
 	return hsmret;
 }
@@ -617,6 +619,8 @@ int32_t v2xSe_exchangeMaPrivateKey
 	uint8_t hsm_respPubKeys[2 * V2XSE_384_EC_PUB_KEY] = {0};
 	int32_t pubKeyXchgLen = keyLenFromCurveID(initiatorCurveId);
 
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_EXCHANGEMAPRIVATEKEY);
+
 	do {
 		if (setupDefaultStatusCode(pHsmStatusCode) ||
 				enforceActivatedState(pHsmStatusCode, &retval)) {
@@ -725,6 +729,7 @@ int32_t v2xSe_exchangeMaPrivateKey
 		nvm_delete_var(MA_KEYHANDLE_NAME);
 	}
 
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_EXCHANGEMAPRIVATEKEY);
 	return retval;
 }
 
@@ -948,6 +953,8 @@ int32_t v2xSe_exchangeRtPrivateKey
 	uint8_t hsm_respPubKeys[2 * V2XSE_384_EC_PUB_KEY] = {0};
 	int32_t pubKeyXchgLen = keyLenFromCurveID(initiatorCurveId);
 
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_EXCHANGERTPRIVATEKEY);
+
 	do {
 		if (setupDefaultStatusCode(pHsmStatusCode) ||
 				enforceActivatedState(pHsmStatusCode, &retval)) {
@@ -1061,6 +1068,7 @@ int32_t v2xSe_exchangeRtPrivateKey
 		}
 	}
 
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_EXCHANGERTPRIVATEKEY);
 	return retval;
 }
 
@@ -1338,6 +1346,8 @@ int32_t v2xSe_exchangeBaPrivateKey
 	uint8_t hsm_respPubKeys[2 * V2XSE_384_EC_PUB_KEY] = {0};
 	int32_t pubKeyXchgLen = keyLenFromCurveID(initiatorCurveId);
 
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_EXCHANGEBAPRIVATEKEY);
+
 	do {
 		if (setupDefaultStatusCode(pHsmStatusCode) ||
 				enforceActivatedState(pHsmStatusCode, &retval)) {
@@ -1451,6 +1461,7 @@ int32_t v2xSe_exchangeBaPrivateKey
 		}
 	}
 
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_EXCHANGEBAPRIVATEKEY);
 	return retval;
 }
 
