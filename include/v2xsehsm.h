@@ -109,7 +109,8 @@ extern const uint8_t serialNumber[V2XSE_SERIAL_NUMBER];
 /** Keystore nonce */
 #define MAGIC_KEYSTORE_NONCE		0x75A8CC6D
 /** Number of expected keystore updates in product lifetime - set to max */
-#define MAX_KEYSTORE_UPDATES		0
+/* workaround dxl seco 0.0.8 default key generate max number limitation issue */
+#define MAX_KEYSTORE_UPDATES		10000
 /*
  * Keystore layout (groups):
  * 0: EU, US & CN MA keys
