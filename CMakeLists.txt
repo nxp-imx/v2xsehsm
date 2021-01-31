@@ -86,5 +86,5 @@ install (FILES
 	${PROJECT_SOURCE_DIR}/v2xsehsmConfig.cmake
 	${CMAKE_CURRENT_BINARY_DIR}/v2xsehsm/v2xsehsmTargets.cmake
 	${CMAKE_CURRENT_BINARY_DIR}/v2xsehsmConfigVersion.cmake
-	DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/share/cmake/v2xsehsm
+	DESTINATION ${CMAKE_INSTALL_LIBDIR}/v2xsehsm/cmake
 	)
