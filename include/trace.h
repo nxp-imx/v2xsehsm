@@ -175,6 +175,8 @@
 #define PROFILE_ID_V2XSE_EXCHANGERTPRIVATEKEY			0x013A
 /** Prodiling ID for v2xSe_exchangeBaPrivateKey */
 #define PROFILE_ID_V2XSE_EXCHANGEBAPRIVATEKEY			0x013B
+/** Profiling ID for v2xse_injectSymmetricKey */
+#define PROFILE_ID_V2XSE_INJECTSYMMETRICKEY			0x013C
 
 /* Profiling IDs for HSM API calls: format 0x02xx */
 

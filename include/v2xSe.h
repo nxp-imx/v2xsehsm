@@ -791,6 +791,10 @@ int32_t v2xSe_injectRtEccPrivateKey(TypeRtKeyId_t rtKeyId,
 	TypeCurveId_t curveId, TypeSW_t *pHsmStatusCode,
 	TypePublicKey_t *pPublicKeyPlain, uint8_t *pKeyData,
 	uint16_t keyDataSize, TypeRtKeyId_t kekId);
+int32_t v2xSe_injectSymmetricKey(TypeRtKeyId_t rtKeyId,
+        TypeCurveId_t curveId, TypeSW_t *pHsmStatusCode,
+        uint8_t *pKeyData,
+        uint16_t keyDataSize, TypeRtKeyId_t kekId);
 int32_t v2xSe_injectBaEccPrivateKey(TypeBaseKeyId_t baseKeyId,
 	TypeCurveId_t curveId, TypeSW_t *pHsmStatusCode,
 	TypePublicKey_t *pPublicKeyPlain, uint8_t *pKeyData,

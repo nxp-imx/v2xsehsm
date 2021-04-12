@@ -592,3 +592,116 @@ int32_t v2xSe_injectBaEccPrivateKey(
 	TRACE_API_EXIT(PROFILE_ID_V2XSE_INJECTBAECCPRIVATEKEY);
 	return retval;
 }
+
+
+/**
+ *
+ * @brief Inject Symmetric key
+ * @ingroup keyimport
+ *
+ * This function injects an RT private key into the device.
+ *
+ * @param rtKeyId slot to store injected private key
+ * @param curveId The ECC curve to be used with the injected key
+ * @param pHsmStatusCode pointer to location to write extended result code
+ * @param pKeyData data containing encrypted Symmetric key
+ * @param keyDataSize size of data containing encrypted Symmetric key
+ * @param kekId slot corresponding to the KEK identifier
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
+int32_t v2xSe_injectSymmetricKey(
+	TypeRtKeyId_t rtKeyId,
+	TypeCurveId_t curveId,
+	TypeSW_t *pHsmStatusCode,
+	uint8_t *pKeyData,
+	uint16_t keyDataSize,
+	TypeRtKeyId_t kekId)
+{
+	int32_t retval = V2XSE_FAILURE;
+	hsm_key_type_t keyType;
+	uint32_t keyHandle;
+	uint32_t kekHandle;
+	TypeCurveId_t storedCurveId;
+	int32_t keyModified = 0;
+	int32_t keyCreated = 0;
+
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_INJECTSYMMETRICKEY);
+
+	do {
+		if (setupDefaultStatusCode(pHsmStatusCode) ||
+				enforceActivatedState(pHsmStatusCode,
+								&retval) ||
+				(pKeyData == NULL)) {
+			break;
+		}
+		if (kekId >= NUM_STORAGE_SLOTS || rtKeyId >= NUM_STORAGE_SLOTS) {
+			*pHsmStatusCode = V2XSE_WRONG_DATA;
+			break;
+		}
+
+		if (!nvm_retrieve_rt_key_handle(kekId, &kekHandle,
+						&storedCurveId)) {
+			/* KEK must be an AES 256 symmetric key */
+			if (storedCurveId != V2XSE_SYMMK_AES_256)
+				break;
+		} else {
+			/* can't inject a new key without KEK */
+			break;
+		}
+
+		keyType = convertCurveId(curveId);
+		if (!keyType) {
+			*pHsmStatusCode = V2XSE_WRONG_DATA;
+			break;
+		}
+
+		if (!nvm_retrieve_rt_key_handle(rtKeyId, &keyHandle,
+						&storedCurveId)) {
+			keyModified = 1;
+			/* Check if can overwrite */
+			if (curveId != storedCurveId) {
+				/* Different type, must delete */
+				if (deleteRtKey(rtKeyId))
+					break;
+			}
+		}
+		if (importHsmKey(&keyHandle,
+					keyType,
+					rtKeyHandle[rtKeyId] ? UPDATE_KEY :
+							CREATE_KEY,
+					RT_KEY,
+					getKeyGroup(RT_KEY, rtKeyId),
+					pKeyData,
+					keyDataSize,
+					kekHandle)) {
+			break;
+		}
+		keyCreated = 1;
+		if (nvm_update_array_data(RT_CURVEID_NAME, rtKeyId,
+				(uint8_t *)&curveId, sizeof(curveId))) {
+			break;
+		}
+		if (nvm_update_array_data(RT_KEYHANDLE_NAME, rtKeyId,
+					(uint8_t *)&keyHandle,
+						sizeof(keyHandle))) {
+			break;
+		}
+		rtKeyHandle[rtKeyId] = keyHandle;
+		rtCurveId[rtKeyId] = curveId;
+		*pHsmStatusCode = V2XSE_NO_ERROR;
+		retval = V2XSE_SUCCESS;
+	} while (0);
+	if (retval != V2XSE_SUCCESS) {
+		if (keyModified || keyCreated) {
+			(void)deleteRtKey(rtKeyId);
+			/* Flag no change only if previous key not modified */
+			if (!keyModified)
+				*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
+		}
+	}
+
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_INJECTSYMMETRICKEY);
+	return retval;
+}

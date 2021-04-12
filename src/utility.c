@@ -62,6 +62,9 @@ hsm_key_type_t convertSymmetricKeyId(TypeSymmetricKeyId_t symmetricKeyId)
 	hsm_key_type_t keyType;
 
 	switch (symmetricKeyId) {
+		case V2XSE_SYMMK_AES_128:
+			keyType = HSM_KEY_TYPE_AES_128;
+			break;
 		case V2XSE_SYMMK_AES_256:
 			keyType = HSM_KEY_TYPE_AES_256;
 			break;
