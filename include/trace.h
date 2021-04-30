@@ -177,6 +177,9 @@
 #define PROFILE_ID_V2XSE_EXCHANGEBAPRIVATEKEY			0x013B
 /** Profiling ID for v2xse_injectSymmetricKey */
 #define PROFILE_ID_V2XSE_INJECTSYMMETRICKEY			0x013C
+/** Profiling ID for v2xSe_deriveRtEccKeyPair_st */
+#define PROFILE_ID_V2XSE_DERIVERTECCKEYPAIR_ST			0x013D
+
 
 /* Profiling IDs for HSM API calls: format 0x02xx */
 
@@ -256,6 +259,8 @@
 #define PROFILE_ID_HSM_SM2_ECES_DECRYPTION			0x0225
 /** Profiling ID for hsm_key_exchange */
 #define PROFILE_ID_HSM_KEY_EXCHANGE				0x0226
+/** Profiling ID for hsm_standalone_butterfly_key_expansion*/
+#define PROFILE_ID_HSM_STANDALONE_BUTTERFLY_KEY_EXPANSION	0x0227
 
 /* Profiling IDs for system calls: format 0x03xx */
 

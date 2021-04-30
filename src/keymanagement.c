@@ -1748,6 +1748,197 @@ int32_t v2xSe_deriveRtEccKeyPair
 
 /**
  *
+ * @brief Derive a runtime key from the specified base key
+ * @ingroup keymanagement
+ *
+ * This function derives a runtime key from the specified base key using
+ * the butterfly algorithm.
+ * NOTE: This operation is only permitted for the US applet.
+ *
+ * @param baseKeyId slot of base key to use
+ * @param fctKeyId slot of use for the expansion function computation
+ * @param pFvSign pointer to the input used to compute the expansion function
+ * @param pRvij pointer to private reconstruction value used in key derivation
+ * @param pHvij pointer to hash value used in key derivation when pRvij and pHvij
+ *        is null, use implicit certificate
+ * @param rtKeyId slot to store the generated runtime key
+ * @param returnPubKey flag indicating whether public key should be returned
+ * @param pHsmStatusCode pointer to location to write extended result code
+ * @param pCurveID pointer to location to write curveId of derived key
+ * @param pPublicKeyPlain pointer to location to write derived public key
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
+
+int32_t v2xSe_deriveRtEccKeyPair_st
+(
+    TypeBaseKeyId_t baseKeyId,
+    TypeRtKeyId_t fctKeyId,
+    TypeAlgoId_t algo,
+    TypeInt128_t *pFvSign,
+    TypeInt256_t *pRvij,
+    TypeInt256_t *pHvij,
+    TypeRtKeyId_t rtKeyId,
+    TypePubKeyOut_t returnPubKey,
+    TypeSW_t *pHsmStatusCode,
+    TypeCurveId_t *pCurveID,
+    TypePublicKey_t *pPublicKeyPlain
+)
+{
+	uint32_t inputBaKeyHandle, inputFctKeyHandle;
+	TypeCurveId_t inputBaCurveId, inputFctCurveId;
+	uint32_t outputRtKeyHandle;
+	TypeCurveId_t storedRtCurveId;
+	hsm_key_type_t keyType;
+	op_st_butt_key_exp_args_t args;
+	int32_t retval = V2XSE_FAILURE;
+	int32_t keyModified = 0;
+	int32_t keyCreated = 0;
+	hsm_err_t hsmret;
+
+	TRACE_API_ENTRY(PROFILE_ID_V2XSE_DERIVERTECCKEYPAIR_ST);
+
+	do {
+		if (setupDefaultStatusCode(pHsmStatusCode) ||
+				enforceActivatedState(pHsmStatusCode,
+								&retval) ||
+				(v2xsePhase != V2XSE_NORMAL_OPERATING_PHASE) ||
+				(pFvSign == NULL)) {
+			break;
+		}
+
+		if (returnPubKey == V2XSE_RSP_WITH_PUBKEY) {
+			if ((pPublicKeyPlain == NULL) || (pCurveID == NULL))
+				break;
+		}
+
+		if ((v2xseAppletId != e_US_AND_GS) &&
+					(v2xseAppletId != e_US)) {
+			*pHsmStatusCode = V2XSE_FUNC_NOT_SUPPORTED;
+			break;
+		}
+		if (baseKeyId >= NUM_STORAGE_SLOTS) {
+			*pHsmStatusCode = V2XSE_WRONG_DATA;
+			break;
+		}
+		if (rtKeyId >= NUM_STORAGE_SLOTS) {
+			*pHsmStatusCode = V2XSE_WRONG_DATA;
+			break;
+		}
+
+		if (nvm_retrieve_ba_key_handle(baseKeyId,
+				&inputBaKeyHandle, &inputBaCurveId)) {
+			*pHsmStatusCode = V2XSE_WRONG_DATA;
+			break;
+		}
+
+		if (nvm_retrieve_rt_key_handle(fctKeyId,
+				&inputFctKeyHandle, &inputFctCurveId)) {
+			*pHsmStatusCode = V2XSE_WRONG_DATA;
+			break;
+		}
+
+		keyType = convertCurveId(inputBaCurveId);
+		if (!is256bitCurve(keyType)) {
+			*pHsmStatusCode = V2XSE_WRONG_DATA;
+			break;
+		}
+
+		/* Delete exiting rt key if different type */
+		if (!nvm_retrieve_rt_key_handle(rtKeyId,
+				&outputRtKeyHandle, &storedRtCurveId)) {
+			keyModified = 1;
+			/*
+			 * HSM PRC2 has a bug where the update
+			 * overwrites the base key instead of the rt
+			 * key.  For the moment delete key even if
+			 * same type, to avoid this bug.
+			 */
+			/* if (storedRtCurveId != inputBaCurveId) { */
+			if (1) {
+				if (deleteRtKey(rtKeyId))
+					break;
+			}
+		}
+
+		memset(&args, 0, sizeof(args));
+		args.key_identifier = inputBaKeyHandle;
+		args.expansion_fct_key_identifier = inputFctKeyHandle;
+		args.expansion_fct_input = pFvSign->data;
+		args.hash_value = pHvij? pHvij->data : NULL;
+		args.pr_reconstruction_value = pRvij? pRvij->data : NULL;
+		args.expansion_fct_input_size = V2XSE_INT128_SIZE;
+		args.hash_value_size = pHvij? V2XSE_INT256_SIZE : 0;
+		args.pr_reconstruction_value_size = pRvij? V2XSE_INT256_SIZE : 0;
+
+		if (rtKeyHandle[rtKeyId]) {
+			args.flags = HSM_OP_BUTTERFLY_KEY_FLAGS_UPDATE;
+		}
+		else {
+			args.flags = HSM_OP_BUTTERFLY_KEY_FLAGS_CREATE;
+		}
+
+		if (args.hash_value == NULL) {
+			args.flags |= HSM_OP_ST_BUTTERFLY_KEY_FLAGS_EXPLICIT_CERTIF;
+		}
+		else {
+			args.flags |= HSM_OP_ST_BUTTERFLY_KEY_FLAGS_IMPLICIT_CERTIF;
+		}
+
+		/* Always use strict update - WA for current code */
+		args.flags |= HSM_OP_BUTTERFLY_KEY_FLAGS_STRICT_OPERATION;
+		args.key_group = getKeyGroup(RT_KEY, rtKeyId);
+		/* Params correspond to implicit certificate */
+		args.flags |= HSM_OP_BUTTERFLY_KEY_FLAGS_IMPLICIT_CERTIF;
+		args.dest_key_identifier = &outputRtKeyHandle;
+
+		if (returnPubKey == V2XSE_RSP_WITH_PUBKEY) {
+			args.output = (uint8_t *)pPublicKeyPlain;
+			args.output_size = V2XSE_256_EC_PUB_KEY;
+		}
+
+		args.key_type = keyType;
+		args.expansion_fct_algo = convertAlgoId(algo);
+		TRACE_HSM_CALL(PROFILE_ID_HSM_STANDALONE_BUTTERFLY_KEY_EXPANSION);
+		hsmret = hsm_standalone_butterfly_key_expansion(hsmKeyMgmtHandle, &args);
+		TRACE_HSM_RETURN(PROFILE_ID_HSM_STANDALONE_BUTTERFLY_KEY_EXPANSION);
+		if (hsmret)
+			break;
+		keyCreated = 1;
+		if (nvm_update_array_data(RT_CURVEID_NAME, rtKeyId,
+				(uint8_t *)&inputBaCurveId,
+					sizeof(inputBaCurveId))) {
+			break;
+		}
+		if (nvm_update_array_data(RT_KEYHANDLE_NAME, rtKeyId,
+			(uint8_t *)&outputRtKeyHandle,
+					sizeof(outputRtKeyHandle))) {
+			break;
+		}
+		convertPublicKeyToV2xseApi(keyType, pPublicKeyPlain);
+		rtKeyHandle[rtKeyId] = outputRtKeyHandle;
+		rtCurveId[rtKeyId] = inputBaCurveId;
+		if (returnPubKey == V2XSE_RSP_WITH_PUBKEY)
+			*pCurveID = inputBaCurveId;
+		*pHsmStatusCode = V2XSE_NO_ERROR;
+		retval = V2XSE_SUCCESS;
+	} while (0);
+	/* Clear key handle in case of error */
+	if (retval != V2XSE_SUCCESS) {
+		if (keyModified || keyCreated) {
+			deleteRtKey(rtKeyId);
+			/* Flag no change only if previous key not modified */
+			if (!keyModified)
+				*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
+		}
+	}
+	TRACE_API_EXIT(PROFILE_ID_V2XSE_DERIVERTECCKEYPAIR_ST);
+	return retval;
+}
+
+/**
+ *
  * @brief Generate Runtime symmetric key
  * @ingroup keymanagement
  *

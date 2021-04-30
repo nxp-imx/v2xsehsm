@@ -179,6 +179,9 @@
 /** Size in bytes of 256 bits of data */
 #define V2XSE_INT256_SIZE		32u
 
+/** Size in bytes of 128 bits of data */
+#define V2XSE_INT128_SIZE		16u
+
 /** Size in bytes of public key for 256 bit curve */
 #define V2XSE_256_EC_PUB_KEY		64u
 /** Size in bytes of 256 bit curve public key X or Y component */
@@ -343,6 +346,13 @@ typedef struct
 	/** Hash data for key derivation */
 	uint8_t data[V2XSE_INT256_SIZE];
 } TypeInt256_t;
+
+
+typedef struct
+{
+	/** Hash data for key derivation */
+	uint8_t data[V2XSE_INT128_SIZE];
+} TypeInt128_t;
 
 /** This structure holds software version info */
 typedef struct
@@ -735,6 +745,11 @@ int32_t v2xSe_deriveRtEccKeyPair(TypeBaseKeyId_t baseKeyId,
         TypeRtKeyId_t rtKeyId, TypePubKeyOut_t returnPubKey,
         TypeSW_t *pHsmStatusCode, TypeCurveId_t *pCurveID,
         TypePublicKey_t *pPublicKeyPlain);
+int32_t v2xSe_deriveRtEccKeyPair_st( TypeBaseKeyId_t baseKeyId,
+	TypeBaseKeyId_t fctKeyId, TypeAlgoId_t algo, TypeInt128_t *pFvSign,
+	TypeInt256_t *pRvij, TypeInt256_t *pHvij, TypeRtKeyId_t rtKeyId,
+	TypePubKeyOut_t returnPubKey, TypeSW_t *pHsmStatusCode,
+	TypeCurveId_t *pCurveID, TypePublicKey_t *pPublicKeyPlain);
 int32_t v2xSe_generateRtSymmetricKey(TypeRtKeyId_t rtKeyId,
         TypeSymmetricKeyId_t symmetricKeyId, TypeSW_t *pHsmStatusCode);
 int32_t v2xSe_deleteRtSymmetricKey(TypeRtKeyId_t rtKeyId,
