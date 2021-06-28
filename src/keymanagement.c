@@ -1642,11 +1642,6 @@ int32_t v2xSe_deriveRtEccKeyPair
 				break;
 		}
 
-		if ((v2xseAppletId != e_US_AND_GS) &&
-					(v2xseAppletId != e_US)) {
-			*pHsmStatusCode = V2XSE_FUNC_NOT_SUPPORTED;
-			break;
-		}
 		if (baseKeyId >= NUM_STORAGE_SLOTS) {
 			*pHsmStatusCode = V2XSE_WRONG_DATA;
 			break;
@@ -1813,11 +1808,6 @@ int32_t v2xSe_deriveRtEccKeyPair_st
 				break;
 		}
 
-		if ((v2xseAppletId != e_US_AND_GS) &&
-					(v2xseAppletId != e_US)) {
-			*pHsmStatusCode = V2XSE_FUNC_NOT_SUPPORTED;
-			break;
-		}
 		if (baseKeyId >= NUM_STORAGE_SLOTS) {
 			*pHsmStatusCode = V2XSE_WRONG_DATA;
 			break;
