@@ -87,6 +87,8 @@ hsm_hdl_t hsmCipherHandle;
 hsm_hdl_t hsmSigGenHandle;
 /** Handle for SM2 ECES service */
 hsm_hdl_t hsmSm2EcesHandle = 0L;
+/** Handle for HSM key generic crypto service */
+hsm_hdl_t hsmKeyGenCrypto = 0L;
 
 /* NVM vars, initialized from filesystem on activate */
 /** Phase inherited from SXF1800, only 'normal operating' for adaptation layer */
@@ -158,6 +160,7 @@ int32_t activateV2x(appletSelection_t appletId,
 	open_svc_cipher_args_t cipher_args;
 	open_svc_sign_gen_args_t sig_gen_args;
 	open_svc_sm2_eces_args_t sm2_eces_args;
+	open_svc_key_generic_crypto_args_t key_generic_crypto_args;
 	int32_t retval = V2XSE_FAILURE;
 	uint32_t justCreatedKeystore = 0;
 	hsm_err_t hsmret;
@@ -312,6 +315,14 @@ int32_t activateV2x(appletSelection_t appletId,
 				TRACE_HSM_RETURN(PROFILE_ID_HSM_OPEN_SM2_ECES_SERVICE);
 				if (hsmret)
 					goto close_signature_generation_service;
+
+				memset(&key_generic_crypto_args,0, sizeof(key_generic_crypto_args));
+				TRACE_HSM_CALL(PROFILE_ID_HSM_OPEN_KEY_GENERIC_CRYPTO_SERVICE);
+				hsmret = hsm_open_key_generic_crypto_service(hsmSessionHandle, &key_generic_crypto_args, &hsmKeyGenCrypto);
+				TRACE_HSM_RETURN(PROFILE_ID_HSM_OPEN_KEY_GENERIC_CRYPTO_SERVICE);
+				if (hsmret)
+					goto close_sm2_eces_service;
+
 			}
 
 			v2xseState = V2XSE_STATE_ACTIVATED;
@@ -321,6 +332,8 @@ int32_t activateV2x(appletSelection_t appletId,
 			goto exit;
 		} while (0);
 
+close_sm2_eces_service:
+		hsm_close_sm2_eces_service(hsmSm2EcesHandle);
 close_signature_generation_service:
 		hsm_close_signature_generation_service(hsmSigGenHandle);
 close_cipher_service:
@@ -420,6 +433,16 @@ int32_t resetV2x(void)
 			if (hsmret)
 				retval = V2XSE_FAILURE;
 		}
+		if (hsmKeyGenCrypto != 0L) {
+			TRACE_HSM_CALL(PROFILE_ID_HSM_CLOSE_KEY_GENERIC_CRYPTO_SERVICE);
+			hsmret = hsm_close_key_generic_crypto_service(hsmKeyGenCrypto);
+			TRACE_HSM_RETURN(PROFILE_ID_HSM_CLOSE_KEY_GENERIC_CRYPTO_SERVICE);
+			if (hsmret)
+				retval = V2XSE_FAILURE;
+			else
+				hsmKeyGenCrypto = 0L;
+		}
+
 		TRACE_HSM_CALL(
 			PROFILE_ID_HSM_CLOSE_SIGNATURE_GENERATION_SERVICE);
 		hsmret = hsm_close_signature_generation_service(

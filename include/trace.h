@@ -261,6 +261,8 @@
 #define PROFILE_ID_HSM_KEY_EXCHANGE				0x0226
 /** Profiling ID for hsm_standalone_butterfly_key_expansion*/
 #define PROFILE_ID_HSM_STANDALONE_BUTTERFLY_KEY_EXPANSION	0x0227
+/** Profiling ID for hsm_auth_enc*/
+#define PROFILE_ID_AUTH_ENC					0x0228
 
 /* Profiling IDs for system calls: format 0x03xx */
 
@@ -284,6 +286,10 @@
 #define PROFILE_ID_SYSTEM_CLOSEDIR				0x0309
 /** Profiling ID for mkdir */
 #define PROFILE_ID_SYSTEM_MKDIR					0x030A
+/** Profiling ID for hsm_open_key_generic_crypto_service */
+#define PROFILE_ID_HSM_OPEN_KEY_GENERIC_CRYPTO_SERVICE		0x0310
+/** Profiling ID for hsm_open_key_generic_crypto_service */
+#define PROFILE_ID_HSM_CLOSE_KEY_GENERIC_CRYPTO_SERVICE		0x0311
 
 /** Tracepoint at entry to v2xSe API call */
 #define TRACE_API_ENTRY(function) tracepoint(v2xsehsm, apiEntry, function)

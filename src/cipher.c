@@ -45,6 +45,122 @@
 #include "v2xsehsm.h"
 #include "nvm.h"
 
+#define IV_SIZE 12
+#define IV_TAG 16
+
+/**
+ * Check if use hsm_auth_enc
+ */
+static int UsingAuthAPI(TypeCurveId_t id)
+{
+	return id == V2XSE_ALGO_SM4_CCM;
+}
+
+/**
+ * Convert CurveId to hsm_op_auth_enc_algo_t
+ */
+static hsm_op_auth_enc_algo_t CurveIdToAuthEncAlgo(TypeCurveId_t id)
+{
+	switch(id)
+	{
+		case V2XSE_ALGO_SM4_CCM:
+			return HSM_AUTH_ENC_ALGO_SM4_CCM;
+	}
+	return 0;
+}
+
+/**
+ *
+ * @brief Perform hsm_auth_enc
+ *
+ * This function performs hsm_auth_enc.  It takes parameters
+ * in v2xSe format, converts them to hsm_api format and launches the
+ * encryption.
+ *
+ * @param keyHandle handle of key to use for encryption
+ * @param keyType type of key for hsm to create
+ * @param pCipherData pointer to encryption parameters in v2xSe format
+ * @param pVctLen length of encrypted data on output
+ * @param pVctData pointer to location to write the encrypted data,
+ * 		   must have extra space for 16byte tag + 12byte iv data
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
+static hsm_err_t doHsmAuthEnc(uint32_t keyHandle, TypeCurveId_t keyType,
+                        TypeEncryptCipher_t *pCipherData,
+                        TypeLen_t *pVctLen, TypeVCTData_t *pVctData)
+{
+	op_auth_enc_args_t args;
+	hsm_err_t retVal;
+
+	memset(&args, 0, sizeof(args));
+	args.key_identifier = keyHandle;
+	args.iv = pCipherData->ivLen == 0 ? NULL: pCipherData->iv;
+	args.iv_size = pCipherData->ivLen;
+	args.ae_algo = CurveIdToAuthEncAlgo(pCipherData->algoId);
+	args.flags = HSM_AUTH_ENC_FLAGS_ENCRYPT | HSM_AUTH_ENC_FLAGS_GENERATE_FULL_IV;
+	args.input = pCipherData->pMsgData->data;
+	args.input_size = pCipherData->msgLen;
+	args.output = pVctData->data;
+	args.output_size = *pVctLen;
+
+	TRACE_HSM_CALL(PROFILE_ID_AUTH_ENC);
+	retVal = hsm_auth_enc(hsmCipherHandle, &args);
+	TRACE_HSM_RETURN(PROFILE_ID_AUTH_ENC);
+
+	if (!retVal)
+		*pVctLen = args.output_size;
+	return retVal;
+}
+
+/**
+ *
+ * @brief Perform decryption using hsm_auth_enc
+ *
+ * This function performs decryption using the hsm_auth_enc.  It takes parameters
+ * in v2xSe format, converts them to hsm_api format and launches the
+ * decrpytion.
+ *
+ * @param keyHandle handle of key to use for decryption
+ * @param keyType type of key for hsm to create
+ * @param pCipherData pointer to decrpytion parameters in v2xSe format
+ * @param pMsgLen msg size on output
+ * @param pMsgData location to write decrpyted message
+ *
+ * @return V2XSE_SUCCESS if no error, non-zero on error
+ *
+ */
+
+static hsm_err_t doHsmAuthDec(uint32_t keyHandle, TypeCurveId_t keyType,
+				TypeDecryptCipher_t *pCipherData,
+				TypeLen_t *pMsgLen, TypePlainText_t *pMsgData)
+{
+	op_auth_enc_args_t args;
+	hsm_err_t retVal;
+
+	memset(&args, 0, sizeof(args));
+	args.key_identifier = keyHandle;
+	args.ae_algo = CurveIdToAuthEncAlgo(pCipherData->algoId);
+	args.flags = HSM_AUTH_ENC_FLAGS_DECRYPT;
+	args.input = pCipherData->pVctData->data;
+
+	args.input_size = pCipherData->vctLen - IV_SIZE;
+	args.iv = args.input + pCipherData->vctLen - IV_SIZE;
+	args.iv_size = IV_SIZE;
+
+	args.output = pMsgData->data;
+	args.output_size = *pMsgLen - IV_TAG - IV_SIZE;
+
+	TRACE_HSM_CALL(PROFILE_ID_AUTH_ENC);
+	retVal = hsm_auth_enc(hsmCipherHandle, &args);
+	TRACE_HSM_RETURN(PROFILE_ID_AUTH_ENC);
+	if (!retVal)
+		*pMsgLen = args.output_size;
+
+	return retVal;
+}
+
 /**
  *
  * @brief Perform CIPHER encryption using hsm
@@ -171,12 +287,24 @@ int32_t v2xSe_encryptUsingRtCipher (TypeRtKeyId_t rtKeyId,
 		} else if (nvm_retrieve_rt_key_handle(rtKeyId, &keyHandle,
 								&curveId)) {
 			*pHsmStatusCode = V2XSE_WRONG_DATA;
-		} else if (doHsmEncryption(keyHandle, convertCurveId(curveId),
-					pCipherData, pVctLen, pVctData)) {
-			*pHsmStatusCode = V2XSE_WRONG_DATA;
 		} else {
-			*pHsmStatusCode = V2XSE_NO_ERROR;
-			retval = V2XSE_SUCCESS;
+			if (UsingAuthAPI(pCipherData->algoId)) {
+				if(doHsmAuthEnc(keyHandle, curveId, pCipherData, pVctLen, pVctData)) {
+					*pHsmStatusCode = V2XSE_WRONG_DATA;
+				} else {
+					*pHsmStatusCode = V2XSE_NO_ERROR;
+					retval = V2XSE_SUCCESS;
+				}
+			}
+			else {
+				if(doHsmEncryption(keyHandle, convertCurveId(curveId),
+					pCipherData, pVctLen, pVctData)) {
+					*pHsmStatusCode = V2XSE_WRONG_DATA;
+				} else {
+					*pHsmStatusCode = V2XSE_NO_ERROR;
+					retval = V2XSE_SUCCESS;
+				}
+			}
 		}
 	}
 	TRACE_API_EXIT(PROFILE_ID_V2XSE_ENCRYPTUSINGRTCIPHER);
@@ -225,12 +353,25 @@ int32_t v2xSe_decryptUsingRtCipher (TypeRtKeyId_t rtKeyId,
 		} else if (nvm_retrieve_rt_key_handle(rtKeyId, &keyHandle,
 								&curveId)) {
 			*pHsmStatusCode = V2XSE_WRONG_DATA;
-		} else if (doHsmDecryption(keyHandle, convertCurveId(curveId),
-					pCipherData, pMsgLen, pMsgData)) {
-			*pHsmStatusCode = V2XSE_WRONG_DATA;
 		} else {
-			*pHsmStatusCode = V2XSE_NO_ERROR;
-			retval = V2XSE_SUCCESS;
+			if (UsingAuthAPI(pCipherData->algoId)) {
+				if(doHsmAuthDec(keyHandle, curveId, pCipherData,
+						pMsgLen, pMsgData)) {
+					*pHsmStatusCode = V2XSE_WRONG_DATA;
+				} else {
+					*pHsmStatusCode = V2XSE_NO_ERROR;
+					retval = V2XSE_SUCCESS;
+				}
+			}
+			else {
+				if (doHsmDecryption(keyHandle, convertCurveId(curveId),
+					pCipherData, pMsgLen, pMsgData)) {
+					*pHsmStatusCode = V2XSE_WRONG_DATA;
+				} else {
+					*pHsmStatusCode = V2XSE_NO_ERROR;
+					retval = V2XSE_SUCCESS;
+				}
+			}
 		}
 	}
 	TRACE_API_EXIT(PROFILE_ID_V2XSE_DECRYPYUSINGRTCIPHER);

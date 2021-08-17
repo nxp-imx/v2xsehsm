@@ -160,6 +160,8 @@
 #define V2XSE_ALGO_SM4_ECB 3u
 /** SM4 CBC */
 #define V2XSE_ALGO_SM4_CBC 4u
+/** SM4 CCM */
+#define V2XSE_ALGO_SM4_CCM 5u
 
 /** KDF Algo for NIST SHA 256 */
 #define V2XSE_KDF_ALG_SHA_256		10u
@@ -229,7 +231,7 @@
 #define V2XSE_ATTACK_LOG		1419u
 
 /** Maximum encrypted data size in bytes for ECIES and CIPHER */
-#define V2XSE_MAX_VCT_DATA_SIZE		169u
+#define V2XSE_MAX_VCT_DATA_SIZE		(169u + 16u +12u)
 /** Maximum plain text data size in bytes for ECIES and CIPHER */
 #define V2XSE_MAX_MSG_SIZE		97u
 /** Maximum KDF P1 parameter size in bytes for ECIES */
