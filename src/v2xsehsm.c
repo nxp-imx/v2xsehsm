@@ -43,7 +43,7 @@
 
 #include <string.h>
 #include "v2xsehsm.h"
-#include "nvm.h"
+#include "nvm_v2xsehsm.h"
 
 /** State of emulated SXF1800, can be INIT, CONNECTED or ACTIVATED */
 uint8_t	v2xseState = V2XSE_STATE_INIT;
@@ -188,8 +188,12 @@ int32_t activateV2x(appletSelection_t appletId,
 			memset(&session_args, 0, sizeof(session_args));
 
 			/* Use high priority HSM session, when available */
+#if LEGACY_SECO_LIBS
 			session_args.session_priority = HSM_OPEN_SESSION_PRIORITY_HIGH;
 			session_args.operating_mode = HSM_OPEN_SESSION_LOW_LATENCY_MASK;
+#else
+			session_args.mu_type = V2X_SV0;
+#endif
 
 			TRACE_HSM_CALL(PROFILE_ID_HSM_OPEN_SESSION);
 			hsmret = hsm_open_session(&session_args,

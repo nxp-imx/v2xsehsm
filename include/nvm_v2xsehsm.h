@@ -41,8 +41,8 @@
  *
  */
 
-#ifndef NVM_H
-#define NVM_H
+#ifndef NVM_V2XSEHSM_H
+#define NVM_V2XSEHSM_H
 
 /** Max absolute patch name expected for filesystem access */
 #define MAX_FILENAME_SIZE	128

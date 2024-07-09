@@ -50,7 +50,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "v2xsehsm.h"
-#include "nvm.h"
+#include "nvm_v2xsehsm.h"
 
 /**
  *

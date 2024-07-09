@@ -146,8 +146,9 @@ int32_t is256bitCurve(hsm_key_type_t keyType)
 		case HSM_KEY_TYPE_ECDSA_BRAINPOOL_T1_256:
 		case HSM_KEY_TYPE_AES_256:
 		case HSM_KEY_TYPE_DSA_SM2_FP_256:
-		case HSM_SIGNATURE_SCHEME_DSA_SM2_FP_256_SM3:
 			retval = 1;
+		default:
+			retval = 0;
 	}
 	return retval;
 }

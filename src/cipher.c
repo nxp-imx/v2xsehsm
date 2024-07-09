@@ -43,7 +43,7 @@
 
 #include <string.h>
 #include "v2xsehsm.h"
-#include "nvm.h"
+#include "nvm_v2xsehsm.h"
 
 #define IV_SIZE 12
 #define IV_TAG 16

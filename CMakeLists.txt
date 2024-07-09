@@ -10,6 +10,8 @@ set (v2xsehsm_MAJOR 0)
 set (v2xsehsm_MINOR 7)
 set (v2xsehsm_PATCH 0)
 set (v2xsehsm_VERSION ${v2xsehsm_MAJOR}.${v2xsehsm_MINOR}.${v2xsehsm_PATCH})
+set (UNIFIED_LIBS TRUE)
+set (LEGACY_SECO_LIBS FALSE)
 
 configure_file (
 	${PROJECT_SOURCE_DIR}/version.h.in
@@ -30,12 +32,24 @@ add_library (v2xCrypto SHARED
 	src/cipher.c
 	)
 
+if(UNIFIED_LIBS)
 target_link_libraries(v2xCrypto
-	${SECO_LIBS_DIR}/hsm_lib.a
+	${HSM_LIBS_DIR}/lib_hsm.so
+	${HSM_LIBS_DIR}/lib_hsm.so.0
+	${HSM_LIBS_DIR}/lib_hsm.so.0.1
 	)
+endif(UNIFIED_LIBS)
+
+if(LEGACY_SECO_LIBS)
+target_link_libraries(v2xCrypto
+	${HSM_LIBS_DIR}/hsm_lib.a
+	)
+add_definitions(-D LEGACY_SECO_LIBS)
+endif(LEGACY_SECO_LIBS)
 
 target_include_directories(v2xCrypto PRIVATE
-	${SECO_LIBS_DIR}/include/
+	${HSM_LIBS_DIR}/include/
+	${HSM_LIBS_DIR}/include/hsm/
 	${LTTNG_DIR}/include/
 	${URCU_DIR}/include/
 	)
