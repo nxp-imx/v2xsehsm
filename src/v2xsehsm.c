@@ -192,7 +192,7 @@ int32_t activateV2x(appletSelection_t appletId,
 			session_args.session_priority = HSM_OPEN_SESSION_PRIORITY_HIGH;
 			session_args.operating_mode = HSM_OPEN_SESSION_LOW_LATENCY_MASK;
 #else
-			session_args.mu_type = V2X_SV0;
+			session_args.mu_type = V2X_SG0;
 #endif
 
 			TRACE_HSM_CALL(PROFILE_ID_HSM_OPEN_SESSION);
