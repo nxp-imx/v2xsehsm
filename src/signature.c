@@ -151,7 +151,6 @@ int32_t v2xSe_createMaSign
 	uint32_t keyHandle;
 	TypeCurveId_t curveId;
 	hsm_signature_scheme_id_t sig_scheme;
-	hsm_key_type_t keyType;
 	TypeHashLength_t expectedHashLength;
 	uint32_t is256bits;
 	int32_t retval = V2XSE_FAILURE;
@@ -167,14 +166,14 @@ int32_t v2xSe_createMaSign
 		if (nvm_retrieve_ma_key_handle(&keyHandle, &curveId)) {
 			*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 		} else {
-			keyType = convertCurveId(curveId);
-			if (keyType == HSM_KEY_TYPE_DSA_SM2_FP_256) {
+			sig_scheme = convertCurveId(curveId);
+			if (sig_scheme == HSM_KEY_TYPE_DSA_SM2_FP_256) {
 				sig_scheme = HSM_SIGNATURE_SCHEME_DSA_SM2_FP_256_SM3;
 			}
 			if (!sig_scheme) {
 				*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 			} else {
-				is256bits = is256bitCurve(keyType);
+				is256bits = is256bitCurve(sig_scheme);
 				if (is256bits)
 					expectedHashLength =
 							V2XSE_256_EC_HASH_SIZE;
@@ -365,7 +364,6 @@ int32_t v2xSe_createRtSign
 	uint32_t keyHandle;
 	TypeCurveId_t curveId;
 	hsm_signature_scheme_id_t sig_scheme;
-	hsm_key_type_t keyType;
 	int32_t retval = V2XSE_FAILURE;
 
 	TRACE_API_ENTRY(PROFILE_ID_V2XSE_CREATERTSIGN);
@@ -382,13 +380,13 @@ int32_t v2xSe_createRtSign
 								&curveId)) {
 			*pHsmStatusCode = V2XSE_WRONG_DATA;
 		} else {
-			keyType = convertCurveId(curveId);
-			if (keyType == HSM_KEY_TYPE_DSA_SM2_FP_256) {
+			sig_scheme = convertCurveId(curveId);
+			if (sig_scheme == HSM_KEY_TYPE_DSA_SM2_FP_256) {
 				sig_scheme = HSM_SIGNATURE_SCHEME_DSA_SM2_FP_256_SM3;
 			}
 			if (!sig_scheme) {
 				*pHsmStatusCode = V2XSE_WRONG_DATA;
-			} else if (!is256bitCurve(keyType)) {
+			} else if (!is256bitCurve(sig_scheme)) {
 				*pHsmStatusCode = V2XSE_WRONG_DATA;
 			} else if (!genHsmSignature(keyHandle, sig_scheme,
 					pHashValue, V2XSE_256_EC_HASH_SIZE,
@@ -432,7 +430,6 @@ int32_t v2xSe_createBaSign
 	uint32_t keyHandle;
 	TypeCurveId_t curveId;
 	hsm_signature_scheme_id_t sig_scheme;
-	hsm_key_type_t keyType;
 	TypeHashLength_t expectedHashLength;
 	uint32_t is256bits;
 	int32_t retval = V2XSE_FAILURE;
@@ -451,14 +448,14 @@ int32_t v2xSe_createBaSign
 								&curveId)) {
 			*pHsmStatusCode = V2XSE_WRONG_DATA;
 		} else {
-			keyType = convertCurveId(curveId);
-			if (keyType == HSM_KEY_TYPE_DSA_SM2_FP_256) {
+			sig_scheme = convertCurveId(curveId);
+			if (sig_scheme == HSM_KEY_TYPE_DSA_SM2_FP_256) {
 				sig_scheme = HSM_SIGNATURE_SCHEME_DSA_SM2_FP_256_SM3;
 			}
 			if (!sig_scheme) {
 				*pHsmStatusCode = V2XSE_NVRAM_UNCHANGED;
 			} else {
-				is256bits = is256bitCurve(keyType);
+				is256bits = is256bitCurve(sig_scheme);
 				if (is256bits)
 					expectedHashLength =
 							V2XSE_256_EC_HASH_SIZE;
